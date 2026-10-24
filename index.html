@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selvedge — stitch playground</title>
+  <meta name="description" content="A playground for realistic, interactive cross stitch and embroidery: draw, convert pictures, stitch letters and embed live thread on any website.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pacifico&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect x='1' y='1' width='26' height='26' rx='7' fill='%23E9B949'/%3E%3Cpath d='M8 8L20 20' stroke='%235B3F06' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M20 8L8 20' stroke='%23121418' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="shell">
+    <header class="app-header">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="#E9B949"/><path d="M8 8L20 20" stroke="#5B3F06" stroke-width="3" stroke-linecap="round"/><path d="M20 8L8 20" stroke="#121418" stroke-width="3" stroke-linecap="round"/></svg>
+        <span class="brand-name">Selvedge</span>
+        <span class="brand-sep" aria-hidden="true">/</span>
+        <span class="brand-file" id="file-name">strawberry-sampler</span>
+        <span class="mono dim" id="file-status">saved</span>
+      </div>
+      <nav class="tabs" aria-label="Mode">
+        <a href="#stitch" data-route="stitch">Stitch</a>
+        <a href="#picture" data-route="picture">Picture</a>
+        <a href="#letters" data-route="letters">Letters</a>
+      </nav>
+      <div class="header-actions">
+        <a class="btn" href="#closeup" data-route="closeup">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+          Close-up
+        </a>
+        <a class="btn btn-primary" href="#embed" data-route="embed">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/></svg>
+          Embed
+        </a>
+      </div>
+    </header>
+    <div id="app" class="app"></div>
+  </div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
