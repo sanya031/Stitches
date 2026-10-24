@@ -12,6 +12,10 @@ npx serve .
 
 Then open the URL it prints. Any static server works; opening `index.html` directly from disk won't, because the scripts are ES modules.
 
+## Thread renderer prototype
+
+Build step 1 lives in `prototype/`: a WebGL2 patch of Aida 14 with a cross-stitched strawberry. With the server running, open `/prototype/`. Scroll or pinch to zoom, drag to pan; Far / Mid / Close jump between levels of detail, and "Light follows cursor" shows the sheen moving along the twist.
+
 ## Deploy to Vercel
 
 Import this repo at [vercel.com/new](https://vercel.com/new). No build command, no output directory — it's a static site. Every push to `main` redeploys.

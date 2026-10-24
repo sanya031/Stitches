@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thread Renderer Prototype</title>
+  <meta name="description" content="Build step 1: WebGL2 stranded-cotton cross stitch on Aida 14, zoomable from colour blobs to plies and fibres.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ground: #121418; --panel: #16181D; --raised: #1E2128; --line: #262A32; --line-3: #3A3F49;
+      --text: #EEE9E0; --muted: #B5BAC3; --dim: #9AA0AB; --accent: #E9B949; --accent-ink: #1A1305;
+      --font: 'Instrument Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ground); color: var(--text); font-family: var(--font); font-size: 14px; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    canvas.dragging { cursor: grabbing; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .hud { position: fixed; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100% - 32px);
+      padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+    .readout { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; min-width: 128px; }
+    .readout .mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .readout strong { font-weight: 600; }
+    .pill { display: flex; background: var(--ground); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+    button { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line-3); border-radius: 999px;
+      min-height: 44px; min-width: 44px; padding: 0 16px; cursor: pointer; }
+    .pill button { background: transparent; border-color: transparent; }
+    .pill button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    button[aria-pressed="true"]:not(.pill button) { border-color: var(--accent); color: var(--accent); }
+    .title { position: fixed; left: 16px; top: 16px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+    .title .mono { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+    .fallback { position: fixed; inset: 0; display: none; place-items: center; padding: 16px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <canvas id="gl" aria-label="Cross stitch strawberry on Aida 14. Scroll or pinch to zoom, drag to pan."></canvas>
+  <div class="title">
+    <div><strong>Thread renderer</strong> · build step 1</div>
+    <div class="mono">Aida 14 · DMC-style 2 strands · <span id="size"></span></div>
+  </div>
+  <div class="hud" role="toolbar" aria-label="View">
+    <div class="readout" aria-live="polite">
+      <strong id="lod">Mid</strong>
+      <span class="mono" id="zoom"></span>
+    </div>
+    <div class="pill" role="group" aria-label="Zoom preset">
+      <button data-preset="far">Far</button>
+      <button data-preset="mid">Mid</button>
+      <button data-preset="close">Close</button>
+    </div>
+    <button id="light" aria-pressed="false">Light follows cursor</button>
+    <button id="reset">Reset</button>
+  </div>
+  <div class="fallback" id="fallback">This prototype needs WebGL2.</div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
