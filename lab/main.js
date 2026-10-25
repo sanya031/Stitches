@@ -701,7 +701,7 @@ const TOOL_HINTS = {
   fill: 'Drag a rectangle to fill it, or click a pattern shape to fill the whole shape in its own colours. Fills sit next to stitches, so you can mix them in one row.',
   pattern: 'Paint squares in the current thread colour to plan your own design, then stitch or fill over it.',
   erase: 'Drag over squares to remove what is there.',
-  select: 'Drag to select an area, or click a part to select the connected patch of that colour. Shift adds to the selection; Esc clears it.',
+  select: 'Drag to select an area, or click a part to select the connected patch of that colour. Shift adds; Done, Esc or another tool ends it.',
   pan: 'Drag to move around. Space, right-drag or middle-drag also pan with any tool.'
 };
 
@@ -718,7 +718,7 @@ panel.innerHTML = `
     </div>
   </section>
   <section id="sel-section" hidden>
-    <h2>Selection</h2>
+    <div class="sel-head"><h2>Selection</h2><button data-act="sel-clear" class="primary">Done</button></div>
     <p class="hint" id="sel-summary"></p>
     <ul class="floss-list" id="sel-colours"></ul>
     <div id="sel-picker" hidden>
@@ -729,7 +729,7 @@ panel.innerHTML = `
       <label class="custom"><input type="color" id="sel-custom"> Custom colour</label>
     </div>
     <button class="switch" role="switch" data-act="sel-pattern" id="sel-pattern"><span class="track"><span class="knob"></span></span>Change the pattern underneath too</button>
-    <div class="row"><button data-act="sel-clear">Clear selection</button></div>
+    <p class="hint">Done, Esc, or clicking an empty spot ends the selection. Switching tool does too.</p>
   </section>
   <section>
     <h2>Picture</h2>
@@ -834,7 +834,10 @@ panel.querySelectorAll('[data-art]').forEach((el) => { el.dataset.color = ''; })
 
 function set(key, val) {
   state[key] = val;
-  if (key === 'tool') updateCursor();
+  if (key === 'tool') {
+    updateCursor();
+    if (val !== 'select' && selection.size) clearSelection();   // a selection belongs to the Select tool
+  }
   if (key === 'strands' || key === 'count') { regions = regions.map((rg) => ({ ...rg })); sceneDirty = true; }   // thread width changes fill spacing
   if (key === 'surface') buildFabricHairs();
   if (key === 'color') recents = [val, ...recents.filter((c) => c !== val)].slice(0, 6);
