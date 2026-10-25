@@ -1,6 +1,7 @@
 // Thread lab: a small cross-stitch editor on top of the WebGL2 thread renderer.
 import { createRenderer, LAYERS } from './renderer.js';
 import { REGION_FILLS, regionLegs } from './fills.js';
+import { TONE_STITCHES, samplePicture, convertPicture } from './picture.js';
 
 // The strawberry starter pattern, same motif as the mockup screens (12×12).
 const STRAWBERRY = [
@@ -19,7 +20,7 @@ const STRAWBERRY = [
 ];
 const CHART_COLOURS = { R: '#C8343B', D: '#8E1D24', G: '#4F8A4B', g: '#2F5A35', y: '#F2D06B' };
 
-const COLS = 40, ROWS = 30;
+let COLS = 40, ROWS = 30;   // canvas size in squares; a picture sets its own
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
 const PRESETS = { far: 4, mid: 26, close: 200 };
 const STRAND_MM = 0.27;   // visible width of one strand of stranded cotton, lying flat
@@ -53,7 +54,7 @@ const CELL_FILLS = {
 const FILLS = { ...CELL_FILLS, ...REGION_FILLS };
 
 const state = {
-  tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
+  tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
   surface: 'dots', twist: 0.2, sheen: 0.3, fuzz: 0.5, guide: true, paletteOpen: false
 };
 let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
@@ -75,13 +76,14 @@ STRAWBERRY.forEach((row, y) => row.split('').forEach((ch, x) => {
 for (const [key, color] of blocks) if (Number(key.split(',')[1]) < oy + 6) stitches.set(key, { type: 'full', color, q: 0 });
 
 function snapshot() {
-  history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks), regions: regions.slice() });
+  history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks), regions: regions.slice(), cols: COLS, rows: ROWS });
   if (history.length > 100) history.shift();
 }
 function undo() {
   const prev = history.pop();
   if (!prev) return;
   ({ stitches, backs, blocks, regions } = prev);
+  setCanvasSize(prev.cols, prev.rows);
   sceneDirty = guideDirty = true;
 }
 
@@ -162,10 +164,10 @@ function buildScene() {
     const rgb = hex(st.color);
     for (const [a, b, layer] of legsOf(x, y, st)) addLeg(layer, a, b, st.type === 'f-tweed' ? tweedTone(rgb, r) : rgb, r);
   }
-  for (const bk of backs) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)));
+  for (const bk of backs) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)), 1, 1, bk.w || 1);
   for (const rg of regions) {
     const fw = fillWidth(rg.thread);
-    if (!regionCache.has(rg)) regionCache.set(rg, regionLegs(rg.kind, rg.cells, rg.density, rg.seed, fw));
+    if (!regionCache.has(rg)) regionCache.set(rg, regionLegs(rg.kind, rg.cells, rg.density, rg.seed, fw, rg.angle));
     const rgb = hex(rg.color), r = rng(rg.seed);
     for (const l of regionCache.get(rg)) addLeg(l.layer, l.a, l.b, l.tone ? rgb.map((c) => c * l.tone) : rgb, r, l.ea, l.eb, fw / W);
   }
@@ -460,6 +462,68 @@ window.addEventListener('keyup', (e) => { if (e.key === ' ') { spaceHeld = false
 
 function fit() { flyTo({ x: COLS / 2, y: ROWS / 2, z: fitZoom() }); }
 
+function setCanvasSize(cols, rows) {
+  if (cols === COLS && rows === ROWS) return;
+  COLS = cols; ROWS = rows;
+  buildFabricHairs();
+  guideDirty = sceneDirty = true;
+  fit();
+  syncUI();
+}
+
+// ---------- picture → thread ----------
+
+const pic = {
+  width: 60, colours: 8, removeBg: true, bgTolerance: 14, dither: false,
+  light: 'half', mid: 'full', dark: 'satin', lightShare: 0.3, darkShare: 0.3,
+  outline: true, outlineStrength: 0.5, outlineColour: 'shade'
+};
+let picture = null;        // { img, url, name, sample, palette }
+let picTimer = null;
+
+function loadPicture(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    if (picture) URL.revokeObjectURL(picture.url);
+    picture = { img, url, name: file.name || 'Pasted image' };
+    snapshot();
+    applyPicture();
+  };
+  img.src = url;
+}
+
+/** Rebuild the whole piece from the picture with the current settings. */
+function applyPicture() {
+  if (!picture) return;
+  if (!picture.sample || picture.sample.width !== pic.width) picture.sample = { width: pic.width, ...samplePicture(picture.img, pic.width) };
+  const res = convertPicture(picture.sample, pic);
+  blocks = res.blocks;
+  stitches = res.stitches;
+  regions = res.regions.map((rg, i) => ({ ...rg, density: state.density, thread: state.fillThread, seed: hashStr(`pic${i}${rg.color}`) }));
+  const darkest = res.palette.filter((p) => !p.outline).sort((a, b) => a.L - b.L)[0];
+  const fixed = pic.outlineColour === 'thread' ? state.color : pic.outlineColour === 'darkest' && darkest ? darkest.hex : null;
+  backs = res.backs.map((b) => ({ ...b, color: fixed || b.color, w: 0.6 }));   // outlines in a single strand
+  picture.palette = res.palette;
+  setCanvasSize(res.cols, res.rows);
+  sceneDirty = guideDirty = true;
+  syncPicUI();
+}
+
+/** Settings changes rebuild live; one undo step covers a whole burst of slider moves. */
+function schedulePicture() {
+  if (!picture) return;
+  if (!picTimer) snapshot(); else clearTimeout(picTimer);
+  picTimer = setTimeout(() => { picTimer = null; applyPicture(); }, 120);
+}
+
+stage.addEventListener('dragover', (e) => { e.preventDefault(); });
+stage.addEventListener('drop', (e) => { e.preventDefault(); loadPicture(e.dataTransfer.files[0]); });
+window.addEventListener('paste', (e) => {
+  const item = [...(e.clipboardData?.items || [])].find((it) => it.type.startsWith('image/'));
+  if (item) { loadPicture(item.getAsFile()); e.preventDefault(); }
+});
+
 // ---------- panel ----------
 
 const panel = document.getElementById('panel');
@@ -497,6 +561,10 @@ const pill = (key, options, label) => `<div class="pill" role="group" aria-label
   `<button data-set="${key}" data-val="${val}">${text}</button>`).join('')}</div>`;
 const slider = (key, label) => `<div class="slider"><label for="r-${key}">${label}</label>
   <input id="r-${key}" type="range" min="0" max="100" data-range="${key}"><output class="mono" id="o-${key}"></output></div>`;
+const PIC_FMT = { width: (v) => `${v} sq`, lightShare: (v) => `${v}%`, darkShare: (v) => `${v}%` };
+const picSlider = (key, label, min, max, step, scale = 1) => `<div class="slider"><label for="p-${key}">${label}</label>
+  <input id="p-${key}" type="range" min="${min}" max="${max}" step="${step}" data-pic="${key}" data-scale="${scale}"><output class="mono" id="po-${key}"></output></div>`;
+const picSwitch = (key, label) => `<button class="switch" role="switch" data-pic-toggle="${key}"><span class="track"><span class="knob"></span></span>${label}</button>`;
 const cards = (key, defs) => `<div class="cards">${Object.entries(defs).map(([id, [name]]) =>
   `<button class="card" data-set="${key}" data-val="${id}"><span class="art" data-art="${id}"></span><span class="card-name">${name}</span></button>`).join('')}</div>`;
 
@@ -518,6 +586,39 @@ panel.innerHTML = `
       <button data-act="undo">Undo</button>
       <button data-act="clear-stitches">Clear stitches</button>
       <button data-act="clear-pattern">Clear pattern</button>
+    </div>
+  </section>
+  <section>
+    <h2>Picture</h2>
+    <div id="pic-empty">
+      <button data-act="pic-choose" class="wide">Choose a photo</button>
+      <p class="hint">Or drop or paste an image onto the canvas. It becomes a stitched piece you can keep editing.</p>
+    </div>
+    <input type="file" accept="image/*" id="pic-file" hidden>
+    <div id="pic-controls" hidden>
+      <div class="pic-head">
+        <img id="pic-thumb" alt="">
+        <div class="pic-meta"><span id="pic-name"></span><span class="mono" id="pic-size"></span></div>
+        <button data-act="pic-choose">Change</button>
+      </div>
+      ${picSlider('width', 'Width', 16, 120, 1)}
+      ${picSlider('colours', 'Colours', 2, 24, 1)}
+      ${picSwitch('removeBg', 'Remove background')}
+      ${picSlider('bgTolerance', 'Tolerance', 2, 40, 1)}
+      ${picSwitch('dither', 'Dither (mix colours for smoother shading)')}
+      <h3>Tones</h3>
+      ${['light', 'mid', 'dark'].map((b) => `<div class="tone-row"><label for="pic-${b}">${b[0].toUpperCase() + b.slice(1)}</label>
+        <select id="pic-${b}" data-pic-select="${b}">${Object.entries(TONE_STITCHES).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>`).join('')}
+      ${picSlider('lightShare', 'Light', 0, 60, 1, 100)}
+      ${picSlider('darkShare', 'Dark', 0, 60, 1, 100)}
+      <h3>Outline</h3>
+      ${picSwitch('outline', 'Backstitch outline')}
+      ${picSlider('outlineStrength', 'Detail', 0, 100, 1, 100)}
+      <div class="count-row"><span class="sub">Colour</span>${pill('picOutlineColour', [['shade', 'Darker shade'], ['darkest', 'Darkest'], ['thread', 'Thread']], 'Outline colour')}</div>
+      <h3>Floss</h3>
+      <ul class="floss-list" id="floss-list"></ul>
+      <button data-act="pic-close" class="wide">Close picture</button>
+      <p class="hint">Changing these settings rebuilds the piece from the picture. Close the picture to keep your hand edits safe.</p>
     </div>
   </section>
   <section>
@@ -576,6 +677,7 @@ function set(key, val) {
   if (key === 'strands' || key === 'count') { regions = regions.map((rg) => ({ ...rg })); sceneDirty = true; }   // thread width changes fill spacing
   if (key === 'surface') buildFabricHairs();
   if (key === 'color') recents = [val, ...recents.filter((c) => c !== val)].slice(0, 6);
+  if (key === 'density' || key === 'fillThread') schedulePicture();   // a picture's fills follow these live
   syncUI();
   dirty = overlayDirty = true;
 }
@@ -585,6 +687,7 @@ panel.addEventListener('click', (e) => {
   if (!b) return;
   if (b.dataset.set) {
     const k = b.dataset.set, v = b.dataset.val;
+    if (k === 'picOutlineColour') { pic.outlineColour = v; state.picOutlineColour = v; syncUI(); schedulePicture(); return; }
     set(k, k === 'strands' || k === 'count' ? Number(v) : v);
     if (k === 'stitch') set('tool', 'stitch');
     if (k === 'fill' || k === 'fillThread') set('tool', 'fill');
@@ -592,20 +695,62 @@ panel.addEventListener('click', (e) => {
     if (k === 'color' && state.tool === 'erase') set('tool', 'stitch');
     return;
   }
+  if (b.dataset.picToggle) { pic[b.dataset.picToggle] = !pic[b.dataset.picToggle]; syncPicUI(); schedulePicture(); return; }
+  if (b.dataset.floss) { set('color', b.dataset.floss); set('tool', 'stitch'); return; }
   const act = b.dataset.act;
+  if (act === 'pic-choose') { document.getElementById('pic-file').click(); return; }
+  if (act === 'pic-close') { URL.revokeObjectURL(picture.url); picture = null; syncPicUI(); return; }
   if (act === 'undo') undo();
   else if (act === 'clear-stitches') { snapshot(); stitches = new Map(); backs = []; regions = []; sceneDirty = true; }
   else if (act === 'clear-pattern') { snapshot(); blocks = new Map(); guideDirty = true; }
   else if (act === 'guide') set('guide', !state.guide);
   else if (act === 'palette') set('paletteOpen', !state.paletteOpen);
 });
+panel.addEventListener('change', (e) => {
+  if (e.target.id === 'pic-file') { loadPicture(e.target.files[0]); e.target.value = ''; }
+  if (e.target.dataset.picSelect) { pic[e.target.dataset.picSelect] = e.target.value; schedulePicture(); }
+});
 panel.addEventListener('input', (e) => {
+  if (e.target.dataset.pic) {
+    pic[e.target.dataset.pic] = Number(e.target.value) / Number(e.target.dataset.scale);
+    syncPicUI();
+    schedulePicture();
+    return;
+  }
   if (e.target.dataset.range) {
     set(e.target.dataset.range, e.target.value / 100);
     if (e.target.dataset.range === 'density') set('tool', 'fill');
   }
   if (e.target.id === 'custom-color') set('color', e.target.value);
 });
+
+function syncPicUI() {
+  document.getElementById('pic-empty').hidden = !!picture;
+  document.getElementById('pic-controls').hidden = !picture;
+  if (!picture) return;
+  document.getElementById('pic-thumb').src = picture.url;
+  document.getElementById('pic-name').textContent = picture.name;
+  document.getElementById('pic-size').textContent = `${COLS}×${ROWS} squares · ${picture.palette?.length || 0} flosses`;
+  panel.querySelectorAll('[data-pic]').forEach((input) => {
+    const k = input.dataset.pic, scale = Number(input.dataset.scale);
+    if (document.activeElement !== input) input.value = Math.round(pic[k] * scale);
+    document.getElementById(`po-${k}`).textContent = (PIC_FMT[k] || String)(Math.round(pic[k] * scale));
+  });
+  panel.querySelectorAll('[data-pic-toggle]').forEach((b) => b.setAttribute('aria-checked', String(!!pic[b.dataset.picToggle])));
+  panel.querySelectorAll('[data-pic-select]').forEach((sel) => { sel.value = pic[sel.dataset.picSelect]; });
+  document.getElementById('p-bgTolerance').closest('.slider').hidden = !pic.removeBg;
+  document.getElementById('p-outlineStrength').closest('.slider').hidden = !pic.outline;
+  // the outline colour may be overridden in the editor, so list what is actually used
+  const fills = (picture.palette || []).filter((p) => !p.outline);
+  const outlineUse = new Map();
+  for (const b of backs) outlineUse.set(b.color, (outlineUse.get(b.color) || 0) + 1);
+  const named = new Map((picture.palette || []).map((p) => [p.hex, p.name]));
+  const total = fills.reduce((s, p) => s + p.count, 0);
+  const row = (hex, name, count) => `<li><button data-floss="${hex}" aria-pressed="${hex === state.color}">${skein(hex)}<span class="floss-name">${name}</span><span class="mono">${count}</span></button></li>`;
+  document.getElementById('floss-list').innerHTML = fills.map((p) => row(p.hex, p.name, p.count)).join('')
+    + [...outlineUse].map(([hex, count]) => row(hex, `${named.get(hex) || threadName(hex)} · outline`, `${count} bs`)).join('')
+    + `<li class="floss-total mono">${total} squares · ${backs.length} backstitches</li>`;
+}
 
 function syncUI() {
   panel.querySelectorAll('[data-set]').forEach((b) => b.setAttribute('aria-pressed', String(String(state[b.dataset.set]) === b.dataset.val)));
@@ -701,8 +846,8 @@ function hud() {
 
 document.querySelectorAll('[data-preset]').forEach((btn) => btn.addEventListener('click', () => {
   const z = PRESETS[btn.dataset.preset];
-  // zooming in from far lands on the starter motif; otherwise keep looking where we are
-  const centre = cam.z < 8 ? { x: ox + 6, y: oy + 6 } : { x: cam.x, y: cam.y };
+  // zooming in from far lands on the middle of the canvas; otherwise keep looking where we are
+  const centre = cam.z < 8 ? { x: COLS / 2, y: ROWS / 2 } : { x: cam.x, y: cam.y };
   flyTo({ ...centre, z });
 }));
 document.getElementById('reset').addEventListener('click', fit);
@@ -731,5 +876,6 @@ resize();
 if (!fitted) cam.z = fitZoom();
 buildFabricHairs();
 syncUI();
+syncPicUI();
 updateCursor();
 requestAnimationFrame(frame);

@@ -16,15 +16,17 @@ export const REGION_FILLS = {
   burst: ['Burst', 'Straight stitches radiating from the centre of the shape.']
 };
 
-const has = (mask, x, y) => mask.has(`${Math.floor(x)},${Math.floor(y)}`);
-
-function bounds(mask) {
+/** A set of "x,y" squares as a bitmap, so the line clipper can test points quickly. */
+function toGrid(mask) {
+  const cells = [...mask].map((k) => k.split(',').map(Number));
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const k of mask) {
-    const [x, y] = k.split(',').map(Number);
-    x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + 1); y1 = Math.max(y1, y + 1);
-  }
-  return { x0, y0, x1, y1 };
+  for (const [x, y] of cells) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + 1); y1 = Math.max(y1, y + 1); }
+  const w = x1 - x0, h = y1 - y0, bits = new Uint8Array(Math.max(0, w * h));
+  for (const [x, y] of cells) bits[(y - y0) * w + (x - x0)] = 1;
+  return {
+    cells, size: cells.length, bb: { x0, y0, x1, y1 },
+    at(x, y) { const ix = Math.floor(x) - x0, iy = Math.floor(y) - y0; return ix >= 0 && iy >= 0 && ix < w && iy < h && bits[iy * w + ix] === 1; }
+  };
 }
 
 function rng(seed) {
@@ -41,7 +43,8 @@ function rng(seed) {
  * A family of parallel lines at angle θ, `s` apart, clipped to the mask.
  * Returns { j, segs: [[u0, u1]] } in the rotated frame where a point is dA*u + nA*v.
  */
-function family(mask, bb, theta, s, phase = 0.5) {
+function family(g, theta, s, phase = 0.5) {
+  const bb = g.bb;
   const dA = [Math.cos(theta), Math.sin(theta)], nA = [-dA[1], dA[0]];
   const corners = [[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x0, bb.y1], [bb.x1, bb.y1]];
   const us = corners.map((p) => p[0] * dA[0] + p[1] * dA[1]), vs = corners.map((p) => p[0] * nA[0] + p[1] * nA[1]);
@@ -51,7 +54,7 @@ function family(mask, bb, theta, s, phase = 0.5) {
     const v = (j + phase) * s, segs = [];
     let start = null;
     for (let u = u0; u <= u1 + step; u += step) {
-      const inside = u <= u1 && has(mask, dA[0] * u + nA[0] * v, dA[1] * u + nA[1] * v);
+      const inside = u <= u1 && g.at(dA[0] * u + nA[0] * v, dA[1] * u + nA[1] * v);
       if (inside && start === null) start = u;
       if (!inside && start !== null) { if (u - step - start > 0.15) segs.push([start, u - step]); start = null; }
     }
@@ -62,8 +65,8 @@ function family(mask, bb, theta, s, phase = 0.5) {
 const pt = (f, u, v) => [f.dA[0] * u + f.nA[0] * v, f.dA[1] * u + f.nA[1] * v];
 
 /** Satin-style lines: one stitch per segment, both ends into the fabric. */
-function laid(mask, theta, s, layer = 0) {
-  const f = family(mask, bounds(mask), theta, s);
+function laid(g, theta, s, layer = 0) {
+  const f = family(g, theta, s);
   const legs = [];
   for (const line of f.lines) for (const [u0, u1] of line.segs) legs.push({ a: pt(f, u0, line.v), b: pt(f, u1, line.v), layer, ea: 1, eb: 1 });
   return legs;
@@ -73,9 +76,9 @@ function laid(mask, theta, s, layer = 0) {
  * Woven: two families at right angles. Each thread is split at the midpoints between
  * crossings so every piece holds one crossing; parity decides whether it passes over or under.
  */
-function woven(mask, theta, s) {
-  const bb = bounds(mask), legs = [];
-  const A = family(mask, bb, theta, s), B = family(mask, bb, theta + Math.PI / 2, s);
+function woven(g, theta, s) {
+  const legs = [];
+  const A = family(g, theta, s), B = family(g, theta + Math.PI / 2, s);
   const weaveFamily = (f, other, flip) => {
     for (const line of f.lines) {
       for (const [u0, u1] of line.segs) {
@@ -97,17 +100,19 @@ function woven(mask, theta, s) {
 }
 
 /** All legs for a region. W is the thread width in squares; density 0 (open) … 1 (solid). */
-export function regionLegs(kind, mask, density, seed, W) {
+export function regionLegs(kind, mask, density, seed, W, angle = 0) {
   const r = rng(seed), mix = (a, b) => a + (b - a) * density;
-  const area = mask.size;
+  const g = toGrid(mask), area = g.size;
+  if (!area) return [];
   switch (kind) {
     // laid lines: open leaves about three threads' gap, solid packs them edge to edge
-    case 'rows': return laid(mask, 0, mix(W * 4, W * 0.85));
-    case 'columns': return laid(mask, Math.PI / 2, mix(W * 4, W * 0.85));
-    case 'hatch': return laid(mask, -Math.PI / 4, mix(W * 4, W * 0.85));
-    case 'weave3': return woven(mask, 0, mix(1.4, 0.75));
-    case 'weave5': return woven(mask, 0, mix(0.9, 0.42));
-    case 'diamond': return woven(mask, Math.PI / 4, mix(1.1, 0.55));
+    case 'satin': return laid(g, angle, mix(W * 4, W * 0.85));   // direction chosen by the caller, e.g. from a picture
+    case 'rows': return laid(g, 0, mix(W * 4, W * 0.85));
+    case 'columns': return laid(g, Math.PI / 2, mix(W * 4, W * 0.85));
+    case 'hatch': return laid(g, -Math.PI / 4, mix(W * 4, W * 0.85));
+    case 'weave3': return woven(g, 0, mix(1.4, 0.75));
+    case 'weave5': return woven(g, 0, mix(0.9, 0.42));
+    case 'diamond': return woven(g, Math.PI / 4, mix(1.1, 0.55));
     case 'blocks': {
       const legs = [], blocks = new Map();
       for (const k of mask) {
@@ -117,38 +122,38 @@ export function regionLegs(kind, mask, density, seed, W) {
       }
       for (const [bk, cells] of blocks) {
         const [bx, by] = bk.split(',').map(Number);
-        legs.push(...laid(cells, (bx + by) % 2 ? Math.PI / 2 : 0, mix(W * 4, W * 0.85)));
+        legs.push(...laid(toGrid(cells), (bx + by) % 2 ? Math.PI / 2 : 0, mix(W * 4, W * 0.85)));
       }
       return legs;
     }
     case 'fern': {
-      const bb = bounds(mask), s = mix(1.0, 0.5), w = s * 0.45, step = mix(0.45, 0.28), legs = [];
+      const bb = g.bb, s = mix(1.0, 0.5), w = s * 0.45, step = mix(0.45, 0.28), legs = [];
       for (let x = bb.x0 + s / 2; x < bb.x1; x += s) {
         for (let y = bb.y0 + 0.1; y < bb.y1; y += step) {
           const tip = [x, y + w * 0.9];
           for (const side of [-1, 1]) {
             const a = [x + side * w, y];
-            if (has(mask, ...a) && has(mask, ...tip)) legs.push({ a, b: tip, layer: side > 0 ? 1 : 0, ea: 1, eb: 1 });
+            if (g.at(...a) && g.at(...tip)) legs.push({ a, b: tip, layer: side > 0 ? 1 : 0, ea: 1, eb: 1 });
           }
         }
       }
       return legs;
     }
     case 'seed': {
-      const cells = [...mask], legs = [], n = Math.round(area * mix(1.2, 5));
+      const cells = g.cells, legs = [], n = Math.round(area * mix(1.2, 5));
       for (let i = 0; i < n; i++) {
-        const [cx, cy] = cells[Math.floor(r() * cells.length)].split(',').map(Number);
+        const [cx, cy] = cells[Math.floor(r() * cells.length)];
         const c = [cx + r(), cy + r()], ang = r() * Math.PI, len = 0.28 + r() * 0.22;
         const a = [c[0] - Math.cos(ang) * len / 2, c[1] - Math.sin(ang) * len / 2], b = [c[0] + Math.cos(ang) * len / 2, c[1] + Math.sin(ang) * len / 2];
-        if (has(mask, ...a) && has(mask, ...b)) legs.push({ a, b, layer: i % 2, ea: 1, eb: 1, tone: 0.85 + r() * 0.3 });
+        if (g.at(...a) && g.at(...b)) legs.push({ a, b, layer: i % 2, ea: 1, eb: 1, tone: 0.85 + r() * 0.3 });
       }
       return legs;
     }
     case 'knots': {
       // A French knot reads as a tight coil: a five-point star of very short wraps.
-      const cells = [...mask], legs = [], n = Math.round(area * mix(0.4, 1.8)), rad = W * 0.6;
+      const cells = g.cells, legs = [], n = Math.round(area * mix(0.4, 1.8)), rad = W * 0.6;
       for (let i = 0; i < n; i++) {
-        const [cx, cy] = cells[Math.floor(r() * cells.length)].split(',').map(Number);
+        const [cx, cy] = cells[Math.floor(r() * cells.length)];
         const c = [cx + 0.15 + r() * 0.7, cy + 0.15 + r() * 0.7], rot = r() * Math.PI * 2;
         const ring = Array.from({ length: 5 }, (_, k) => [c[0] + Math.cos(rot + k * 1.2566) * rad, c[1] + Math.sin(rot + k * 1.2566) * rad]);
         ring.forEach((p, k) => legs.push({ a: p, b: ring[(k + 2) % 5], layer: 1, ea: 1, eb: 1, tone: 0.92 + r() * 0.16 }));
@@ -156,12 +161,12 @@ export function regionLegs(kind, mask, density, seed, W) {
       return legs;
     }
     case 'burst': {
-      const bb = bounds(mask), c = [(bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2];
+      const bb = g.bb, c = [(bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2];
       const R = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0) / 2 * 0.96, n = Math.round(mix(14, 48)), legs = [];
       for (let k = 0; k < n; k++) {
         const ang = (k / n) * Math.PI * 2 + r() * 0.08, len = R * (0.82 + r() * 0.18);
         const a = [c[0] + Math.cos(ang) * len, c[1] + Math.sin(ang) * len], b = [c[0] + Math.cos(ang) * 0.06, c[1] + Math.sin(ang) * 0.06];
-        if (has(mask, ...a)) legs.push({ a, b, layer: k % 2, ea: 1, eb: 1 });
+        if (g.at(...a)) legs.push({ a, b, layer: k % 2, ea: 1, eb: 1 });
       }
       return legs;
     }

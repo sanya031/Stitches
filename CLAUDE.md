@@ -12,6 +12,7 @@ Plain HTML/CSS/JS, no build step. Two parts:
 - `index.html` — page, panel and HUD markup + styles.
 - `lab/renderer.js` — WebGL2 renderer: procedural surfaces (dot grid, Aida, linen, denim) with the pattern as a texture on top, instanced stitch legs in three layers (under, top, backstitch), stray fibres. Frequency-based LOD from colour blobs to fibres.
 - `lab/main.js` — the editor. Every counted stitch and fill is a per-square entry that `legsOf()` turns into legs (the panel's card previews use it too). Tools: stitch, fill (rectangle or flood a pattern shape), pattern (planned squares), erase, pan. Undo snapshots stitches, backstitches, pattern and fills.
+- `lab/picture.js` — picture → thread: sample to the grid, flood the border colour out as background, k-means in Lab snapped to `lab/floss.js`, tone bands by lightness share mapped to stitches or fills (satin angle from the region's structure tensor), outline from undithered colours in a darker shade of the same floss family. Returns plain data; `main.js` applies it and rebuilds live on every setting change.
 - `lab/fills.js` — region fills: long stitches clipped to a shape of squares (laid lines, woven over/under, blocks, fern, seed, knots, burst). Legs carry per-end flags: 1 = enters the fabric (pinched), 0 = continues as the same thread.
 
 **Clickable mockup** of the full product, at `/mockup/`:
