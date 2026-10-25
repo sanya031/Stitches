@@ -17,7 +17,14 @@ Then open the URL it prints. Any static server works; opening `index.html` direc
 
 ## Thread lab
 
-Pick a stitch type (full, half, quarter, three-quarter, backstitch), a thread, strands, fabric count and colour; adjust twist, sheen and fuzz. Click or drag to stitch, scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo. Code: `index.html`, `lab/main.js` (editor), `lab/renderer.js` (WebGL2).
+- **Tools:** Stitch, Fill, Pattern, Erase, Pan.
+- **Stitches:** full cross, half, quarter, three-quarter, backstitch.
+- **Fills:** cross, hatch, rows, columns, weave, tweed. Drag a rectangle, or click a pattern shape to fill it in its own colours.
+- **Pattern:** paint squares to plan your own design, then stitch or fill over it; "Show pattern" hides it.
+- **Canvas:** dot grid (default), Aida, linen or denim; count 11–18 squares per inch.
+- **Thread:** 20 colours plus custom, recent threads, 1–3 strands; twist, sheen and fuzz sliders.
+
+Scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo. Code: `index.html`, `lab/main.js` (editor), `lab/renderer.js` (WebGL2).
 
 ## Deploy to Vercel
 

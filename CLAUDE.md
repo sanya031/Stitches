@@ -10,8 +10,8 @@ Plain HTML/CSS/JS, no build step. Two parts:
 
 **Thread lab** (the home page, build step 1 in progress):
 - `index.html` — page, panel and HUD markup + styles.
-- `lab/renderer.js` — WebGL2 renderer: procedural Aida (with printed-pattern guide texture), instanced stitch legs in three layers (under, top, backstitch), stray fibres. Frequency-based LOD from colour blobs to fibres.
-- `lab/main.js` — the editor: stitch data, tools, stitch types, threads, fabric and look settings, zoom/pan, undo.
+- `lab/renderer.js` — WebGL2 renderer: procedural surfaces (dot grid, Aida, linen, denim) with the pattern as a texture on top, instanced stitch legs in three layers (under, top, backstitch), stray fibres. Frequency-based LOD from colour blobs to fibres.
+- `lab/main.js` — the editor. Every counted stitch and fill is a per-square entry that `legsOf()` turns into legs (the panel's card previews use it too). Tools: stitch, fill (rectangle or flood a pattern shape), pattern (planned squares), erase, pan. Undo snapshots stitches, backstitches and pattern.
 
 **Clickable mockup** of the full product, at `/mockup/`:
 - `mockup/index.html` — shell + header; `mockup/styles.css` — all styling and design tokens.

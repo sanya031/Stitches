@@ -1,7 +1,7 @@
 // Thread lab: a small cross-stitch editor on top of the WebGL2 thread renderer.
 import { createRenderer, LAYERS } from './renderer.js';
 
-// The strawberry kit chart, same motif as the mockup screens (12×12).
+// The strawberry starter pattern, same motif as the mockup screens (12×12).
 const STRAWBERRY = [
   '....GG.G....',
   '...GgGGG....',
@@ -16,6 +16,7 @@ const STRAWBERRY = [
   '...RDRRR....',
   '....RRR.....'
 ];
+const CHART_COLOURS = { R: '#C8343B', D: '#8E1D24', G: '#4F8A4B', g: '#2F5A35', y: '#F2D06B' };
 
 const COLS = 40, ROWS = 30;
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
@@ -28,39 +29,57 @@ const THREADS = [
   ['Teal', '#2E8C8A'], ['Sky', '#6FA8DC'], ['Navy', '#24345C'], ['Lavender', '#9C88C9'], ['Plum', '#6B2F5E'], ['Ecru', '#EADFC8'],
   ['Pearl grey', '#B9B6AE'], ['Charcoal', '#3A3836']
 ];
-const FABRICS = { white: ['White', '#F4F2EC'], linen: ['Linen', '#ECE5D6'], oatmeal: ['Oatmeal', '#D6C9AE'] };
-const STITCHES = {
-  full: 'Full cross',
-  half: 'Half stitch',
-  quarter: 'Quarter: click the corner it starts from',
-  threeq: 'Three-quarter: click the corner the short leg starts from',
-  back: 'Backstitch: drag from hole to hole'
+const SURFACES = {
+  dots: { id: 0, name: 'Dot grid', color: '#F2EEE6' },
+  aida: { id: 1, name: 'Aida', color: '#F4F2EC' },
+  linen: { id: 2, name: 'Linen', color: '#D9CCB2' },
+  denim: { id: 3, name: 'Denim', color: '#3C5A86' }
 };
-const CHART_COLOURS = { R: '#C8343B', D: '#8E1D24', G: '#4F8A4B', g: '#2F5A35', y: '#F2D06B' };
+const STITCH_TYPES = {
+  full: ['Full cross', 'An X over one square. The everyday stitch.'],
+  half: ['Half stitch', 'One diagonal. Lighter, for shading and backgrounds.'],
+  quarter: ['Quarter', 'Corner to centre. Click near the corner you want.'],
+  threeq: ['Three-quarter', 'Half plus a quarter, for smooth curved edges. Click near the corner.'],
+  back: ['Backstitch', 'A straight line from hole to hole, for outlines. Drag to draw.']
+};
+const FILLS = {
+  'f-cross': ['Cross', 'Solid crosses.'],
+  'f-hatch': ['Hatch', 'Parallel diagonals.'],
+  'f-rows': ['Rows', 'Horizontal bars, row by row.'],
+  'f-columns': ['Columns', 'Vertical bars, column by column.'],
+  'f-weave': ['Weave', 'Basketweave: blocks of bars that alternate direction.'],
+  'f-tweed': ['Tweed', 'Crosses in mixed light and dark tones of the thread.']
+};
 
 const state = {
-  tool: 'stitch', stitch: 'full', color: '#C8343B', strands: 2, count: 14, fabric: 'linen',
-  twist: 0.2, sheen: 0.3, fuzz: 0.5, guide: true, followLight: false
+  tool: 'stitch', stitch: 'full', fill: 'f-weave', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
+  surface: 'dots', twist: 0.2, sheen: 0.3, fuzz: 0.5, guide: true, paletteOpen: false
 };
+let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
 
 // ---------- piece data ----------
 
 let stitches = new Map();   // "x,y" -> { type, color, q }
 let backs = [];             // { a: [x, y], b: [x, y], color }
+let blocks = new Map();     // "x,y" -> colour: the pattern you plan to stitch
 const history = [];
 
-const chart = { ox: 14, oy: 9, cells: [] };
+const ox = 14, oy = 9;
 STRAWBERRY.forEach((row, y) => row.split('').forEach((ch, x) => {
-  if (CHART_COLOURS[ch]) chart.cells.push({ x: x + chart.ox, y: y + chart.oy, color: CHART_COLOURS[ch] });
+  if (CHART_COLOURS[ch]) blocks.set(`${x + ox},${y + oy}`, CHART_COLOURS[ch]);
 }));
-// Start half-stitched, like a kit in progress: top rows done, the rest still printed.
-chart.cells.filter((c) => c.y < chart.oy + 6).forEach((c) => stitches.set(`${c.x},${c.y}`, { type: 'full', color: c.color, q: 0 }));
+// Start half-stitched, like a kit in progress: top rows done, the rest still to stitch.
+for (const [key, color] of blocks) if (Number(key.split(',')[1]) < oy + 6) stitches.set(key, { type: 'full', color, q: 0 });
 
-function snapshot() { history.push({ stitches: new Map(stitches), backs: backs.slice() }); if (history.length > 100) history.shift(); }
+function snapshot() {
+  history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks) });
+  if (history.length > 100) history.shift();
+}
 function undo() {
   const prev = history.pop();
   if (!prev) return;
-  stitches = prev.stitches; backs = prev.backs; sceneDirty = true;
+  ({ stitches, backs, blocks } = prev);
+  sceneDirty = guideDirty = true;
 }
 
 // ---------- seeded randomness, so a stitch looks the same every time it is rebuilt ----------
@@ -76,19 +95,32 @@ function rng(seed) {
   };
 }
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+const toHex = (rgb) => '#' + rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('');
 const threadWidth = () => state.strands * STRAND_MM * state.count / 25.4;
+const threadName = (c) => (THREADS.find(([, h]) => h.toLowerCase() === c.toLowerCase()) || ['Custom'])[0];
 
-/** Legs for one stitch: [from, to, layer]. Layer 0 is under, 1 is top, 2 is backstitch. */
+/** Legs for one square: [from, to, layer]. Layer 0 is under, 1 is top, 2 is backstitch. */
 function legsOf(x, y, st) {
   const TL = [x, y], TR = [x + 1, y], BL = [x, y + 1], BR = [x + 1, y + 1], C = [x + 0.5, y + 0.5];
-  const corner = [TL, TR, BL, BR][st.q];
+  const corner = [TL, TR, BL, BR][st.q || 0];
   switch (st.type) {
-    case 'full': return [[BL, TR, 0], [TL, BR, 1]];           // every top leg runs the same way: \
-    case 'half': return [[BL, TR, 0]];
+    case 'full': case 'f-cross': case 'f-tweed': return [[BL, TR, 0], [TL, BR, 1]];   // every top leg runs the same way: \
+    case 'half': case 'f-hatch': return [[BL, TR, 0]];
     case 'quarter': return [[corner, C, 1]];
     case 'threeq': return [st.q === 0 || st.q === 3 ? [BL, TR, 0] : [TL, BR, 0], [corner, C, 1]];
+    case 'f-rows': return [[[x, y + 0.5], [x + 1, y + 0.5], 0]];
+    case 'f-columns': return [[[x + 0.5, y], [x + 0.5, y + 1], 0]];
+    case 'f-weave': return (x + y) % 2 === 0
+      ? [[[x, y + 0.28], [x + 1, y + 0.28], 0], [[x, y + 0.72], [x + 1, y + 0.72], 0]]
+      : [[[x + 0.28, y], [x + 0.28, y + 1], 0], [[x + 0.72, y], [x + 0.72, y + 1], 0]];
     default: return [];
   }
+}
+
+/** Tweed: each leg picks a lighter, darker or true tone of the thread. */
+function tweedTone(rgb, r) {
+  const k = r();
+  return k < 0.33 ? rgb.map((c) => c * 0.7) : k < 0.66 ? rgb.map((c) => c + (1 - c) * 0.38) : rgb;
 }
 
 function buildScene() {
@@ -128,7 +160,7 @@ function buildScene() {
     const [x, y] = key.split(',').map(Number);
     const r = rng(hashStr(key + st.type + st.q));
     const rgb = hex(st.color);
-    for (const [a, b, layer] of legsOf(x, y, st)) addLeg(layer, a, b, rgb, r);
+    for (const [a, b, layer] of legsOf(x, y, st)) addLeg(layer, a, b, st.type === 'f-tweed' ? tweedTone(rgb, r) : rgb, r);
   }
   for (const bk of backs) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)));
 
@@ -137,7 +169,7 @@ function buildScene() {
 
 function buildFabricHairs() {
   const r = rng(99), hairs = [];
-  const cloth = hex(FABRICS[state.fabric][1]);
+  const cloth = state.surface === 'denim' ? [0.82, 0.84, 0.88] : hex(SURFACES[state.surface].color);
   for (let i = 0; i < 1400; i++) {
     const p0 = [r() * COLS, r() * ROWS];
     const ang = r() * Math.PI * 2, len = 0.06 + r() * 0.22, curl = (r() - 0.5) * 0.16;
@@ -152,9 +184,10 @@ function buildFabricHairs() {
 
 function buildGuide() {
   const data = new Uint8Array(COLS * ROWS * 4);
-  for (const c of chart.cells) {
-    const i = (c.y * COLS + c.x) * 4;
-    hex(c.color).forEach((v, k) => { data[i + k] = Math.round(v * 255); });
+  for (const [key, color] of blocks) {
+    const [x, y] = key.split(',').map(Number);
+    const i = (y * COLS + x) * 4;
+    hex(color).forEach((v, k) => { data[i + k] = Math.round(v * 255); });
     data[i + 3] = 255;
   }
   renderer.setGuide(COLS, ROWS, data);
@@ -174,13 +207,12 @@ if (!renderer) {
 }
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const DEFAULT_LIGHT = norm([-0.45, -0.55, 0.7]);
+const LIGHT = norm([-0.45, -0.55, 0.7]);
 const cam = { x: COLS / 2, y: ROWS / 2, z: 1 };   // z: CSS px per stitch
-let light = DEFAULT_LIGHT;
-let anim = null, dirty = true, sceneDirty = true, overlayDirty = true;
+let anim = null, dirty = true, sceneDirty = true, guideDirty = true, overlayDirty = true;
 let view = { w: 1, h: 1 };
 let hover = null;          // { wx, wy } under the pointer
-let backDrag = null;       // { a: [x, y] } while dragging a backstitch
+let drag = null;           // { a: start point } while dragging a backstitch or fill rectangle
 
 function norm(v) { const l = Math.hypot(...v); return v.map((c) => c / l); }
 const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
@@ -231,6 +263,7 @@ function cellAt(wx, wy) {
   if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return null;
   return { x, y, q: (wx - x > 0.5 ? 1 : 0) + (wy - y > 0.5 ? 2 : 0) };
 }
+const clampCell = (wx, wy) => ({ x: Math.min(COLS - 1, Math.max(0, Math.floor(wx))), y: Math.min(ROWS - 1, Math.max(0, Math.floor(wy))) });
 const holeAt = (wx, wy) => [Math.min(COLS, Math.max(0, Math.round(wx))), Math.min(ROWS, Math.max(0, Math.round(wy)))];
 
 function applyAt(wx, wy) {
@@ -238,10 +271,15 @@ function applyAt(wx, wy) {
   if (!c) return;
   const key = `${c.x},${c.y}`;
   if (state.tool === 'erase') {
+    if (state.eraseWhat === 'pattern') { if (blocks.delete(key)) guideDirty = true; return; }
     const had = stitches.delete(key);
     const before = backs.length;
     backs = backs.filter((b) => Math.floor((b.a[0] + b.b[0]) / 2) !== c.x || Math.floor((b.a[1] + b.b[1]) / 2) !== c.y);
     if (had || backs.length !== before) sceneDirty = true;
+    return;
+  }
+  if (state.tool === 'pattern') {
+    if (blocks.get(key) !== state.color) { blocks.set(key, state.color); guideDirty = true; }
     return;
   }
   const prev = stitches.get(key);
@@ -251,16 +289,38 @@ function applyAt(wx, wy) {
   sceneDirty = true;
 }
 
-/** Paint every cell along a drag segment so fast strokes leave no gaps. */
+/** Paint every square along a drag segment so fast strokes leave no gaps. */
 function strokeTo(from, to) {
   const n = Math.max(1, Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) / 0.25));
   for (let i = 1; i <= n; i++) applyAt(from[0] + (to[0] - from[0]) * i / n, from[1] + (to[1] - from[1]) * i / n);
 }
 
+/** Fill tool: a click on a pattern shape fills that shape in its colours; a drag fills the rectangle. */
+function fillFrom(a, b) {
+  const ca = clampCell(...a), cb = clampCell(...b);
+  const startKey = `${ca.x},${ca.y}`;
+  if (ca.x === cb.x && ca.y === cb.y && blocks.has(startKey)) {
+    const colour = blocks.get(startKey), seen = new Set([startKey]), queue = [[ca.x, ca.y]];
+    while (queue.length) {
+      const [x, y] = queue.pop();
+      stitches.set(`${x},${y}`, { type: state.fill, color: colour, q: 0 });
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const k = `${x + dx},${y + dy}`;
+        if (!seen.has(k) && blocks.get(k) === colour) { seen.add(k); queue.push([x + dx, y + dy]); }
+      }
+    }
+  } else {
+    for (let y = Math.min(ca.y, cb.y); y <= Math.max(ca.y, cb.y); y++) {
+      for (let x = Math.min(ca.x, cb.x); x <= Math.max(ca.x, cb.x); x++) stitches.set(`${x},${y}`, { type: state.fill, color: state.color, q: 0 });
+    }
+  }
+  sceneDirty = true;
+}
+
 // ---------- input ----------
 
 const pointers = new Map();
-let mode = null;           // 'paint' | 'pan' | 'pinch' | 'back'
+let mode = null;           // 'paint' | 'pan' | 'pinch' | 'back' | 'fill'
 let lastWorld = null, pinch = null, spaceHeld = false;
 
 function panMode() { return state.tool === 'pan' || spaceHeld; }
@@ -279,7 +339,8 @@ canvas.addEventListener('pointerdown', (e) => {
   const [sx, sy] = local(e);
   pointers.set(e.pointerId, { x: sx, y: sy });
   anim = null;
-  if (pointers.size === 2) { mode = 'pinch'; pinch = null; backDrag = null; overlayDirty = true; return; }
+  if (state.paletteOpen) { state.paletteOpen = false; syncUI(); }
+  if (pointers.size === 2) { mode = 'pinch'; pinch = null; drag = null; overlayDirty = true; return; }
   if (pointers.size > 2) return;
   const w = toWorld(sx, sy);
   if (e.button === 1 || e.button === 2 || panMode()) {
@@ -287,7 +348,10 @@ canvas.addEventListener('pointerdown', (e) => {
     canvas.classList.add('dragging');
   } else if (state.tool === 'stitch' && state.stitch === 'back') {
     mode = 'back';
-    backDrag = { a: holeAt(...w) };
+    drag = { a: holeAt(...w) };
+  } else if (state.tool === 'fill') {
+    mode = 'fill';
+    drag = { a: w };
   } else {
     mode = 'paint';
     snapshot();
@@ -298,10 +362,6 @@ canvas.addEventListener('pointerdown', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   const [sx, sy] = local(e);
-  if (state.followLight) {
-    light = norm([(sx / view.w - 0.5) * 2.2, (sy / view.h - 0.5) * 2.2, 0.75]);
-    dirty = true;
-  }
   const w = toWorld(sx, sy);
   hover = { wx: w[0], wy: w[1] };
   overlayDirty = true;
@@ -329,16 +389,24 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 const endPointer = (e) => {
-  if (mode === 'back' && backDrag && hover) {
-    const b = holeAt(hover.wx, hover.wy);
-    if (b[0] !== backDrag.a[0] || b[1] !== backDrag.a[1]) {
+  // a click with no movement never sent a pointermove, so take the position from this event
+  const w = toWorld(...local(e));
+  hover = { wx: w[0], wy: w[1] };
+  if (drag && (mode === 'back' || mode === 'fill')) {
+    if (mode === 'back') {
+      const b = holeAt(hover.wx, hover.wy);
+      if (b[0] !== drag.a[0] || b[1] !== drag.a[1]) {
+        snapshot();
+        backs.push({ a: drag.a, b, color: state.color });
+        sceneDirty = true;
+      }
+    } else {
       snapshot();
-      backs.push({ a: backDrag.a, b, color: state.color });
-      sceneDirty = true;
+      fillFrom(drag.a, [hover.wx, hover.wy]);
     }
   }
   pointers.delete(e.pointerId);
-  if (!pointers.size) { mode = null; backDrag = null; pinch = null; canvas.classList.remove('dragging'); }
+  if (!pointers.size) { mode = null; drag = null; pinch = null; canvas.classList.remove('dragging'); }
   overlayDirty = true;
 };
 canvas.addEventListener('pointerup', endPointer);
@@ -348,6 +416,7 @@ canvas.addEventListener('pointerleave', () => { if (!pointers.size) { hover = nu
 window.addEventListener('keydown', (e) => {
   if (e.target.closest('input')) return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { undo(); e.preventDefault(); return; }
+  if (e.key === 'Escape' && state.paletteOpen) { set('paletteOpen', false); return; }
   if (e.key === ' ' && !e.target.closest('button')) { spaceHeld = true; updateCursor(); e.preventDefault(); return; }
   if (e.target.closest('button')) return;
   const cx = view.w / 2, cy = view.h / 2, step = 60 / cam.z;
@@ -355,7 +424,8 @@ window.addEventListener('keydown', (e) => {
     '+': () => zoomAt(cx, cy, 1.25), '=': () => zoomAt(cx, cy, 1.25), '-': () => zoomAt(cx, cy, 0.8), '0': fit,
     ArrowLeft: () => { cam.x -= step; }, ArrowRight: () => { cam.x += step; },
     ArrowUp: () => { cam.y -= step; }, ArrowDown: () => { cam.y += step; },
-    s: () => set('tool', 'stitch'), e: () => set('tool', 'erase'), h: () => set('tool', 'pan')
+    s: () => set('tool', 'stitch'), f: () => set('tool', 'fill'), p: () => set('tool', 'pattern'),
+    e: () => set('tool', 'erase'), h: () => set('tool', 'pan')
   };
   if (keys[e.key]) { keys[e.key](); dirty = true; e.preventDefault(); }
 });
@@ -366,17 +436,26 @@ function fit() { flyTo({ x: COLS / 2, y: ROWS / 2, z: fitZoom() }); }
 // ---------- panel ----------
 
 const panel = document.getElementById('panel');
-const stitchIcon = (type) => {
-  const g = {
-    full: '<path d="M7 25L25 7M7 7L25 25"/>',
-    half: '<path d="M7 25L25 7"/>',
-    quarter: '<path d="M7 25L16 16"/>',
-    threeq: '<path d="M7 25L25 7M7 7L16 16"/>',
-    back: '<path d="M5 25H27"/><circle cx="5" cy="25" r="2" stroke="none"/><circle cx="27" cy="25" r="2" stroke="none"/>'
-  }[type];
-  return `<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="7" width="18" height="18" fill="none" stroke="#3A3F49" stroke-width="1"/>`
-    + `<g stroke="currentColor" fill="currentColor" stroke-width="3.2" stroke-linecap="round">${g}</g></svg>`;
-};
+
+/** Card art: the stitch drawn the way it sits on the grid, using the same legs the renderer gets. */
+function previewSVG(kind, color) {
+  const fill = kind.startsWith('f-');
+  const cols = fill ? 3 : 2, rows = fill ? 2 : 1, S = 22, pad = 8;
+  const w = cols * S + pad * 2, h = rows * S + pad * 2;
+  const P = ([x, y]) => `${(pad + x * S).toFixed(1)} ${(pad + y * S).toFixed(1)}`;
+  let legs = [];
+  if (kind === 'back') legs = [[[0, 1], [1, 0], 2], [[1, 0], [2, 1], 2]];
+  else for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) legs.push(...legsOf(x, y, { type: kind, q: 2 }));
+  const rgb = hex(color), r = rng(7);
+  const draw = legs.sort((a, b) => a[2] - b[2]).map(([a, b, layer]) => {
+    const c = kind === 'f-tweed' ? toHex(tweedTone(rgb, r)) : toHex(rgb.map((v) => v * (layer === 0 ? 0.86 : 1)));
+    return `<path d="M${P(a)}L${P(b)}" stroke="${c}" stroke-width="5.5"/><path d="M${P(a)}L${P(b)}" stroke="#fff" stroke-opacity=".22" stroke-width="1.6"/>`;
+  }).join('');
+  let dots = '';
+  for (let y = 0; y <= rows; y++) for (let x = 0; x <= cols; x++) dots += `<circle cx="${pad + x * S}" cy="${pad + y * S}" r="1.6"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><rect width="${w}" height="${h}" rx="6" fill="#F2EEE6"/>`
+    + `<g fill="#8F8A80">${dots}</g><g fill="none" stroke-linecap="round">${draw}</g></svg>`;
+}
 const skein = (color) => `<svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true">
   <rect x="2" y="5" width="36" height="16" rx="8" fill="${color}"/>
   <path d="M6 9.5H34M5 13H35M6 16.5H34" stroke="#000" stroke-opacity=".16" stroke-width="1"/>
@@ -386,57 +465,82 @@ const pill = (key, options, label) => `<div class="pill" role="group" aria-label
   `<button data-set="${key}" data-val="${val}">${text}</button>`).join('')}</div>`;
 const slider = (key, label) => `<div class="slider"><label for="r-${key}">${label}</label>
   <input id="r-${key}" type="range" min="0" max="100" data-range="${key}"><output class="mono" id="o-${key}"></output></div>`;
+const cards = (key, defs) => `<div class="cards">${Object.entries(defs).map(([id, [name]]) =>
+  `<button class="card" data-set="${key}" data-val="${id}"><span class="art" data-art="${id}"></span><span class="card-name">${name}</span></button>`).join('')}</div>`;
+
+const TOOL_HINTS = {
+  stitch: 'Click or drag on the grid to place the stitch below.',
+  fill: 'Drag a rectangle to fill it. Or click a pattern shape to fill the whole shape in its own colours.',
+  pattern: 'Paint squares in the current thread colour to plan your own design, then stitch or fill over it.',
+  erase: 'Drag over squares to remove what is there.',
+  pan: 'Drag to move around. Space, right-drag or middle-drag also pan with any tool.'
+};
 
 panel.innerHTML = `
   <section>
     <h2>Tool</h2>
+    ${pill('tool', [['stitch', 'Stitch'], ['fill', 'Fill'], ['pattern', 'Pattern'], ['erase', 'Erase'], ['pan', 'Pan']], 'Tool')}
+    <p class="hint" id="tool-hint"></p>
+    <div id="erase-what" hidden>${pill('eraseWhat', [['stitches', 'Stitches'], ['pattern', 'Pattern']], 'Erase')}</div>
     <div class="row">
-      ${pill('tool', [['stitch', 'Stitch'], ['erase', 'Erase'], ['pan', 'Pan']], 'Tool')}
-    </div>
-    <div class="row" style="margin-top:8px">
       <button data-act="undo">Undo</button>
-      <button data-act="clear">Clear all</button>
+      <button data-act="clear-stitches">Clear stitches</button>
+      <button data-act="clear-pattern">Clear pattern</button>
     </div>
   </section>
   <section>
-    <h2>Stitch</h2>
-    <div class="stitch-grid">${Object.keys(STITCHES).map((t) =>
-      `<button data-set="stitch" data-val="${t}" aria-label="${STITCHES[t].split(':')[0]}" title="${STITCHES[t].split(':')[0]}">${stitchIcon(t)}</button>`).join('')}</div>
-    <div class="stitch-name" id="stitch-name"></div>
+    <h2>Stitches</h2>
+    ${cards('stitch', STITCH_TYPES)}
+    <p class="hint" id="stitch-desc"></p>
+  </section>
+  <section>
+    <h2>Fills</h2>
+    ${cards('fill', FILLS)}
+    <p class="hint" id="fill-desc"></p>
   </section>
   <section>
     <h2>Thread</h2>
-    <div class="skeins">${THREADS.map(([name, c]) =>
-      `<button data-set="color" data-val="${c}" aria-label="${name}" title="${name}">${skein(c)}</button>`).join('')}</div>
-    <label class="custom"><input type="color" id="custom-color" value="#C8343B"> Custom colour</label>
-    <div class="thread-name mono" id="thread-name"></div>
+    <button class="thread-current" data-act="palette" aria-expanded="false" aria-controls="palette">
+      <span id="current-skein"></span><span class="thread-label"><span id="current-name"></span><span class="mono" id="current-hex"></span></span><span class="change">Change</span>
+    </button>
+    <div class="palette" id="palette" hidden>
+      <div class="skeins">${THREADS.map(([name, c]) =>
+        `<button data-set="color" data-val="${c}" aria-label="${name}" title="${name}">${skein(c)}</button>`).join('')}</div>
+      <label class="custom"><input type="color" id="custom-color" value="#C8343B"> Custom colour</label>
+    </div>
+    <div class="recents" id="recents" aria-label="Recent threads"></div>
   </section>
   <section>
     <h2>Strands</h2>
     ${pill('strands', [['1', '1'], ['2', '2'], ['3', '3']], 'Strands')}
+    <p class="hint">Embroidery floss is six thin strands; you stitch with a few at a time. More strands make thicker thread that covers more of the canvas.</p>
   </section>
   <section>
-    <h2>Fabric</h2>
-    ${pill('count', [['11', 'Aida 11'], ['14', '14'], ['16', '16'], ['18', '18']], 'Fabric count')}
-    <div style="height:8px"></div>
-    ${pill('fabric', Object.entries(FABRICS).map(([k, [n]]) => [k, n]), 'Fabric colour')}
-    <div class="row" style="margin-top:8px"><button class="toggle" data-act="guide" id="guide-btn">Printed pattern</button></div>
+    <h2>Canvas</h2>
+    ${pill('surface', Object.entries(SURFACES).map(([k, s]) => [k, s.name]), 'Surface')}
+    <div class="count-row">
+      <span class="sub">Count</span>
+      ${pill('count', [['11', '11'], ['14', '14'], ['16', '16'], ['18', '18']], 'Squares per inch')}
+    </div>
+    <p class="hint" id="count-hint"></p>
+    <button class="switch" role="switch" data-act="guide" id="guide-switch"><span class="track"><span class="knob"></span></span>Show pattern</button>
   </section>
   <section>
-    <h2>Look</h2>
+    <h2>Thread look</h2>
     ${slider('twist', 'Twist')}
     ${slider('sheen', 'Sheen')}
     ${slider('fuzz', 'Fuzz')}
-    <div class="row" style="margin-top:4px"><button class="toggle" data-act="light" id="light-btn">Light follows cursor</button></div>
   </section>
-  <p class="hint">Click or drag to stitch. Scroll or pinch to zoom. Right-drag, middle-drag or hold Space to pan. Cmd/Ctrl+Z undoes.</p>
+  <p class="hint">Scroll or pinch to zoom. Cmd/Ctrl+Z undoes. Keys: S stitch, F fill, P pattern, E erase, H pan.</p>
 `;
+panel.querySelectorAll('[data-art]').forEach((el) => { el.dataset.color = ''; });
 
 function set(key, val) {
   state[key] = val;
   if (key === 'tool') updateCursor();
   if (key === 'strands' || key === 'count') sceneDirty = true;   // thread width changes
-  if (key === 'fabric') buildFabricHairs();
+  if (key === 'surface') buildFabricHairs();
+  if (key === 'color') recents = [val, ...recents.filter((c) => c !== val)].slice(0, 6);
   syncUI();
   dirty = overlayDirty = true;
 }
@@ -447,18 +551,22 @@ panel.addEventListener('click', (e) => {
   if (b.dataset.set) {
     const k = b.dataset.set, v = b.dataset.val;
     set(k, k === 'strands' || k === 'count' ? Number(v) : v);
-    if (k === 'stitch' || k === 'color') set('tool', 'stitch');
-  } else if (b.dataset.act === 'undo') undo();
-  else if (b.dataset.act === 'clear') { snapshot(); stitches = new Map(); backs = []; sceneDirty = true; }
-  else if (b.dataset.act === 'guide') set('guide', !state.guide);
-  else if (b.dataset.act === 'light') {
-    set('followLight', !state.followLight);
-    if (!state.followLight) light = DEFAULT_LIGHT;
+    if (k === 'stitch') set('tool', 'stitch');
+    if (k === 'fill') set('tool', 'fill');
+    if (k === 'color' && b.closest('.palette')) set('paletteOpen', false);
+    if (k === 'color' && state.tool === 'erase') set('tool', 'stitch');
+    return;
   }
+  const act = b.dataset.act;
+  if (act === 'undo') undo();
+  else if (act === 'clear-stitches') { snapshot(); stitches = new Map(); backs = []; sceneDirty = true; }
+  else if (act === 'clear-pattern') { snapshot(); blocks = new Map(); guideDirty = true; }
+  else if (act === 'guide') set('guide', !state.guide);
+  else if (act === 'palette') set('paletteOpen', !state.paletteOpen);
 });
 panel.addEventListener('input', (e) => {
   if (e.target.dataset.range) set(e.target.dataset.range, e.target.value / 100);
-  if (e.target.id === 'custom-color') { set('color', e.target.value); set('tool', 'stitch'); }
+  if (e.target.id === 'custom-color') set('color', e.target.value);
 });
 
 function syncUI() {
@@ -468,13 +576,26 @@ function syncUI() {
     if (document.activeElement !== input) input.value = Math.round(state[k] * 100);
     panel.querySelector(`#o-${k}`).textContent = Math.round(state[k] * 100);
   }
-  document.getElementById('guide-btn').setAttribute('aria-pressed', String(state.guide));
-  document.getElementById('light-btn').setAttribute('aria-pressed', String(state.followLight));
-  document.getElementById('stitch-name').textContent = STITCHES[state.stitch];
-  const named = THREADS.find(([, c]) => c.toLowerCase() === state.color.toLowerCase());
-  document.getElementById('thread-name').textContent = `${named ? named[0] : 'Custom'} · ${state.color.toUpperCase()}`;
-  const inch = COLS / state.count;
-  document.getElementById('size').textContent = `Aida ${state.count} · ${state.strands} strand${state.strands > 1 ? 's' : ''} · ${COLS}×${ROWS} · ${Math.round(inch * 25.4)} mm wide`;
+  // card art follows the current thread colour
+  panel.querySelectorAll('[data-art]').forEach((el) => {
+    if (el.dataset.color !== state.color) { el.innerHTML = previewSVG(el.dataset.art, state.color); el.dataset.color = state.color; }
+  });
+  document.getElementById('tool-hint').textContent = TOOL_HINTS[state.tool];
+  document.getElementById('erase-what').hidden = state.tool !== 'erase';
+  document.getElementById('stitch-desc').textContent = STITCH_TYPES[state.stitch][1];
+  document.getElementById('fill-desc').textContent = FILLS[state.fill][1];
+  document.getElementById('current-skein').innerHTML = skein(state.color);
+  document.getElementById('current-name').textContent = threadName(state.color);
+  document.getElementById('current-hex').textContent = state.color.toUpperCase();
+  document.querySelector('[data-act="palette"]').setAttribute('aria-expanded', String(state.paletteOpen));
+  document.getElementById('palette').hidden = !state.paletteOpen;
+  document.getElementById('recents').innerHTML = recents.map((c) =>
+    `<button data-set="color" data-val="${c}" aria-pressed="${c === state.color}" aria-label="${threadName(c)} ${c}" title="${threadName(c)}">${skein(c)}</button>`).join('');
+  document.getElementById('guide-switch').setAttribute('aria-checked', String(state.guide));
+  const cmW = COLS / state.count * 2.54, cmH = ROWS / state.count * 2.54;
+  document.getElementById('count-hint').textContent =
+    `Squares per inch. At ${state.count}, this ${COLS}×${ROWS} canvas stitches out to ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm. Higher counts mean smaller stitches and finer detail.`;
+  document.getElementById('size').textContent = `${SURFACES[state.surface].name} · count ${state.count} · ${state.strands} strand${state.strands > 1 ? 's' : ''} · ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm`;
   lastHud = '';
 }
 
@@ -486,25 +607,36 @@ function drawOverlay() {
   octx.clearRect(0, 0, view.w, view.h);
   if (!hover || mode === 'pan' || mode === 'pinch' || panMode()) return;
   octx.lineWidth = 1.5;
+  octx.strokeStyle = '#E9B949';
   if (state.tool === 'stitch' && state.stitch === 'back') {
     const h = holeAt(hover.wx, hover.wy);
-    const r = Math.max(3, cam.z * 0.12);
-    if (backDrag) {
-      const [ax, ay] = toScreen(...backDrag.a), [bx, by] = toScreen(...h);
-      octx.strokeStyle = state.color; octx.globalAlpha = 0.85; octx.lineWidth = Math.max(2, threadWidth() * cam.z);
-      octx.lineCap = 'round';
+    if (drag) {
+      const [ax, ay] = toScreen(...drag.a), [bx, by] = toScreen(...h);
+      octx.save();
+      octx.strokeStyle = state.color; octx.globalAlpha = 0.85; octx.lineWidth = Math.max(2, threadWidth() * cam.z); octx.lineCap = 'round';
       octx.beginPath(); octx.moveTo(ax, ay); octx.lineTo(bx, by); octx.stroke();
-      octx.globalAlpha = 1; octx.lineWidth = 1.5;
+      octx.restore();
     }
     const [hx, hy] = toScreen(...h);
-    octx.strokeStyle = '#E9B949';
-    octx.beginPath(); octx.arc(hx, hy, r, 0, Math.PI * 2); octx.stroke();
+    octx.beginPath(); octx.arc(hx, hy, Math.max(3, cam.z * 0.12), 0, Math.PI * 2); octx.stroke();
+    return;
+  }
+  if (state.tool === 'fill' && drag) {
+    const a = clampCell(...drag.a), b = clampCell(hover.wx, hover.wy);
+    const [x0, y0] = toScreen(Math.min(a.x, b.x), Math.min(a.y, b.y));
+    const [x1, y1] = toScreen(Math.max(a.x, b.x) + 1, Math.max(a.y, b.y) + 1);
+    octx.fillStyle = 'rgba(233, 185, 73, 0.12)';
+    octx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    octx.strokeRect(x0 + 0.75, y0 + 0.75, x1 - x0 - 1.5, y1 - y0 - 1.5);
     return;
   }
   const c = cellAt(hover.wx, hover.wy);
   if (!c) return;
   const [x, y] = toScreen(c.x, c.y);
-  octx.strokeStyle = state.tool === 'erase' ? '#EEE9E0' : '#E9B949';
+  if (state.tool === 'pattern') {
+    octx.save(); octx.globalAlpha = 0.45; octx.fillStyle = state.color; octx.fillRect(x, y, cam.z, cam.z); octx.restore();
+  }
+  if (state.tool === 'erase') octx.strokeStyle = '#EEE9E0';
   octx.strokeRect(x + 0.75, y + 0.75, cam.z - 1.5, cam.z - 1.5);
   if (state.tool === 'stitch' && (state.stitch === 'quarter' || state.stitch === 'threeq')) {
     const [cx, cy] = [[c.x, c.y], [c.x + 1, c.y], [c.x, c.y + 1], [c.x + 1, c.y + 1]][c.q];
@@ -531,21 +663,22 @@ function hud() {
 
 document.querySelectorAll('[data-preset]').forEach((btn) => btn.addEventListener('click', () => {
   const z = PRESETS[btn.dataset.preset];
-  // zooming in from far lands on the motif; otherwise keep looking where we are
-  const centre = cam.z < 8 ? { x: chart.ox + 6, y: chart.oy + 6 } : { x: cam.x, y: cam.y };
+  // zooming in from far lands on the starter motif; otherwise keep looking where we are
+  const centre = cam.z < 8 ? { x: ox + 6, y: oy + 6 } : { x: cam.x, y: cam.y };
   flyTo({ ...centre, z });
 }));
-document.getElementById('reset').addEventListener('click', () => { light = DEFAULT_LIGHT; fit(); });
+document.getElementById('reset').addEventListener('click', fit);
 
 function frame(now) {
   if (anim) { anim(now); dirty = overlayDirty = true; }
   if (sceneDirty) { buildScene(); sceneDirty = false; dirty = true; }
+  if (guideDirty) { buildGuide(); guideDirty = false; dirty = true; }
   if (dirty) {
     renderer.draw(
-      { x: cam.x, y: cam.y, scale: cam.z * dpr(), cssScale: cam.z, light },
+      { x: cam.x, y: cam.y, scale: cam.z * dpr(), cssScale: cam.z, light: LIGHT },
       {
-        fabricRect: [0, 0, COLS, ROWS], cloth: hex(FABRICS[state.fabric][1]), threadWidth: threadWidth(),
-        strands: state.strands, twist: state.twist, sheen: state.sheen, fuzz: state.fuzz, guide: state.guide
+        fabricRect: [0, 0, COLS, ROWS], surface: SURFACES[state.surface].id, cloth: hex(SURFACES[state.surface].color),
+        threadWidth: threadWidth(), strands: state.strands, twist: state.twist, sheen: state.sheen, fuzz: state.fuzz, guide: state.guide
       }
     );
     hud();
@@ -558,7 +691,6 @@ function frame(now) {
 new ResizeObserver(resize).observe(stage);
 resize();
 if (!fitted) cam.z = fitZoom();
-buildGuide();
 buildFabricHairs();
 syncUI();
 updateCursor();

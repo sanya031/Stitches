@@ -17,7 +17,7 @@ vec3 toLinear(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 toSRGB(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
 `;
 
-// ---------- fabric: one quad, procedural Aida weave, optional printed guide ----------
+// ---------- canvas: one quad; dot grid, Aida, linen or denim, with the pattern on top ----------
 
 const FABRIC_VS = SHARED + `
 layout(location = 0) in vec2 aCorner;
@@ -28,21 +28,23 @@ void main() { vP = mix(uQuad.xy, uQuad.zw, aCorner); gl_Position = vec4(proj(vP)
 
 const FABRIC_FS = SHARED + `
 in vec2 vP;
-uniform vec4 uRect;     // fabric edges, cells
-uniform vec3 uCloth;    // sRGB
+uniform vec4 uRect;     // canvas edges, cells
+uniform vec3 uCloth;    // sRGB base colour of the surface
+uniform int uSurface;   // 0 dot grid, 1 Aida, 2 linen, 3 denim
 uniform sampler2D uGuide;
 uniform float uGuideOn;
 out vec4 o;
 
-const float BW = 0.41;  // half-width of a thread bundle; holes are what the bundles leave at the corners
-float prof(float d) { float t = clamp(d / BW, -1.0, 1.0); return sqrt(1.0 - t * t); }
+float prof(float d, float r) { float t = clamp(d / r, -1.0, 1.0); return sqrt(1.0 - t * t); }
 
-// Height of the weave. Weft (horizontal) and warp (vertical) bundles of 4 threads
-// go over and under in a checkerboard; 'tid' identifies the visible thread for colour variation.
-float weave(vec2 p, float thr, out float tid) {
+const float BW = 0.41;  // Aida: half-width of a thread bundle; holes are what the bundles leave at the corners
+
+// Aida. Weft (horizontal) and warp (vertical) bundles of 4 threads go over and under
+// in a checkerboard; 'tid' identifies the visible thread for colour variation.
+float aida(vec2 p, float thr, out float tid) {
   vec2 c = floor(p), f = p - c - 0.5;
   float s = mod(c.x + c.y, 2.0) < 0.5 ? 1.0 : -1.0;
-  float hh = prof(f.y), hv = prof(f.x);
+  float hh = prof(f.y, BW), hv = prof(f.x, BW);
   float ty = clamp((f.y + BW) / (2.0 * BW), 0.0, 0.999) * 4.0;
   float tx = clamp((f.x + BW) / (2.0 * BW), 0.0, 0.999) * 4.0;
   float py = fract(ty) * 2.0 - 1.0, px = fract(tx) * 2.0 - 1.0;
@@ -60,48 +62,107 @@ float weave(vec2 p, float thr, out float tid) {
   return max(hh, hv);
 }
 
+// Linen (plain weave, slubby) and denim (3/1 twill): n single threads per square.
+// 'warp' is 1 where the vertical thread is on top.
+float cloth(vec2 p, float n, bool twill, float thr, out float warp, out float tid) {
+  vec2 q = p * n, i = floor(q), f = q - i - 0.5;
+  float slub = twill ? 0.25 : 0.7;   // linen threads thicken and thin along their length
+  float rv = 0.49 * (1.0 + (vnoise(vec2(i.x * 7.1, q.y * 0.4)) - 0.5) * slub);
+  float rh = 0.49 * (1.0 + (vnoise(vec2(q.x * 0.4, i.y * 7.1)) - 0.5) * slub);
+  float hv = prof(f.x, rv), hh = prof(f.y, rh);
+  float over = twill ? (mod(i.x + i.y, 4.0) < 0.5 ? 0.0 : 1.0) : (mod(i.x + i.y, 2.0) < 0.5 ? 1.0 : 0.0);
+  hv *= mix(0.8, 1.0, over) * (0.9 + 0.1 * cos(3.14159 * f.y));
+  hh *= mix(1.0, 0.8, over) * (0.9 + 0.1 * cos(3.14159 * f.x));
+  hv += (vnoise(vec2(q.x * 14.0, q.y * 1.5)) - 0.5) * 0.18 * thr * smoothstep(0.0, 0.3, hv);
+  hh += (vnoise(vec2(q.x * 1.5, q.y * 14.0)) - 0.5) * 0.18 * thr * smoothstep(0.0, 0.3, hh);
+  warp = hv > hh ? 1.0 : 0.0;
+  tid = warp > 0.5 ? i.x : i.y + 500.0;
+  return max(hv, hh);
+}
+
+float surfaceH(vec2 p, float n, float thr, out float warp, out float tid) {
+  warp = 0.0;
+  if (uSurface == 1) return aida(p, thr, tid);
+  return cloth(p, n, uSurface == 3, thr, warp, tid);
+}
+
 void main() {
   vec2 lo = uRect.xy, hi = uRect.zw;
   float px = 1.0 / uScale;
   float outside = max(max(lo.x - vP.x, vP.x - hi.x), max(lo.y - vP.y, vP.y - hi.y));
   float inside = 1.0 - smoothstep(-px, px, outside);
 
-  // soft drop shadow of the cloth onto the bench
+  // soft drop shadow of the canvas onto the bench
   vec2 sp = vP - vec2(0.18, 0.26);
   float sd = length(max(max(lo - sp, sp - hi), 0.0));
   float shadow = (1.0 - smoothstep(0.0, 1.1, sd)) * 0.6;
 
-  float weaveD = smoothstep(4.0, 10.0, uScale);   // holes and bundles
-  float thr = smoothstep(14.0, 40.0, uScale);     // individual threads and fibres
-  float tid, t2;
-  float h = weave(vP, thr, tid);
-  float e = clamp(1.0 / uScale, 0.0012, 0.01);
-  float hx = weave(vP + vec2(e, 0), thr, t2);
-  float hy = weave(vP + vec2(0, e), thr, t2);
-  const float HS = 0.07;  // bundle height, cells: low, so the cloth reads soft rather than embossed
-  vec3 n = normalize(vec3(-(hx - h) / e * HS, -(hy - h) / e * HS, 1.0));
-  n = normalize(mix(vec3(0, 0, 1), n, weaveD));
+  vec3 lin = toLinear(uCloth);
+  vec4 g = texelFetch(uGuide, ivec2(clamp(floor(vP - lo), vec2(0), vec2(textureSize(uGuide, 0) - 1))), 0);
+  float guide = g.a * uGuideOn;
+  vec3 col;
 
-  vec3 lin = toLinear(uCloth) * (0.96 + 0.07 * hash12(vec2(tid, 3.1)) * thr);
-  lin *= 0.97 + 0.06 * vnoise(vP * 0.6);   // uneven bleaching across the cloth
+  if (uSurface == 0) {
+    // Dot grid: smooth paper with a dot at every hole, a stronger one every 10 squares.
+    col = lin * (0.975 + 0.035 * (vnoise(vP * 30.0) * 0.6 + vnoise(vP * 3.0) * 0.4));
+    // pattern squares look like a coloured chart: tint with a fine diagonal hatch
+    float hatch = mix(1.0, 0.82 + 0.18 * smoothstep(0.25, 0.55, abs(fract((vP.x + vP.y) * 5.0) - 0.5) * 2.0), smoothstep(30.0, 60.0, uScale));
+    col = mix(col, lin * toLinear(g.rgb) * 1.05, guide * 0.5 * hatch);
+    vec2 hp = vP - floor(vP + 0.5);
+    vec2 hole = floor(vP + 0.5);
+    float major = (mod(hole.x, 10.0) < 0.5 && mod(hole.y, 10.0) < 0.5) ? 1.0 : 0.0;
+    float r = max(mix(0.05, 0.08, major), 0.8 * px);
+    float dotA = (1.0 - smoothstep(r - px, r + px, length(hp))) * smoothstep(3.0, 7.0, uScale);
+    col = mix(col, lin * mix(0.42, 0.25, major), dotA);
+  } else {
+    float n = uSurface == 2 ? 2.0 : 4.0;   // threads per square: linen is stitched over two, denim is dense
+    float period = uSurface == 1 ? 1.0 : 1.0 / n;
+    float weaveD = smoothstep(4.0, 10.0, uScale * period);   // holes, bundles, threads
+    float thr = smoothstep(14.0, 40.0, uScale * period);     // fibres
+    float warp, tid, w2, t2;
+    float h = surfaceH(vP, n, thr, warp, tid);
+    float e = clamp(1.0 / uScale, 0.0012, 0.01 * period);
+    float hx = surfaceH(vP + vec2(e, 0), n, thr, w2, t2);
+    float hy = surfaceH(vP + vec2(0, e), n, thr, w2, t2);
+    float HS = 0.07 * period;   // thread height, cells: low, so the cloth reads soft rather than embossed
+    vec3 nrm = normalize(vec3(-(hx - h) / e * HS, -(hy - h) / e * HS, 1.0));
+    nrm = normalize(mix(vec3(0, 0, 1), nrm, weaveD));
 
-  // printed pattern guide: ink soaks into the threads, darkest where they are thickest
-  vec2 gi = vP - lo;
-  vec4 g = texelFetch(uGuide, ivec2(clamp(floor(gi), vec2(0), vec2(textureSize(uGuide, 0) - 1))), 0);
-  float ink = g.a * uGuideOn * 0.62 * mix(1.0, 0.75 + 0.35 * smoothstep(0.2, 0.9, h), weaveD);
-  lin = mix(lin, lin * mix(toLinear(g.rgb), vec3(1.0), 0.25), ink);
+    vec3 base = lin * (0.96 + 0.07 * hash12(vec2(tid, 3.1)) * thr);
+    vec3 avgBase = lin;
+    if (uSurface == 2) {
+      base = lin * (0.9 + 0.18 * hash12(vec2(tid, 8.3)));   // flax varies thread to thread
+      base *= 1.0 - 0.25 * smoothstep(0.82, 0.95, vnoise(vP * vec2(7.0, 1.3) + tid));   // dark flecks
+    } else if (uSurface == 3) {
+      vec3 weft = toLinear(vec3(0.74, 0.76, 0.8));
+      vec3 indigo = lin * (0.78 + 0.4 * hash12(vec2(tid, 5.7)));
+      indigo = mix(indigo, toLinear(vec3(0.62, 0.68, 0.78)), smoothstep(0.7, 0.95, vnoise(vP * vec2(9.0, 40.0))) * 0.45);  // ring-dyed: pale where worn
+      base = mix(weft, indigo, mix(0.75, warp, weaveD));
+      avgBase = mix(weft, lin, 0.75);
+    }
+    base *= 0.97 + 0.06 * vnoise(vP * 0.6);   // uneven bleaching across the cloth
+    avgBase *= 0.97 + 0.06 * vnoise(vP * 0.6);
 
-  float diff = max(dot(n, uLight), 0.0);
-  float ao = mix(0.74, 1.0, smoothstep(0.05, 0.7, h));
-  vec3 col = lin * (0.5 + 0.62 * diff) * ao;
-  // Holes are round-ish openings where the bundles part; fibres fray their rim.
-  vec2 hp = vP - floor(vP + 0.5);
-  float hr = length(hp) / (0.5 - BW + 0.05) + (vnoise(vP * 60.0) - 0.5) * 0.35 * thr;
-  float hole = (1.0 - smoothstep(0.75, 1.0, hr)) * weaveD;
-  vec3 holeCol = lin * mix(0.22, 0.5, smoothstep(0.0, 1.0, hr));   // shadowed cloth behind, not a black void
-  col = mix(col, holeCol, hole);
-  vec3 avg = lin * (0.5 + 0.62 * uLight.z) * 0.95;
-  col = mix(avg, col, weaveD);
+    // printed pattern: ink soaks into the threads, darkest where they are thickest
+    float ink = guide * 0.62 * mix(1.0, 0.75 + 0.35 * smoothstep(0.2, 0.9, h), weaveD);
+    base = mix(base, base * mix(toLinear(g.rgb), vec3(1.0), 0.25), ink);
+    avgBase = mix(avgBase, avgBase * mix(toLinear(g.rgb), vec3(1.0), 0.25), guide * 0.62);
+
+    float diff = max(dot(nrm, uLight), 0.0);
+    float ao = mix(0.74, 1.0, smoothstep(0.05, 0.7, h));
+    col = base * (0.5 + 0.62 * diff) * ao;
+    if (uSurface == 1) {
+      // Aida holes are round-ish openings where the bundles part; fibres fray their rim.
+      vec2 hp = vP - floor(vP + 0.5);
+      float hr = length(hp) / (0.5 - BW + 0.05) + (vnoise(vP * 60.0) - 0.5) * 0.35 * thr;
+      float hole = (1.0 - smoothstep(0.75, 1.0, hr)) * weaveD;
+      col = mix(col, base * mix(0.22, 0.5, smoothstep(0.0, 1.0, hr)), hole);
+    } else {
+      col = mix(col, base * 0.3, (1.0 - smoothstep(0.0, 0.15, h)) * weaveD);   // gaps between threads
+    }
+    vec3 avg = avgBase * (0.5 + 0.62 * uLight.z) * (uSurface == 1 ? 0.95 : 0.88);
+    col = mix(avg, col, weaveD);
+  }
 
   o = vec4(toSRGB(col), 1.0) * inside + vec4(0, 0, 0, shadow) * (1.0 - inside);
 }
@@ -372,7 +433,7 @@ export function createRenderer(canvas) {
 
   /**
    * cam: { x, y, scale (device px per cell), cssScale, light }
-   * look: { fabricRect, cloth (sRGB triple), threadWidth, strands, twist, sheen, fuzz, guide }
+   * look: { fabricRect, surface (0 dots, 1 Aida, 2 linen, 3 denim), cloth (sRGB triple), threadWidth, strands, twist, sheen, fuzz, guide }
    */
   function draw(cam, look) {
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -386,6 +447,7 @@ export function createRenderer(canvas) {
     gl.uniform4f(fabric.loc.uQuad, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
     gl.uniform4f(fabric.loc.uRect, x0, y0, x1, y1);
     gl.uniform3fv(fabric.loc.uCloth, look.cloth);
+    gl.uniform1i(fabric.loc.uSurface, look.surface);
     gl.uniform1f(fabric.loc.uGuideOn, look.guide ? 1 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, guide);
@@ -402,7 +464,7 @@ export function createRenderer(canvas) {
     };
     const s = cam.cssScale;
     const ramp = (lo, hi) => Math.min(1, Math.max(0, (s - lo) / (hi - lo)));
-    drawHairs(fabricHairs, ramp(25, 80) * (0.4 + 0.6 * look.fuzz));
+    if (look.surface !== 0) drawHairs(fabricHairs, ramp(25, 80) * (0.4 + 0.6 * look.fuzz));   // paper has no loose fibres
 
     // Blob-ness at far zoom, in CSS px so it looks the same on any screen.
     const far = 1 - ramp(4, 12);
