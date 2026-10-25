@@ -3,6 +3,7 @@ import { createRenderer, LAYERS } from './renderer.js';
 import { REGION_FILLS, regionLegs } from './fills.js';
 import { TONE_STITCHES, samplePicture, convertPicture } from './picture.js';
 import { drawCallaLilies } from './starter.js';
+import { FLOSS } from './floss.js';
 
 // The canvas is a sheet of a set size; the cell size decides how many squares fit on it.
 const CANVAS_PRESETS = { square: ['Square', 900, 900], landscape: ['Landscape', 1200, 900], wide: ['Wide', 1600, 900], portrait: ['Portrait', 900, 1200] };
@@ -65,6 +66,8 @@ function undo() {
   const prev = history.pop();
   if (!prev) return;
   ({ stitches, backs, blocks, regions } = prev);
+  recolourFrom = null;
+  syncSelectionUI();
   sceneDirty = guideDirty = true;
 }
 
@@ -84,7 +87,12 @@ const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 const toHex = (rgb) => '#' + rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('');
 const threadWidth = () => state.strands * STRAND_MM * state.count / 25.4;
 const fillWidth = (thread) => FILL_THREADS[thread][1] * STRAND_MM * state.count / 25.4;
-const threadName = (c) => (THREADS.find(([, h]) => h.toLowerCase() === c.toLowerCase()) || ['Custom'])[0];
+const threadName = (c) => {
+  const lc = c.toLowerCase(), t = THREADS.find(([, h]) => h.toLowerCase() === lc);
+  if (t) return t[0];
+  const f = FLOSS.find((x) => x.hex.toLowerCase() === lc);
+  return f ? f.name : 'Custom';
+};
 
 /** Legs for one square: [from, to, layer]. Layer 0 is under, 1 is top, 2 is backstitch. */
 function legsOf(x, y, st) {
@@ -373,6 +381,9 @@ canvas.addEventListener('pointerdown', (e) => {
   } else if (state.tool === 'fill') {
     mode = 'fill';
     drag = { a: w };
+  } else if (state.tool === 'select') {
+    mode = 'select';
+    drag = { a: w, add: e.shiftKey };
   } else {
     mode = 'paint';
     snapshot();
@@ -413,6 +424,7 @@ const endPointer = (e) => {
   // a click with no movement never sent a pointermove, so take the position from this event
   const w = toWorld(...local(e));
   hover = { wx: w[0], wy: w[1] };
+  if (drag && mode === 'select') selectFrom(drag.a, [hover.wx, hover.wy], drag.add);
   if (drag && (mode === 'back' || mode === 'fill')) {
     if (mode === 'back') {
       const b = holeAt(hover.wx, hover.wy);
@@ -438,6 +450,7 @@ window.addEventListener('keydown', (e) => {
   if (e.target.closest('input')) return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { undo(); e.preventDefault(); return; }
   if (e.key === 'Escape' && state.paletteOpen) { set('paletteOpen', false); return; }
+  if (e.key === 'Escape' && selection.size) { clearSelection(); return; }
   if (e.key === ' ' && !e.target.closest('button')) { spaceHeld = true; updateCursor(); e.preventDefault(); return; }
   if (e.target.closest('button')) return;
   const cx = view.w / 2, cy = view.h / 2, step = 60 / cam.z;
@@ -446,7 +459,7 @@ window.addEventListener('keydown', (e) => {
     ArrowLeft: () => { cam.x -= step; }, ArrowRight: () => { cam.x += step; },
     ArrowUp: () => { cam.y -= step; }, ArrowDown: () => { cam.y += step; },
     s: () => set('tool', 'stitch'), f: () => set('tool', 'fill'), p: () => set('tool', 'pattern'),
-    e: () => set('tool', 'erase'), h: () => set('tool', 'pan')
+    e: () => set('tool', 'erase'), h: () => set('tool', 'pan'), v: () => set('tool', 'select')
   };
   if (keys[e.key]) { keys[e.key](); dirty = true; e.preventDefault(); }
 });
@@ -543,6 +556,102 @@ window.addEventListener('paste', (e) => {
   if (item) { loadPicture(item.getAsFile()); e.preventDefault(); }
 });
 
+// ---------- selection and recolouring ----------
+
+let selection = new Set();   // "x,y" squares
+let selEdges = [];           // outline segments of the selection, for the overlay
+let recolourFrom = null;     // the colour in the selection being replaced
+let recolourPattern = true;  // also recolour the pattern squares underneath
+
+/** What colour shows in each square: stitches over fills over pattern. */
+function cellColours() {
+  const m = new Map(blocks);
+  for (const rg of regions) for (const k of rg.cells) m.set(k, rg.color);
+  for (const [k, st] of stitches) m.set(k, st.color);
+  return m;
+}
+
+/** Drag: a rectangle. Click: the connected patch of the colour clicked. Shift adds. */
+function selectFrom(a, b, add) {
+  const ca = clampCell(...a), cb = clampCell(...b), picked = new Set();
+  if (ca.x === cb.x && ca.y === cb.y) {
+    const colours = cellColours(), start = `${ca.x},${ca.y}`, target = colours.get(start);
+    if (target) {
+      const queue = [[ca.x, ca.y]];
+      picked.add(start);
+      while (queue.length) {
+        const [x, y] = queue.pop();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const k = `${x + dx},${y + dy}`;
+          if (!picked.has(k) && colours.get(k) === target) { picked.add(k); queue.push([x + dx, y + dy]); }
+        }
+      }
+    }
+  } else {
+    for (let y = Math.min(ca.y, cb.y); y <= Math.max(ca.y, cb.y); y++) {
+      for (let x = Math.min(ca.x, cb.x); x <= Math.max(ca.x, cb.x); x++) picked.add(`${x},${y}`);
+    }
+  }
+  selection = add ? new Set([...selection, ...picked]) : picked;
+  recolourFrom = null;
+  updateSelection();
+}
+
+function clearSelection() { selection = new Set(); recolourFrom = null; updateSelection(); }
+
+function updateSelection() {
+  selEdges = [];
+  for (const k of selection) {
+    const [x, y] = k.split(',').map(Number);
+    if (!selection.has(`${x - 1},${y}`)) selEdges.push([x, y, x, y + 1]);
+    if (!selection.has(`${x + 1},${y}`)) selEdges.push([x + 1, y, x + 1, y + 1]);
+    if (!selection.has(`${x},${y - 1}`)) selEdges.push([x, y, x + 1, y]);
+    if (!selection.has(`${x},${y + 1}`)) selEdges.push([x, y + 1, x + 1, y + 1]);
+  }
+  overlayDirty = true;
+  syncSelectionUI();
+}
+
+const backCell = (bk) => `${Math.floor((bk.a[0] + bk.b[0]) / 2 - (bk.a[0] === bk.b[0] ? 0.5 : 0))},${Math.floor((bk.a[1] + bk.b[1]) / 2 - (bk.a[1] === bk.b[1] ? 0.5 : 0))}`;
+
+/** Colours used inside the selection, most squares first. Backstitch counts separately. */
+function selectionColours() {
+  const counts = new Map(), bump = (c, k) => { const e = counts.get(c) || { squares: 0, backs: 0 }; e[k]++; counts.set(c, e); };
+  for (const k of selection) {
+    const st = stitches.get(k);
+    if (st) { bump(st.color, 'squares'); continue; }
+    const rg = regions.find((r) => r.cells.has(k));
+    if (rg) bump(rg.color, 'squares');
+  }
+  for (const bk of backs) if (selection.has(backCell(bk))) bump(bk.color, 'backs');
+  return [...counts].sort((a, b) => (b[1].squares - a[1].squares) || (b[1].backs - a[1].backs));
+}
+
+/** Swap one colour for another, only inside the selection. Fills that cross its edge are split. */
+function recolour(from, to) {
+  if (!selection.size || from === to) return;
+  snapshot();
+  for (const k of selection) {
+    const st = stitches.get(k);
+    if (st && st.color === from) stitches.set(k, { ...st, color: to });
+    if (recolourPattern && blocks.get(k) === from) blocks.set(k, to);
+  }
+  backs = backs.map((bk) => (bk.color === from && selection.has(backCell(bk)) ? { ...bk, color: to } : bk));
+  regions = regions.flatMap((rg) => {
+    if (rg.color !== from) return [rg];
+    const inside = new Set([...rg.cells].filter((k) => selection.has(k)));
+    if (!inside.size) return [rg];
+    if (inside.size === rg.cells.size) return [{ ...rg, color: to }];
+    const outside = new Set([...rg.cells].filter((k) => !inside.has(k)));
+    return [{ ...rg, cells: outside }, { ...rg, cells: inside, color: to }];
+  });
+  // a picture still open would rebuild over this edit, so the piece is yours from here
+  if (picture) { picture = null; syncPicUI(); }
+  recolourFrom = to;
+  sceneDirty = guideDirty = true;
+  syncSelectionUI();
+}
+
 // ---------- panel ----------
 
 const panel = document.getElementById('panel');
@@ -592,13 +701,14 @@ const TOOL_HINTS = {
   fill: 'Drag a rectangle to fill it, or click a pattern shape to fill the whole shape in its own colours. Fills sit next to stitches, so you can mix them in one row.',
   pattern: 'Paint squares in the current thread colour to plan your own design, then stitch or fill over it.',
   erase: 'Drag over squares to remove what is there.',
+  select: 'Drag to select an area, or click a part to select the connected patch of that colour. Shift adds to the selection; Esc clears it.',
   pan: 'Drag to move around. Space, right-drag or middle-drag also pan with any tool.'
 };
 
 panel.innerHTML = `
   <section>
     <h2>Tool</h2>
-    ${pill('tool', [['stitch', 'Stitch'], ['fill', 'Fill'], ['pattern', 'Pattern'], ['erase', 'Erase'], ['pan', 'Pan']], 'Tool')}
+    ${pill('tool', [['stitch', 'Stitch'], ['fill', 'Fill'], ['pattern', 'Pattern'], ['select', 'Select'], ['erase', 'Erase'], ['pan', 'Pan']], 'Tool')}
     <p class="hint" id="tool-hint"></p>
     <div id="erase-what" hidden>${pill('eraseWhat', [['stitches', 'Stitches'], ['pattern', 'Pattern']], 'Erase')}</div>
     <div class="row">
@@ -606,6 +716,20 @@ panel.innerHTML = `
       <button data-act="clear-stitches">Clear stitches</button>
       <button data-act="clear-pattern">Clear pattern</button>
     </div>
+  </section>
+  <section id="sel-section" hidden>
+    <h2>Selection</h2>
+    <p class="hint" id="sel-summary"></p>
+    <ul class="floss-list" id="sel-colours"></ul>
+    <div id="sel-picker" hidden>
+      <p class="hint" id="sel-picker-title"></p>
+      <div class="skeins" id="sel-shades"></div>
+      <div class="skeins" id="sel-threads" style="margin-top:6px">${THREADS.map(([name, c]) =>
+        `<button data-recolour="${c}" aria-label="${name}" title="${name}">${skein(c)}</button>`).join('')}</div>
+      <label class="custom"><input type="color" id="sel-custom"> Custom colour</label>
+    </div>
+    <button class="switch" role="switch" data-act="sel-pattern" id="sel-pattern"><span class="track"><span class="knob"></span></span>Change the pattern underneath too</button>
+    <div class="row"><button data-act="sel-clear">Clear selection</button></div>
   </section>
   <section>
     <h2>Picture</h2>
@@ -750,6 +874,10 @@ panel.addEventListener('click', (e) => {
     return;
   }
   if (b.dataset.picToggle) { pic[b.dataset.picToggle] = !pic[b.dataset.picToggle]; syncPicUI(); schedulePicture(); return; }
+  if (b.dataset.selColour) { recolourFrom = b.dataset.selColour; syncSelectionUI(); return; }
+  if (b.dataset.recolour) { recolour(recolourFrom, b.dataset.recolour); return; }
+  if (b.dataset.act === 'sel-clear') { clearSelection(); return; }
+  if (b.dataset.act === 'sel-pattern') { recolourPattern = !recolourPattern; syncSelectionUI(); return; }
   if (b.dataset.floss) { set('color', b.dataset.floss); set('tool', 'stitch'); return; }
   const act = b.dataset.act;
   if (act === 'rotate') { [canvasSpec.w, canvasSpec.h] = [canvasSpec.h, canvasSpec.w]; canvasSpec.preset = matchPreset(); state.canvasPreset = canvasSpec.preset; applyCanvas(); return; }
@@ -790,6 +918,7 @@ panel.addEventListener('input', (e) => {
     if (e.target.dataset.range === 'density') set('tool', 'fill');
   }
   if (e.target.id === 'custom-color') set('color', e.target.value);
+  if (e.target.id === 'sel-custom' && recolourFrom) recolour(recolourFrom, e.target.value.toUpperCase());
 });
 
 function syncPicUI() {
@@ -823,6 +952,39 @@ function syncPicUI() {
   document.getElementById('floss-list').innerHTML = fills.map((p) => row(p.hex, p.name, p.count)).join('')
     + [...outlineUse].map(([hex, count]) => row(hex, `${named.get(hex) || threadName(hex)} · outline`, `${count} bs`)).join('')
     + `<li class="floss-total mono">${total} squares · ${backs.length} backstitches</li>`;
+}
+
+/** Lighter and darker shades from the same floss family, when the colour is a floss. */
+function shadesOf(hex) {
+  const i = FLOSS.findIndex((f) => f.hex.toLowerCase() === hex.toLowerCase());
+  if (i < 0 || !FLOSS[i].name.includes(' · ')) return [];
+  const family = FLOSS[i].name.split(' · ')[0];
+  return FLOSS.filter((f) => f.name.startsWith(family + ' · '));
+}
+
+function syncSelectionUI() {
+  const sec = document.getElementById('sel-section');
+  sec.hidden = !selection.size;
+  if (!selection.size) return;
+  const colours = selectionColours();
+  if (recolourFrom && !colours.some(([c]) => c === recolourFrom)) recolourFrom = null;
+  document.getElementById('sel-summary').textContent = colours.length
+    ? `${selection.size} squares · ${colours.length} colour${colours.length > 1 ? 's' : ''}. Pick one to change it, only inside the selection.`
+    : `${selection.size} squares, nothing stitched in them yet.`;
+  document.getElementById('sel-colours').innerHTML = colours.map(([c, n]) =>
+    `<li><button data-sel-colour="${c}" aria-pressed="${c === recolourFrom}">${skein(c)}<span class="floss-name">${threadName(c)}</span>`
+    + `<span class="mono">${n.squares ? n.squares : ''}${n.backs ? `${n.squares ? ' + ' : ''}${n.backs} bs` : ''}</span></button></li>`).join('');
+  const picker = document.getElementById('sel-picker');
+  picker.hidden = !recolourFrom;
+  if (recolourFrom) {
+    document.getElementById('sel-picker-title').textContent = `Replace ${threadName(recolourFrom)} with:`;
+    const shades = shadesOf(recolourFrom);
+    document.getElementById('sel-shades').innerHTML = shades.map((f) =>
+      `<button data-recolour="${f.hex}" aria-pressed="${f.hex === recolourFrom}" aria-label="${f.name}" title="${f.name}">${skein(f.hex)}</button>`).join('');
+    document.getElementById('sel-shades').hidden = !shades.length;
+    document.getElementById('sel-custom').value = recolourFrom;
+  }
+  document.getElementById('sel-pattern').setAttribute('aria-checked', String(recolourPattern));
 }
 
 function syncUI() {
@@ -868,6 +1030,19 @@ function drawOverlay() {
   const d = dpr();
   octx.setTransform(d, 0, 0, d, 0, 0);
   octx.clearRect(0, 0, view.w, view.h);
+  if (selEdges.length) {
+    // selection: brass outline with a dark under-stroke so it reads on light and dark thread
+    octx.lineCap = 'round';
+    for (const [w, c] of [[3.5, 'rgba(18,20,24,0.55)'], [1.75, '#E9B949']]) {
+      octx.lineWidth = w; octx.strokeStyle = c;
+      octx.beginPath();
+      for (const [x0, y0, x1, y1] of selEdges) {
+        const [ax, ay] = toScreen(x0, y0), [bx, by] = toScreen(x1, y1);
+        octx.moveTo(ax, ay); octx.lineTo(bx, by);
+      }
+      octx.stroke();
+    }
+  }
   if (!hover || mode === 'pan' || mode === 'pinch' || panMode()) return;
   octx.lineWidth = 1.5;
   octx.strokeStyle = '#E9B949';
@@ -884,7 +1059,7 @@ function drawOverlay() {
     octx.beginPath(); octx.arc(hx, hy, Math.max(3, cam.z * 0.12), 0, Math.PI * 2); octx.stroke();
     return;
   }
-  if (state.tool === 'fill' && drag) {
+  if ((state.tool === 'fill' || state.tool === 'select') && drag) {
     const a = clampCell(...drag.a), b = clampCell(hover.wx, hover.wy);
     const [x0, y0] = toScreen(Math.min(a.x, b.x), Math.min(a.y, b.y));
     const [x1, y1] = toScreen(Math.max(a.x, b.x) + 1, Math.max(a.y, b.y) + 1);
@@ -956,6 +1131,7 @@ resize();
 if (!fitted) cam.z = fitZoom();
 buildFabricHairs();
 syncUI();
+syncSelectionUI();
 // The starter piece: calla lilies drawn in starter.js, stitched through the picture pipeline so
 // the panel shows how it was made. Choose a photo to replace it, or close the picture to edit by hand.
 {

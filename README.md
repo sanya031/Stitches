@@ -17,7 +17,8 @@ Then open the URL it prints. Any static server works; opening `index.html` direc
 
 ## Thread lab
 
-- **Tools:** Stitch, Fill, Pattern, Erase, Pan.
+- **Tools:** Stitch, Fill, Pattern, Select, Erase, Pan.
+- **Select and recolour:** drag a rectangle or click a part to select the connected patch of one colour (Shift adds). The colours in the selection are listed; pick one and choose a new thread (same-family shades suggested first) to change it only there.
 - **Stitches:** full cross, half, quarter, three-quarter, backstitch.
 - **Fills:** long stitches laid across a whole shape: rows, columns, hatch, woven (3×3, 5×5, diagonal), satin blocks, fern, seed, French knots, burst; plus cross and tweed (one per square). Drag a rectangle, or click a pattern shape to fill it in its own colours. Density runs from open to solid satin. Fills and stitches mix freely in the same row.
 - **Pattern:** paint squares to plan your own design, then stitch or fill over it; "Show pattern" hides it.
