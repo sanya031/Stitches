@@ -115,7 +115,7 @@ void main() {
     float dotA = (1.0 - smoothstep(r - px, r + px, length(hp))) * smoothstep(3.0, 7.0, uScale);
     col = mix(col, lin * mix(0.42, 0.25, major), dotA);
   } else {
-    float n = uSurface == 2 ? 2.0 : 4.0;   // threads per square: linen is stitched over two, denim is dense
+    float n = uSurface == 2 ? 2.0 : 6.0;   // threads per square: linen is stitched over two, denim is dense
     float period = uSurface == 1 ? 1.0 : 1.0 / n;
     float weaveD = smoothstep(4.0, 10.0, uScale * period);   // holes, bundles, threads
     float thr = smoothstep(14.0, 40.0, uScale * period);     // fibres
@@ -134,11 +134,12 @@ void main() {
       base = lin * (0.9 + 0.18 * hash12(vec2(tid, 8.3)));   // flax varies thread to thread
       base *= 1.0 - 0.25 * smoothstep(0.82, 0.95, vnoise(vP * vec2(7.0, 1.3) + tid));   // dark flecks
     } else if (uSurface == 3) {
-      vec3 weft = toLinear(vec3(0.74, 0.76, 0.8));
-      vec3 indigo = lin * (0.78 + 0.4 * hash12(vec2(tid, 5.7)));
+      vec3 weft = toLinear(vec3(0.66, 0.69, 0.76));
+      // each warp thread takes the dye differently, and it streaks along its length
+      vec3 indigo = lin * (0.7 + 0.45 * hash12(vec2(tid, 5.7))) * (0.85 + 0.3 * vnoise(vec2(tid * 3.1, vP.y * 1.5)));
       indigo = mix(indigo, toLinear(vec3(0.62, 0.68, 0.78)), smoothstep(0.7, 0.95, vnoise(vP * vec2(9.0, 40.0))) * 0.45);  // ring-dyed: pale where worn
-      base = mix(weft, indigo, mix(0.75, warp, weaveD));
-      avgBase = mix(weft, lin, 0.75);
+      base = mix(weft, indigo, mix(0.8, warp, weaveD));
+      avgBase = mix(weft, lin, 0.8);
     }
     base *= 0.97 + 0.06 * vnoise(vP * 0.6);   // uneven bleaching across the cloth
     avgBase *= 0.97 + 0.06 * vnoise(vP * 0.6);
@@ -188,18 +189,20 @@ void main() {
   float L = length(d);
   vec2 A = d / L, N = vec2(-A.y, A.x);
   float u = aCorner.x;
-  // thread compresses as it dives into a hole; at far zoom legs fatten into a colour blob
   float endD = min(aBow.z > 0.5 ? u * L : 1e3, aBow.w > 0.5 ? (1.0 - u) * L : 1e3);
   // this leg's own thread: aBow.y scales the shared width, and the strand count with it
   float W = uWidth * aBow.y;
-  float pinch = mix(mix(0.55, 1.0, smoothstep(0.0, W * 0.9, endD)), 1.0, uFar);
-  float hw = 0.5 * W * mix(1.0, 1.8, uFar) * pinch;
-  if (uShadow > 0.5) hw *= 1.25;
+  // Thread puffs up between holes and is squeezed where it enters one, so a short
+  // cross-stitch leg is lens-shaped; a long satin stitch only narrows near its ends.
+  float ramp = min(L * 0.42, W * 1.5);
+  float pinch = mix(0.4, 1.0, sqrt(smoothstep(0.0, ramp, endD)));
+  float hw = 0.5 * W * 1.08 * mix(1.0, 1.25, uFar) * pinch;   // a little fuller when far, so coverage holds
+  if (uShadow > 0.5) hw *= 1.45;
   vec2 P = a + d * u + N * aBow.x * 4.0 * u * (1.0 - u) + N * aCorner.y * hw * PAD;
   if (uShadow > 0.5) P += uShadowOff;
   vUV = vec2(u, aCorner.y * PAD);
   vCol = aCol.rgb; vSeed = aCol.a; vLen = L; vPinch = pinch; vAxis = A; vEnter = aBow.zw;
-  vW = W; vStrands = clamp(floor(uStrands * aBow.y + 0.5), 1.0, 3.0);
+  vW = W; vStrands = clamp(floor(uStrands * aBow.y + 0.5), 1.0, 6.0);
   gl_Position = vec4(proj(P), 0, 1);
 }
 `;
@@ -219,8 +222,9 @@ void main() {
   float u = vUV.x, v = vUV.y, av = abs(v);
   float endD = min(vEnter.x > 0.5 ? u * vLen : 1e3, vEnter.y > 0.5 ? (1.0 - u) * vLen : 1e3);   // distance to where it enters the fabric, cells
   if (uShadow > 0.5) {
-    // thin threads lie flatter and sit side by side, so each casts a lighter shadow
-    o = vec4(0, 0, 0, (1.0 - smoothstep(0.1, 1.25, av)) * smoothstep(0.0, vW * 0.7, endD) * 0.26 * clamp(vW / 0.3, 0.3, 1.0));
+    // contact shadow: thread sits on the cloth, darkest right under its edge.
+    // Thin threads lie flatter and sit side by side, so each casts a lighter one.
+    o = vec4(0, 0, 0, (1.0 - smoothstep(0.0, 1.25, av)) * smoothstep(0.0, vW * 0.5, endD) * 0.4 * clamp(vW / 0.3, 0.3, 1.0));
     return;
   }
   float W = vW, strands = vStrands;
@@ -235,13 +239,15 @@ void main() {
   vec2 st = vec2(s, t);
   float fa = dot(st, Pl) / fw, fl = dot(st, Tl) / (W * 2.5);
   float fn = vnoise(vec2(fa, fl + vSeed * 31.0)) * 0.65 + vnoise(vec2(fa * 2.3 + 7.0, fl * 1.7)) * 0.35;
-  float fD = smoothstep(1.2, 3.5, fw * uScale) * (1.0 - uFar);
+  float fD = smoothstep(1.2, 3.5, fw * uScale);
 
-  // Ragged silhouette: loose fibres break the edge once they are big enough to see.
+  // Fuzzy silhouette: loose fibres break and soften the edge. It works at the scale of the
+  // whole thread, so it already shows from a distance, which is much of why thread reads as thread.
   float es = s / (W * 0.16);
   float edgeN = vnoise(vec2(es, sign(v) * 5.0 + vSeed * 17.0)) * 0.7 + vnoise(vec2(es * 2.7, sign(v) * 9.0 + vSeed * 3.0)) * 0.3;
-  float lim = 1.0 - 0.12 * edgeN * fD;
-  float aa = fwidth(v) * 1.2 + 0.06 * fD;   // soft, haloed edge rather than a cut line
+  float eD = smoothstep(0.8, 3.0, W * 0.16 * uScale);
+  float lim = 1.0 - 0.15 * edgeN * eD;
+  float aa = fwidth(v) * 1.2 + 0.12 * eD;
   float cover = 1.0 - smoothstep(lim - aa, lim + aa, av);
   if (cover < 0.002) discard;
 
@@ -249,17 +255,22 @@ void main() {
   float sp = (vc * 0.5 + 0.5) * strands + (vnoise(vec2(s * 3.0, vSeed * 9.0)) - 0.5) * 0.3;
   float sf = fract(sp);
   float inner = step(0.5, sp) * step(sp, strands - 0.5);
-  float valley = mix(1.0, mix(0.8, 1.0, smoothstep(0.0, 0.22, min(sf, 1.0 - sf))), inner * step(1.5, strands) * (1.0 - uFar));
+  // strands splay apart by different amounts from stitch to stitch
+  float splay = 0.62 + 0.25 * fract(vSeed * 7.31);
+  float valley = mix(1.0, mix(splay, 1.0, smoothstep(0.0, 0.25, min(sf, 1.0 - sf))), inner * step(1.5, strands));
 
-  // Optional plies (Twist): grooves at the helix angle within each strand.
+  // Twist: grooves at the helix angle within each strand. Drawn while they are ~1.5px or more;
+  // below that their average darkening stays, so the thread keeps its tone instead of going flat.
   float Ws = W / strands, spacing = 0.87 * Ws;
   float q = (s - t * COTA) / spacing + vSeed * 13.0;
   float c = fract(q) * 2.0 - 1.0, bulge = sqrt(max(0.0, 1.0 - c * c));
-  float gD = smoothstep(2.5, 7.0, spacing * uScale) * (1.0 - uFar) * uTwist;
+  float gDraw = smoothstep(1.2, 4.0, spacing * uScale);
+  float gD = gDraw * uTwist;
 
   vec2 g = normalize(vec2(1.0, -COTA));
-  float strandTilt = (sf * 2.0 - 1.0) * 0.3 * step(1.5, strands);
-  vec3 nL = normalize(vec3(g.x * c * 0.9 * gD, (vc * 0.5 + strandTilt) * (1.0 - 0.6 * uFar) + g.y * c * 0.9 * gD, 1.0));
+  float strandTilt = (sf * 2.0 - 1.0) * 0.35 * step(1.5, strands);
+  // a properly round cord: the sides turn away from the light
+  vec3 nL = normalize(vec3(g.x * c * 0.8 * gD, vc * 0.95 + strandTilt + g.y * c * 0.8 * gD, mix(zc, 1.0, 0.3)));
   vec3 T3 = normalize(vec3(Tl, 0.0) + nL * (c * 0.5 * gD + (fn - 0.5) * 0.4 * fD));
 
   vec2 A = vAxis, N = vec2(-A.y, A.x);
@@ -268,16 +279,17 @@ void main() {
 
   vec3 L = uLight, H = normalize(L + vec3(0, 0, 1));
   float ndl = dot(n, L);
-  float diff = clamp(0.72 + 0.3 * ndl, 0.0, 1.1);
+  float diff = 0.3 + 0.82 * clamp(ndl * 0.85 + 0.15, 0.0, 1.0);
   float th = dot(T, H), sth = sqrt(max(0.0, 1.0 - th * th));   // Kajiya-Kay, broad and soft: cotton is matte
   float spec = (pow(sth, 10.0) * 0.16 + pow(sth, 48.0) * 0.22) * uSheen * smoothstep(-0.1, 0.3, ndl);
-  spec *= mix(1.0, 0.3 + 1.4 * fn, fD) * (1.0 - 0.7 * uFar);
+  spec *= mix(1.0, 0.3 + 1.4 * fn, fD) * mix(1.0, 0.5 + bulge, gD);
 
-  float ao = mix(1.0, 0.62 + 0.38 * smoothstep(0.0, 0.7, bulge), gD);
-  ao *= mix(mix(0.66, 1.0, smoothstep(W * 0.06, W * 0.8, endD)), 1.0, uFar);
-  ao *= mix(0.84, 1.0, mix(zc, 1.0, uFar * 0.7)) * valley;
+  float groove = mix(0.88, 0.66 + 0.34 * smoothstep(0.0, 0.7, bulge), gDraw);
+  float ao = mix(1.0, groove, uTwist);
+  ao *= mix(0.48, 1.0, smoothstep(W * 0.05, W * 1.1, endD));   // dark where it dives into the hole
+  ao *= mix(0.62, 1.0, zc) * valley;                           // sides tuck under, out of the light
 
-  float mottle = 1.0 + (vnoise(vec2(s * 1.4 + vSeed * 20.0, 3.0)) - 0.5) * 0.12;   // uneven dye
+  float mottle = 1.0 + (vnoise(vec2(s * 1.4 + vSeed * 20.0, 3.0)) - 0.5) * 0.14;   // uneven dye
   vec3 base = toLinear(vCol) * mottle * mix(1.0, 0.8 + 0.34 * fn, fD);
   vec3 col = base * diff * ao + spec * mix(vec3(1.0), base * 2.0, 0.4) * ao;
   o = vec4(toSRGB(col) * cover, cover);
@@ -493,7 +505,7 @@ export function createRenderer(canvas) {
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, ribbon.count, set.n);
     }
 
-    drawHairs(threadHairs, ramp(35, 110) * look.fuzz * 1.4);
+    drawHairs(threadHairs, ramp(16, 80) * look.fuzz * 1.4);
     gl.bindVertexArray(null);
   }
 

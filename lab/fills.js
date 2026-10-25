@@ -162,7 +162,9 @@ export function regionLegs(kind, mask, density, seed, W, angle = 0) {
     }
     case 'burst': {
       const bb = g.bb, c = [(bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2];
-      const R = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0) / 2 * 0.96, n = Math.round(mix(14, 48)), legs = [];
+      const R = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0) / 2 * 0.96, legs = [];
+      // enough spokes that their outer ends sit side by side at full density, like a stitched pad
+      const n = Math.max(12, Math.round(2 * Math.PI * R / (W * mix(3.5, 0.8))));
       for (let k = 0; k < n; k++) {
         const ang = (k / n) * Math.PI * 2 + r() * 0.08, len = R * (0.82 + r() * 0.18);
         const a = [c[0] + Math.cos(ang) * len, c[1] + Math.sin(ang) * len], b = [c[0] + Math.cos(ang) * 0.06, c[1] + Math.sin(ang) * 0.06];

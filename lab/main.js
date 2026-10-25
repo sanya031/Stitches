@@ -55,7 +55,7 @@ const FILLS = { ...CELL_FILLS, ...REGION_FILLS };
 
 const state = {
   tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
-  surface: 'dots', twist: 0.2, sheen: 0.3, fuzz: 0.5, guide: true, paletteOpen: false
+  surface: 'dots', twist: 0.6, sheen: 0.35, fuzz: 0.6, guide: true, paletteOpen: false
 };
 let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
 
@@ -132,8 +132,10 @@ function buildScene() {
   const addLeg = (layer, a0, b0, rgb, r, ea = 1, eb = 1, wmul = 1) => {
     const j = (amt) => (r() - 0.5) * 2 * amt;
     // ends that carry on as the same thread (woven fills) stay put so the pieces line up
-    const a = ea ? [a0[0] + j(0.015), a0[1] + j(0.015)] : a0, b = eb ? [b0[0] + j(0.015), b0[1] + j(0.015)] : b0;
-    layers[layer].push(a[0], a[1], b[0], b[1], ...rgb.map((c) => c * (1 + j(0.03))), r(), ea && eb ? j(0.014) * wmul : 0, wmul * (1 + j(0.06)), ea, eb);
+    // hand tension: holes are hit a little off-centre, legs bow and vary in thickness and dye
+    const a = ea ? [a0[0] + j(0.028), a0[1] + j(0.028)] : a0, b = eb ? [b0[0] + j(0.028), b0[1] + j(0.028)] : b0;
+    const tone = 1 + j(0.05);
+    layers[layer].push(a[0], a[1], b[0], b[1], ...rgb.map((c) => c * tone), r(), ea && eb ? j(0.035) * wmul : 0, wmul * (1 + j(0.12)), ea, eb);
 
     const d = [b[0] - a[0], b[1] - a[1]], L = Math.hypot(d[0], d[1]);
     const A = [d[0] / L, d[1] / L], N = [-A[1], A[0]];
@@ -648,7 +650,7 @@ panel.innerHTML = `
   </section>
   <section>
     <h2>Strands</h2>
-    ${pill('strands', [['1', '1'], ['2', '2'], ['3', '3']], 'Strands')}
+    ${pill('strands', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6']], 'Strands')}
     <p class="hint">Embroidery floss is six thin strands; you stitch with a few at a time. More strands make thicker thread that covers more of the canvas.</p>
   </section>
   <section>
