@@ -2,28 +2,12 @@
 import { createRenderer, LAYERS } from './renderer.js';
 import { REGION_FILLS, regionLegs } from './fills.js';
 import { TONE_STITCHES, samplePicture, convertPicture } from './picture.js';
-
-// The strawberry starter pattern, same motif as the mockup screens (12×12).
-const STRAWBERRY = [
-  '....GG.G....',
-  '...GgGGG....',
-  '..RRGgGRR...',
-  '.RRRRRRRRR..',
-  '.RRyRRRyRRR.',
-  'RRRRRRRRRRR.',
-  'RRyRRRRyRRR.',
-  '.RRRRyRRRR..',
-  '.RDRRRRRRR..',
-  '..RRyRRDR...',
-  '...RDRRR....',
-  '....RRR.....'
-];
-const CHART_COLOURS = { R: '#C8343B', D: '#8E1D24', G: '#4F8A4B', g: '#2F5A35', y: '#F2D06B' };
+import { drawCallaLilies } from './starter.js';
 
 // The canvas is a sheet of a set size; the cell size decides how many squares fit on it.
 const CANVAS_PRESETS = { square: ['Square', 900, 900], landscape: ['Landscape', 1200, 900], wide: ['Wide', 1600, 900], portrait: ['Portrait', 900, 1200] };
 const CANVAS_MIN = 200, CANVAS_MAX = 2400, CELL_MIN = 8, CELL_MAX = 48;
-const canvasSpec = { preset: 'landscape', w: 1200, h: 900, cell: 20 };
+const canvasSpec = { preset: 'landscape', w: 1200, h: 900, cell: 12 };
 const gridOf = () => [Math.max(4, Math.round(canvasSpec.w / canvasSpec.cell)), Math.max(4, Math.round(canvasSpec.h / canvasSpec.cell))];
 let [COLS, ROWS] = gridOf();   // canvas size in squares
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
@@ -59,7 +43,7 @@ const CELL_FILLS = {
 const FILLS = { ...CELL_FILLS, ...REGION_FILLS };
 
 const state = {
-  canvasPreset: 'landscape', tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
+  canvasPreset: 'landscape', picMode: 'stitched', tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
   surface: 'dots', twist: 0.6, sheen: 0.35, fuzz: 0.6, guide: true, paletteOpen: false
 };
 let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
@@ -72,13 +56,6 @@ let blocks = new Map();     // "x,y" -> colour: the pattern you plan to stitch
 let regions = [];           // { kind, color, cells: Set of "x,y", density, thread, seed }: long-stitch fills
 const regionCache = new WeakMap();   // region -> legs; regions are replaced, never mutated
 const history = [];
-
-const ox = Math.floor((COLS - STRAWBERRY[0].length) / 2), oy = Math.floor((ROWS - STRAWBERRY.length) / 2);
-STRAWBERRY.forEach((row, y) => row.split('').forEach((ch, x) => {
-  if (CHART_COLOURS[ch]) blocks.set(`${x + ox},${y + oy}`, CHART_COLOURS[ch]);
-}));
-// Start half-stitched, like a kit in progress: top rows done, the rest still to stitch.
-for (const [key, color] of blocks) if (Number(key.split(',')[1]) < oy + 6) stitches.set(key, { type: 'full', color, q: 0 });
 
 function snapshot() {
   history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks), regions: regions.slice() });
@@ -502,6 +479,7 @@ function applyCanvas() {
 // ---------- picture → thread ----------
 
 const pic = {
+  mode: 'stitched',   // 'stitched': the photo becomes stitching; 'pattern': only the pattern squares, to stitch over yourself
   size: 0.85, colours: 8, removeBg: true, bgTolerance: 14, dither: false,
   light: 'half', mid: 'full', dark: 'satin', lightShare: 0.3, darkShare: 0.3,
   outline: true, outlineStrength: 0.5, outlineColour: 'shade'
@@ -526,7 +504,7 @@ function applyPicture() {
   if (!picture) return;
   // the picture fits inside the canvas at the chosen share of it, centred
   const maxC = Math.max(4, Math.round(COLS * pic.size)), maxR = Math.max(4, Math.round(ROWS * pic.size));
-  const iw = picture.img.naturalWidth, ih = picture.img.naturalHeight;
+  const iw = picture.img.naturalWidth || picture.img.width, ih = picture.img.naturalHeight || picture.img.height;
   const cols = Math.max(1, Math.min(maxC, Math.round(maxR * iw / ih)));
   const sampleKey = `${cols}x${maxR}`;
   if (!picture.sample || picture.sample.key !== sampleKey) picture.sample = { key: sampleKey, ...samplePicture(picture.img, cols, maxR) };
@@ -534,13 +512,19 @@ function applyPicture() {
   const dx = Math.floor((COLS - res.cols) / 2), dy = Math.floor((ROWS - res.rows) / 2);
   const shift = (k) => { const [x, y] = k.split(',').map(Number); return `${x + dx},${y + dy}`; };
   blocks = new Map([...res.blocks].map(([k, v]) => [shift(k), v]));
+  picture.palette = res.palette;
+  picture.size = [res.cols, res.rows];
+  if (pic.mode === 'pattern') {
+    // pattern only: your stitches stay exactly as they are
+    guideDirty = true;
+    syncPicUI();
+    return;
+  }
   stitches = new Map([...res.stitches].map(([k, v]) => [shift(k), v]));
   regions = res.regions.map((rg, i) => ({ ...rg, cells: new Set([...rg.cells].map(shift)), density: state.density, thread: state.fillThread, seed: hashStr(`pic${i}${rg.color}`) }));
   const darkest = res.palette.filter((p) => !p.outline).sort((a, b) => a.L - b.L)[0];
   const fixed = pic.outlineColour === 'thread' ? state.color : pic.outlineColour === 'darkest' && darkest ? darkest.hex : null;
   backs = res.backs.map((b) => ({ a: [b.a[0] + dx, b.a[1] + dy], b: [b.b[0] + dx, b.b[1] + dy], color: fixed || b.color, w: 0.6 }));   // outlines in a single strand
-  picture.palette = res.palette;
-  picture.size = [res.cols, res.rows];
   sceneDirty = guideDirty = true;
   syncPicUI();
 }
@@ -626,8 +610,11 @@ panel.innerHTML = `
   <section>
     <h2>Picture</h2>
     <div id="pic-empty">
-      <button data-act="pic-choose" class="wide">Choose a photo</button>
-      <p class="hint">Or drop or paste an image onto the canvas. It becomes a stitched piece you can keep editing.</p>
+      <div class="row">
+        <button data-act="pic-choose" data-mode="stitched" class="primary">Stitch a photo</button>
+        <button data-act="pic-choose" data-mode="pattern">Pattern from a photo</button>
+      </div>
+      <p class="hint">Stitch a photo turns it into finished stitching. Pattern from a photo turns it into coloured squares to stitch over yourself, like a printed kit. You can also drop or paste an image onto the canvas.</p>
     </div>
     <input type="file" accept="image/*" id="pic-file" hidden>
     <div id="pic-controls" hidden>
@@ -636,11 +623,13 @@ panel.innerHTML = `
         <div class="pic-meta"><span id="pic-name"></span><span class="mono" id="pic-size"></span></div>
         <button data-act="pic-choose">Change</button>
       </div>
+      <div class="count-row"><span class="sub">Make</span>${pill('picMode', [['stitched', 'Stitched piece'], ['pattern', 'Pattern only']], 'Make')}</div>
       ${picSlider('size', 'Size', 20, 100, 1, 100)}
       ${picSlider('colours', 'Colours', 2, 24, 1)}
       ${picSwitch('removeBg', 'Remove background')}
       ${picSlider('bgTolerance', 'Tolerance', 2, 40, 1)}
       ${picSwitch('dither', 'Dither (mix colours for smoother shading)')}
+      <div id="pic-stitch-opts">
       <h3>Tones</h3>
       ${['light', 'mid', 'dark'].map((b) => `<div class="tone-row"><label for="pic-${b}">${b[0].toUpperCase() + b.slice(1)}</label>
         <select id="pic-${b}" data-pic-select="${b}">${Object.entries(TONE_STITCHES).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div>`).join('')}
@@ -650,10 +639,11 @@ panel.innerHTML = `
       ${picSwitch('outline', 'Backstitch outline')}
       ${picSlider('outlineStrength', 'Detail', 0, 100, 1, 100)}
       <div class="count-row"><span class="sub">Colour</span>${pill('picOutlineColour', [['shade', 'Darker shade'], ['darkest', 'Darkest'], ['thread', 'Thread']], 'Outline colour')}</div>
+      </div>
       <h3>Floss</h3>
       <ul class="floss-list" id="floss-list"></ul>
       <button data-act="pic-close" class="wide">Close picture</button>
-      <p class="hint">Changing these settings rebuilds the piece from the picture. Close the picture to keep your hand edits safe.</p>
+      <p class="hint" id="pic-hint"></p>
     </div>
   </section>
   <section>
@@ -741,6 +731,16 @@ panel.addEventListener('click', (e) => {
       applyCanvas();
       return;
     }
+    if (k === 'picMode') {
+      if (v === pic.mode) return;
+      snapshot();
+      // switching to pattern only takes the generated stitching off, leaving the pattern to stitch over
+      if (v === 'pattern') { stitches = new Map(); regions = []; backs = []; sceneDirty = true; }
+      pic.mode = v; state.picMode = v;
+      applyPicture();
+      syncUI();
+      return;
+    }
     if (k === 'picOutlineColour') { pic.outlineColour = v; state.picOutlineColour = v; syncUI(); schedulePicture(); return; }
     set(k, k === 'strands' || k === 'count' ? Number(v) : v);
     if (k === 'stitch') set('tool', 'stitch');
@@ -753,7 +753,11 @@ panel.addEventListener('click', (e) => {
   if (b.dataset.floss) { set('color', b.dataset.floss); set('tool', 'stitch'); return; }
   const act = b.dataset.act;
   if (act === 'rotate') { [canvasSpec.w, canvasSpec.h] = [canvasSpec.h, canvasSpec.w]; canvasSpec.preset = matchPreset(); state.canvasPreset = canvasSpec.preset; applyCanvas(); return; }
-  if (act === 'pic-choose') { document.getElementById('pic-file').click(); return; }
+  if (act === 'pic-choose') {
+    if (b.dataset.mode) { pic.mode = b.dataset.mode; state.picMode = b.dataset.mode; }
+    document.getElementById('pic-file').click();
+    return;
+  }
   if (act === 'pic-close') { URL.revokeObjectURL(picture.url); picture = null; syncPicUI(); return; }
   if (act === 'undo') undo();
   else if (act === 'clear-stitches') { snapshot(); stitches = new Map(); backs = []; regions = []; sceneDirty = true; }
@@ -804,6 +808,10 @@ function syncPicUI() {
   panel.querySelectorAll('[data-pic-toggle]').forEach((b) => b.setAttribute('aria-checked', String(!!pic[b.dataset.picToggle])));
   panel.querySelectorAll('[data-pic-select]').forEach((sel) => { sel.value = pic[sel.dataset.picSelect]; });
   document.getElementById('p-bgTolerance').closest('.slider').hidden = !pic.removeBg;
+  document.getElementById('pic-stitch-opts').hidden = pic.mode === 'pattern';
+  document.getElementById('pic-hint').textContent = pic.mode === 'pattern'
+    ? 'Only the pattern changes when you adjust these; your stitches stay. Stitch over it, or use Fill and click a shape to fill it in its colour.'
+    : 'Changing these settings rebuilds the stitching from the picture. Close the picture to keep your hand edits safe.';
   document.getElementById('p-outlineStrength').closest('.slider').hidden = !pic.outline;
   // the outline colour may be overridden in the editor, so list what is actually used
   const fills = (picture.palette || []).filter((p) => !p.outline);
@@ -948,6 +956,14 @@ resize();
 if (!fitted) cam.z = fitZoom();
 buildFabricHairs();
 syncUI();
+// The starter piece: calla lilies drawn in starter.js, stitched through the picture pipeline so
+// the panel shows how it was made. Choose a photo to replace it, or close the picture to edit by hand.
+{
+  const img = drawCallaLilies(450, 800);
+  picture = { img, url: img.toDataURL(), name: 'Calla lilies (starter)' };
+  Object.assign(pic, { size: 0.94, colours: 12, removeBg: false, light: 'satin', mid: 'satin', dark: 'full', lightShare: 0.35, darkShare: 0.25, outlineStrength: 0.35 });
+  applyPicture();
+}
 syncPicUI();
 updateCursor();
 requestAnimationFrame(frame);
