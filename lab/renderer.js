@@ -175,12 +175,13 @@ layout(location = 0) in vec2 aCorner;  // u along 0..1, side -1/1
 layout(location = 1) in vec4 aEnds;    // hole a, hole b
 layout(location = 2) in vec4 aCol;     // rgb, seed
 layout(location = 3) in vec4 aBow;     // lateral bow, width multiplier, end a / end b enters the fabric (1) or carries on (0)
-uniform float uWidth, uFar, uShadow;
+uniform float uWidth, uFar, uShadow, uStrands;
 uniform vec2 uShadowOff;
 out vec2 vUV;
 out vec3 vCol;
 out float vSeed, vLen, vPinch;
 flat out vec2 vAxis, vEnter;
+flat out float vW, vStrands;
 const float PAD = 1.25;   // extra ribbon width so edges can be antialiased in the fragment shader
 void main() {
   vec2 a = aEnds.xy, b = aEnds.zw, d = b - a;
@@ -189,13 +190,16 @@ void main() {
   float u = aCorner.x;
   // thread compresses as it dives into a hole; at far zoom legs fatten into a colour blob
   float endD = min(aBow.z > 0.5 ? u * L : 1e3, aBow.w > 0.5 ? (1.0 - u) * L : 1e3);
-  float pinch = mix(mix(0.55, 1.0, smoothstep(0.0, 0.28, endD)), 1.0, uFar);
-  float hw = 0.5 * uWidth * aBow.y * mix(1.0, 1.8, uFar) * pinch;
+  // this leg's own thread: aBow.y scales the shared width, and the strand count with it
+  float W = uWidth * aBow.y;
+  float pinch = mix(mix(0.55, 1.0, smoothstep(0.0, W * 0.9, endD)), 1.0, uFar);
+  float hw = 0.5 * W * mix(1.0, 1.8, uFar) * pinch;
   if (uShadow > 0.5) hw *= 1.25;
   vec2 P = a + d * u + N * aBow.x * 4.0 * u * (1.0 - u) + N * aCorner.y * hw * PAD;
   if (uShadow > 0.5) P += uShadowOff;
   vUV = vec2(u, aCorner.y * PAD);
-  vCol = aCol.rgb; vSeed = aCol.a; vLen = L; vPinch = pinch * aBow.y; vAxis = A; vEnter = aBow.zw;
+  vCol = aCol.rgb; vSeed = aCol.a; vLen = L; vPinch = pinch; vAxis = A; vEnter = aBow.zw;
+  vW = W; vStrands = clamp(floor(uStrands * aBow.y + 0.5), 1.0, 3.0);
   gl_Position = vec4(proj(P), 0, 1);
 }
 `;
@@ -205,6 +209,7 @@ in vec2 vUV;
 in vec3 vCol;
 in float vSeed, vLen, vPinch;
 flat in vec2 vAxis, vEnter;
+flat in float vW, vStrands;
 uniform float uWidth, uFar, uShadow, uTwist, uSheen, uStrands;
 out vec4 o;
 
@@ -214,10 +219,11 @@ void main() {
   float u = vUV.x, v = vUV.y, av = abs(v);
   float endD = min(vEnter.x > 0.5 ? u * vLen : 1e3, vEnter.y > 0.5 ? (1.0 - u) * vLen : 1e3);   // distance to where it enters the fabric, cells
   if (uShadow > 0.5) {
-    o = vec4(0, 0, 0, (1.0 - smoothstep(0.1, 1.25, av)) * smoothstep(0.0, 0.2, endD) * 0.26);
+    // thin threads lie flatter and sit side by side, so each casts a lighter shadow
+    o = vec4(0, 0, 0, (1.0 - smoothstep(0.1, 1.25, av)) * smoothstep(0.0, vW * 0.7, endD) * 0.26 * clamp(vW / 0.3, 0.3, 1.0));
     return;
   }
-  float W = uWidth;
+  float W = vW, strands = vStrands;
   float s = u * vLen;                                   // along the leg, cells
   float vc = clamp(v, -0.98, 0.98), zc = sqrt(1.0 - vc * vc);
   float t = asin(vc) * 0.5 * W * vPinch;                // across, following the surface, cells
@@ -240,19 +246,19 @@ void main() {
   if (cover < 0.002) discard;
 
   // Strands lie side by side, each slightly rounded, with a shallow valley between them.
-  float sp = (vc * 0.5 + 0.5) * uStrands + (vnoise(vec2(s * 3.0, vSeed * 9.0)) - 0.5) * 0.3;
+  float sp = (vc * 0.5 + 0.5) * strands + (vnoise(vec2(s * 3.0, vSeed * 9.0)) - 0.5) * 0.3;
   float sf = fract(sp);
-  float inner = step(0.5, sp) * step(sp, uStrands - 0.5);
-  float valley = mix(1.0, mix(0.8, 1.0, smoothstep(0.0, 0.22, min(sf, 1.0 - sf))), inner * step(1.5, uStrands) * (1.0 - uFar));
+  float inner = step(0.5, sp) * step(sp, strands - 0.5);
+  float valley = mix(1.0, mix(0.8, 1.0, smoothstep(0.0, 0.22, min(sf, 1.0 - sf))), inner * step(1.5, strands) * (1.0 - uFar));
 
   // Optional plies (Twist): grooves at the helix angle within each strand.
-  float Ws = W / uStrands, spacing = 0.87 * Ws;
+  float Ws = W / strands, spacing = 0.87 * Ws;
   float q = (s - t * COTA) / spacing + vSeed * 13.0;
   float c = fract(q) * 2.0 - 1.0, bulge = sqrt(max(0.0, 1.0 - c * c));
   float gD = smoothstep(2.5, 7.0, spacing * uScale) * (1.0 - uFar) * uTwist;
 
   vec2 g = normalize(vec2(1.0, -COTA));
-  float strandTilt = (sf * 2.0 - 1.0) * 0.3 * step(1.5, uStrands);
+  float strandTilt = (sf * 2.0 - 1.0) * 0.3 * step(1.5, strands);
   vec3 nL = normalize(vec3(g.x * c * 0.9 * gD, (vc * 0.5 + strandTilt) * (1.0 - 0.6 * uFar) + g.y * c * 0.9 * gD, 1.0));
   vec3 T3 = normalize(vec3(Tl, 0.0) + nL * (c * 0.5 * gD + (fn - 0.5) * 0.4 * fD));
 
@@ -268,7 +274,7 @@ void main() {
   spec *= mix(1.0, 0.3 + 1.4 * fn, fD) * (1.0 - 0.7 * uFar);
 
   float ao = mix(1.0, 0.62 + 0.38 * smoothstep(0.0, 0.7, bulge), gD);
-  ao *= mix(mix(0.66, 1.0, smoothstep(0.02, 0.24, endD)), 1.0, uFar);
+  ao *= mix(mix(0.66, 1.0, smoothstep(W * 0.06, W * 0.8, endD)), 1.0, uFar);
   ao *= mix(0.84, 1.0, mix(zc, 1.0, uFar * 0.7)) * valley;
 
   float mottle = 1.0 + (vnoise(vec2(s * 1.4 + vSeed * 20.0, 3.0)) - 0.5) * 0.12;   // uneven dye

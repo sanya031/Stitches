@@ -101,9 +101,10 @@ export function regionLegs(kind, mask, density, seed, W) {
   const r = rng(seed), mix = (a, b) => a + (b - a) * density;
   const area = mask.size;
   switch (kind) {
-    case 'rows': return laid(mask, 0, mix(0.6, W * 0.85));
-    case 'columns': return laid(mask, Math.PI / 2, mix(0.6, W * 0.85));
-    case 'hatch': return laid(mask, -Math.PI / 4, mix(0.6, W * 0.85));
+    // laid lines: open leaves about three threads' gap, solid packs them edge to edge
+    case 'rows': return laid(mask, 0, mix(W * 4, W * 0.85));
+    case 'columns': return laid(mask, Math.PI / 2, mix(W * 4, W * 0.85));
+    case 'hatch': return laid(mask, -Math.PI / 4, mix(W * 4, W * 0.85));
     case 'weave3': return woven(mask, 0, mix(1.4, 0.75));
     case 'weave5': return woven(mask, 0, mix(0.9, 0.42));
     case 'diamond': return woven(mask, Math.PI / 4, mix(1.1, 0.55));
@@ -116,7 +117,7 @@ export function regionLegs(kind, mask, density, seed, W) {
       }
       for (const [bk, cells] of blocks) {
         const [bx, by] = bk.split(',').map(Number);
-        legs.push(...laid(cells, (bx + by) % 2 ? Math.PI / 2 : 0, mix(0.5, W * 0.85)));
+        legs.push(...laid(cells, (bx + by) % 2 ? Math.PI / 2 : 0, mix(W * 4, W * 0.85)));
       }
       return legs;
     }

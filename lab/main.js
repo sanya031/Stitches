@@ -23,6 +23,8 @@ const COLS = 40, ROWS = 30;
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
 const PRESETS = { far: 4, mid: 26, close: 200 };
 const STRAND_MM = 0.27;   // visible width of one strand of stranded cotton, lying flat
+// Fills are laid in their own thread: a fine split strand by default, like silk shading.
+const FILL_THREADS = { fine: ['Fine', 0.6], medium: ['Medium', 1], bold: ['Bold', 2] };
 
 const THREADS = [
   ['Strawberry', '#C8343B'], ['Garnet', '#8E1D24'], ['Coral', '#E8735A'], ['Blush', '#F2A7A0'], ['Rust', '#B5562B'], ['Tobacco', '#7A4A2A'],
@@ -51,7 +53,7 @@ const CELL_FILLS = {
 const FILLS = { ...CELL_FILLS, ...REGION_FILLS };
 
 const state = {
-  tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.8, eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
+  tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
   surface: 'dots', twist: 0.2, sheen: 0.3, fuzz: 0.5, guide: true, paletteOpen: false
 };
 let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
@@ -61,7 +63,7 @@ let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
 let stitches = new Map();   // "x,y" -> { type, color, q }
 let backs = [];             // { a: [x, y], b: [x, y], color }
 let blocks = new Map();     // "x,y" -> colour: the pattern you plan to stitch
-let regions = [];           // { kind, color, cells: Set of "x,y", density, seed }: long-stitch fills
+let regions = [];           // { kind, color, cells: Set of "x,y", density, thread, seed }: long-stitch fills
 const regionCache = new WeakMap();   // region -> legs; regions are replaced, never mutated
 const history = [];
 
@@ -98,6 +100,7 @@ function rng(seed) {
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 const toHex = (rgb) => '#' + rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('');
 const threadWidth = () => state.strands * STRAND_MM * state.count / 25.4;
+const fillWidth = (thread) => FILL_THREADS[thread][1] * STRAND_MM * state.count / 25.4;
 const threadName = (c) => (THREADS.find(([, h]) => h.toLowerCase() === c.toLowerCase()) || ['Custom'])[0];
 
 /** Legs for one square: [from, to, layer]. Layer 0 is under, 1 is top, 2 is backstitch. */
@@ -124,17 +127,17 @@ function buildScene() {
   const hairs = [];
   const W = threadWidth();
 
-  const addLeg = (layer, a0, b0, rgb, r, ea = 1, eb = 1) => {
+  const addLeg = (layer, a0, b0, rgb, r, ea = 1, eb = 1, wmul = 1) => {
     const j = (amt) => (r() - 0.5) * 2 * amt;
     // ends that carry on as the same thread (woven fills) stay put so the pieces line up
     const a = ea ? [a0[0] + j(0.015), a0[1] + j(0.015)] : a0, b = eb ? [b0[0] + j(0.015), b0[1] + j(0.015)] : b0;
-    layers[layer].push(a[0], a[1], b[0], b[1], ...rgb.map((c) => c * (1 + j(0.03))), r(), ea && eb ? j(0.014) : 0, 1 + j(0.06), ea, eb);
+    layers[layer].push(a[0], a[1], b[0], b[1], ...rgb.map((c) => c * (1 + j(0.03))), r(), ea && eb ? j(0.014) * wmul : 0, wmul * (1 + j(0.06)), ea, eb);
 
     const d = [b[0] - a[0], b[1] - a[1]], L = Math.hypot(d[0], d[1]);
     const A = [d[0] / L, d[1] / L], N = [-A[1], A[0]];
     const at = (u, side) => [a[0] + d[0] * u + N[0] * side * W * 0.4, a[1] + d[1] * u + N[1] * side * W * 0.4];
     const light = rgb.map((c) => Math.min(1, c * 1.1 + 0.04));
-    const count = Math.round(5 * L);
+    const count = Math.round(5 * L * wmul);
     for (let k = 0; k < count; k++) {
       const u = 0.12 + r() * 0.76, side = r() < 0.5 ? -1 : 1;
       const p0 = at(u, side), out = [N[0] * side, N[1] * side];
@@ -161,9 +164,10 @@ function buildScene() {
   }
   for (const bk of backs) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)));
   for (const rg of regions) {
-    if (!regionCache.has(rg)) regionCache.set(rg, regionLegs(rg.kind, rg.cells, rg.density, rg.seed, W));
+    const fw = fillWidth(rg.thread);
+    if (!regionCache.has(rg)) regionCache.set(rg, regionLegs(rg.kind, rg.cells, rg.density, rg.seed, fw));
     const rgb = hex(rg.color), r = rng(rg.seed);
-    for (const l of regionCache.get(rg)) addLeg(l.layer, l.a, l.b, l.tone ? rgb.map((c) => c * l.tone) : rgb, r, l.ea, l.eb);
+    for (const l of regionCache.get(rg)) addLeg(l.layer, l.a, l.b, l.tone ? rgb.map((c) => c * l.tone) : rgb, r, l.ea, l.eb, fw / W);
   }
 
   renderer.setStitches(layers.map((l) => new Float32Array(l)), new Float32Array(hairs));
@@ -335,7 +339,7 @@ function fillFrom(a, b) {
   if (CELL_FILLS[state.fill]) {
     for (const k of cells) stitches.set(k, { type: state.fill, color: colour, q: 0 });
   } else {
-    regions.push({ kind: state.fill, color: colour, cells, density: state.density, seed: hashStr(`${startKey}${Date.now()}`) });
+    regions.push({ kind: state.fill, color: colour, cells, density: state.density, thread: state.fillThread, seed: hashStr(`${startKey}${Date.now()}`) });
   }
   sceneDirty = true;
 }
@@ -471,13 +475,13 @@ function previewSVG(kind, color) {
   else if (REGION_FILLS[kind]) {
     const mask = new Set();
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) mask.add(`${x},${y}`);
-    legs = regionLegs(kind, mask, 0.55, 3, 0.3).map((l) => [l.a, l.b, l.layer]);
+    legs = regionLegs(kind, mask, 0.85, 3, 0.1).map((l) => [l.a, l.b, l.layer]);
   } else for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) legs.push(...legsOf(x, y, { type: kind, q: 2 }));
   const rgb = hex(color), r = rng(7);
   const draw = legs.sort((a, b) => a[2] - b[2]).map(([a, b, layer]) => {
     const c = kind === 'f-tweed' ? toHex(tweedTone(rgb, r)) : toHex(rgb.map((v) => v * (layer === 0 ? 0.86 : 1)));
-    const sw = fill && REGION_FILLS[kind] ? 4.2 : 5.5;
-    return `<path d="M${P(a)}L${P(b)}" stroke="${c}" stroke-width="${sw}"/><path d="M${P(a)}L${P(b)}" stroke="#fff" stroke-opacity=".22" stroke-width="1.4"/>`;
+    const sw = fill && REGION_FILLS[kind] ? 2.2 : 5.5;
+    return `<path d="M${P(a)}L${P(b)}" stroke="${c}" stroke-width="${sw}"/><path d="M${P(a)}L${P(b)}" stroke="#fff" stroke-opacity=".22" stroke-width="${(sw * 0.28).toFixed(2)}"/>`;
   }).join('');
   let dots = '';
   for (let y = 0; y <= rows; y++) for (let x = 0; x <= cols; x++) dots += `<circle cx="${pad + x * S}" cy="${pad + y * S}" r="1.6"/>`;
@@ -525,7 +529,9 @@ panel.innerHTML = `
     <h2>Fills</h2>
     ${cards('fill', FILLS)}
     <p class="hint" id="fill-desc"></p>
+    <div class="count-row"><span class="sub">Thread</span>${pill('fillThread', Object.entries(FILL_THREADS).map(([k, [n]]) => [k, n]), 'Fill thread')}</div>
     ${slider('density', 'Density')}
+    <p class="hint">Thread and density apply to the next fill you make.</p>
   </section>
   <section>
     <h2>Thread</h2>
@@ -581,7 +587,7 @@ panel.addEventListener('click', (e) => {
     const k = b.dataset.set, v = b.dataset.val;
     set(k, k === 'strands' || k === 'count' ? Number(v) : v);
     if (k === 'stitch') set('tool', 'stitch');
-    if (k === 'fill') set('tool', 'fill');
+    if (k === 'fill' || k === 'fillThread') set('tool', 'fill');
     if (k === 'color' && b.closest('.palette')) set('paletteOpen', false);
     if (k === 'color' && state.tool === 'erase') set('tool', 'stitch');
     return;
