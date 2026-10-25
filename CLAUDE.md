@@ -6,16 +6,22 @@ A free browser playground for **realistic, interactive cross stitch and embroide
 
 ## Where things are now
 
-This repo is a **clickable mockup**, not the product yet. Plain HTML/CSS/JS, no build step:
+Plain HTML/CSS/JS, no build step. Two parts:
 
-- `index.html` — shell + header; `styles.css` — all styling and design tokens.
-- `js/app.js` — hash router (`#stitch`, `#picture`, `#letters`, `#closeup`, `#embed`) and a tiny state store. Screens re-render on every action.
-- `js/screens/*.js` — one module per screen: `{ title, file, status, initial, render(state), actions }`. Wire controls with `data-act="name" data-arg="…"` (click), `data-input` (live input), `data-change` (sliders, commit on release).
-- `js/thread.js` — SVG stitch drawing (`crossSVG`, `cellsHTML`, `wornStitchSVG`), the strawberry motif, stitch picker icons.
+**Thread lab** (the home page, build step 1 in progress):
+- `index.html` — page, panel and HUD markup + styles.
+- `lab/renderer.js` — WebGL2 renderer: procedural Aida (with printed-pattern guide texture), instanced stitch legs in three layers (under, top, backstitch), stray fibres. Frequency-based LOD from colour blobs to fibres.
+- `lab/main.js` — the editor: stitch data, tools, stitch types, threads, fabric and look settings, zoom/pan, undo.
 
-The SVG stitches are **stand-ins**. The real renderer (below) replaces them; the screens' layout and controls are what carry forward.
+**Clickable mockup** of the full product, at `/mockup/`:
+- `mockup/index.html` — shell + header; `mockup/styles.css` — all styling and design tokens.
+- `mockup/js/app.js` — hash router (`#stitch`, `#picture`, `#letters`, `#closeup`, `#embed`) and a tiny state store. Screens re-render on every action.
+- `mockup/js/screens/*.js` — one module per screen: `{ title, file, status, initial, render(state), actions }`. Wire controls with `data-act="name" data-arg="…"` (click), `data-input` (live input), `data-change` (sliders, commit on release).
+- `mockup/js/thread.js` — SVG stitch drawing (`crossSVG`, `cellsHTML`, `wornStitchSVG`), the strawberry motif, stitch picker icons.
 
-Run locally: `npx serve .` (or any static server — ES modules need http, not file://). Deploys to Vercel as a static site with no config.
+The mockup's SVG stitches are **stand-ins**. The lab's renderer replaces them; the mockup screens' layout and controls are what carry forward.
+
+Run locally: `npx serve .` (or any static server — ES modules need http, not file://). Deploys to Vercel as a static site (`vercel.json` only redirects the old `/prototype/` link to `/`); every push to `main` redeploys https://stitches-ruddy.vercel.app.
 
 ## Product
 

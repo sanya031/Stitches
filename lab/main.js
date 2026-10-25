@@ -1,6 +1,21 @@
 // Thread lab: a small cross-stitch editor on top of the WebGL2 thread renderer.
 import { createRenderer, LAYERS } from './renderer.js';
-import { STRAWBERRY } from '../js/thread.js';
+
+// The strawberry kit chart, same motif as the mockup screens (12×12).
+const STRAWBERRY = [
+  '....GG.G....',
+  '...GgGGG....',
+  '..RRGgGRR...',
+  '.RRRRRRRRR..',
+  '.RRyRRRyRRR.',
+  'RRRRRRRRRRR.',
+  'RRyRRRRyRRR.',
+  '.RRRRyRRRR..',
+  '.RDRRRRRRR..',
+  '..RRyRRDR...',
+  '...RDRRR....',
+  '....RRR.....'
+];
 
 const COLS = 40, ROWS = 30;
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
