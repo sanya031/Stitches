@@ -14,7 +14,7 @@ Then open the URL it prints. Any static server works; opening `index.html` direc
 
 ## Thread renderer prototype
 
-Build step 1 lives in `prototype/`: a WebGL2 patch of Aida 14 with a cross-stitched strawberry. With the server running, open `/prototype/`. Scroll or pinch to zoom, drag to pan; Far / Mid / Close jump between levels of detail, and "Light follows cursor" shows the sheen moving along the twist.
+Build step 1 lives in `prototype/` (the "thread lab"): a WebGL2 patch of Aida with a half-stitched strawberry kit you can keep stitching. Pick a stitch type (full, half, quarter, three-quarter, backstitch), a thread, strands, fabric count and colour; adjust twist, sheen and fuzz. Click or drag to stitch, scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo.
 
 ## Deploy to Vercel
 
