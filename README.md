@@ -21,8 +21,8 @@ Then open the URL it prints. Any static server works; opening `index.html` direc
 - **Stitches:** full cross, half, quarter, three-quarter, backstitch.
 - **Fills:** long stitches laid across a whole shape: rows, columns, hatch, woven (3×3, 5×5, diagonal), satin blocks, fern, seed, French knots, burst; plus cross and tweed (one per square). Drag a rectangle, or click a pattern shape to fill it in its own colours. Density runs from open to solid satin. Fills and stitches mix freely in the same row.
 - **Pattern:** paint squares to plan your own design, then stitch or fill over it; "Show pattern" hides it.
-- **Picture → stitches:** choose, drop or paste a photo. Set width and number of colours, remove the background, dither. Light, mid and dark tones each become a stitch or fill (satin follows the picture's edges). Colours snap to a named floss palette, with a floss list of what you'd need, and an optional backstitch outline in a darker shade.
-- **Canvas:** dot grid (default), Aida, linen or denim; count 11–18 squares per inch.
+- **Picture → stitches:** choose, drop or paste a photo; it fits inside the canvas, centred. Set its size and number of colours, remove the background, dither. Light, mid and dark tones each become a stitch or fill (satin follows the picture's edges). Colours snap to a named floss palette, with a floss list of what you'd need, and an optional backstitch outline in a darker shade.
+- **Canvas:** size presets (Square, Landscape, Wide, Portrait) or a custom width × height, rotate, and a cell size that sets how many squares fit on it. Surface: dot grid (default), Aida, linen or denim; count 11–18 squares per inch.
 - **Thread:** 20 colours plus custom, recent threads, 1–3 strands; twist, sheen and fuzz sliders.
 
 Scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo. Code: `index.html`, `lab/main.js` (editor), `lab/picture.js` (picture conversion), `lab/floss.js` (thread palette), `lab/fills.js` (fill generators), `lab/renderer.js` (WebGL2).

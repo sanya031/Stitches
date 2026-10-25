@@ -20,7 +20,12 @@ const STRAWBERRY = [
 ];
 const CHART_COLOURS = { R: '#C8343B', D: '#8E1D24', G: '#4F8A4B', g: '#2F5A35', y: '#F2D06B' };
 
-let COLS = 40, ROWS = 30;   // canvas size in squares; a picture sets its own
+// The canvas is a sheet of a set size; the cell size decides how many squares fit on it.
+const CANVAS_PRESETS = { square: ['Square', 900, 900], landscape: ['Landscape', 1200, 900], wide: ['Wide', 1600, 900], portrait: ['Portrait', 900, 1200] };
+const CANVAS_MIN = 200, CANVAS_MAX = 2400, CELL_MIN = 8, CELL_MAX = 48;
+const canvasSpec = { preset: 'landscape', w: 1200, h: 900, cell: 20 };
+const gridOf = () => [Math.max(4, Math.round(canvasSpec.w / canvasSpec.cell)), Math.max(4, Math.round(canvasSpec.h / canvasSpec.cell))];
+let [COLS, ROWS] = gridOf();   // canvas size in squares
 const ZOOM_MIN = 2, ZOOM_MAX = 700;
 const PRESETS = { far: 4, mid: 26, close: 200 };
 const STRAND_MM = 0.27;   // visible width of one strand of stranded cotton, lying flat
@@ -54,7 +59,7 @@ const CELL_FILLS = {
 const FILLS = { ...CELL_FILLS, ...REGION_FILLS };
 
 const state = {
-  tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
+  canvasPreset: 'landscape', tool: 'stitch', stitch: 'full', fill: 'columns', density: 0.85, fillThread: 'fine', picOutlineColour: 'shade', eraseWhat: 'stitches', color: '#C8343B', strands: 2, count: 14,
   surface: 'dots', twist: 0.6, sheen: 0.35, fuzz: 0.6, guide: true, paletteOpen: false
 };
 let recents = ['#C8343B', '#8E1D24', '#4F8A4B', '#2F5A35', '#F2D06B'];
@@ -68,7 +73,7 @@ let regions = [];           // { kind, color, cells: Set of "x,y", density, thre
 const regionCache = new WeakMap();   // region -> legs; regions are replaced, never mutated
 const history = [];
 
-const ox = 14, oy = 9;
+const ox = Math.floor((COLS - STRAWBERRY[0].length) / 2), oy = Math.floor((ROWS - STRAWBERRY.length) / 2);
 STRAWBERRY.forEach((row, y) => row.split('').forEach((ch, x) => {
   if (CHART_COLOURS[ch]) blocks.set(`${x + ox},${y + oy}`, CHART_COLOURS[ch]);
 }));
@@ -76,14 +81,13 @@ STRAWBERRY.forEach((row, y) => row.split('').forEach((ch, x) => {
 for (const [key, color] of blocks) if (Number(key.split(',')[1]) < oy + 6) stitches.set(key, { type: 'full', color, q: 0 });
 
 function snapshot() {
-  history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks), regions: regions.slice(), cols: COLS, rows: ROWS });
+  history.push({ stitches: new Map(stitches), backs: backs.slice(), blocks: new Map(blocks), regions: regions.slice() });
   if (history.length > 100) history.shift();
 }
 function undo() {
   const prev = history.pop();
   if (!prev) return;
   ({ stitches, backs, blocks, regions } = prev);
-  setCanvasSize(prev.cols, prev.rows);
   sceneDirty = guideDirty = true;
 }
 
@@ -160,18 +164,26 @@ function buildScene() {
     }
   };
 
+  const inside = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
   for (const [key, st] of stitches) {
     const [x, y] = key.split(',').map(Number);
+    if (!inside(x, y)) continue;   // work outside a shrunk canvas is kept, just not shown
     const r = rng(hashStr(key + st.type + st.q));
     const rgb = hex(st.color);
     for (const [a, b, layer] of legsOf(x, y, st)) addLeg(layer, a, b, st.type === 'f-tweed' ? tweedTone(rgb, r) : rgb, r);
   }
-  for (const bk of backs) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)), 1, 1, bk.w || 1);
+  const holeIn = ([x, y]) => x >= 0 && y >= 0 && x <= COLS && y <= ROWS;
+  for (const bk of backs) if (holeIn(bk.a) && holeIn(bk.b)) addLeg(2, bk.a, bk.b, hex(bk.color), rng(hashStr(`b${bk.a}${bk.b}`)), 1, 1, bk.w || 1);
   for (const rg of regions) {
     const fw = fillWidth(rg.thread);
-    if (!regionCache.has(rg)) regionCache.set(rg, regionLegs(rg.kind, rg.cells, rg.density, rg.seed, fw, rg.angle));
+    let cached = regionCache.get(rg);
+    if (!cached || cached.cols !== COLS || cached.rows !== ROWS) {
+      const cells = new Set([...rg.cells].filter((k) => { const [x, y] = k.split(',').map(Number); return inside(x, y); }));
+      cached = { cols: COLS, rows: ROWS, legs: regionLegs(rg.kind, cells, rg.density, rg.seed, fw, rg.angle) };
+      regionCache.set(rg, cached);
+    }
     const rgb = hex(rg.color), r = rng(rg.seed);
-    for (const l of regionCache.get(rg)) addLeg(l.layer, l.a, l.b, l.tone ? rgb.map((c) => c * l.tone) : rgb, r, l.ea, l.eb, fw / W);
+    for (const l of cached.legs) addLeg(l.layer, l.a, l.b, l.tone ? rgb.map((c) => c * l.tone) : rgb, r, l.ea, l.eb, fw / W);
   }
 
   renderer.setStitches(layers.map((l) => new Float32Array(l)), new Float32Array(hairs));
@@ -196,6 +208,7 @@ function buildGuide() {
   const data = new Uint8Array(COLS * ROWS * 4);
   for (const [key, color] of blocks) {
     const [x, y] = key.split(',').map(Number);
+    if (x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
     const i = (y * COLS + x) * 4;
     hex(color).forEach((v, k) => { data[i + k] = Math.round(v * 255); });
     data[i + 3] = 255;
@@ -464,19 +477,32 @@ window.addEventListener('keyup', (e) => { if (e.key === ' ') { spaceHeld = false
 
 function fit() { flyTo({ x: COLS / 2, y: ROWS / 2, z: fitZoom() }); }
 
-function setCanvasSize(cols, rows) {
+/** Apply canvasSpec: recompute the grid; a picture on the canvas re-fits to it. */
+function applyCanvas() {
+  const [cols, rows] = gridOf();
+  syncUI();
   if (cols === COLS && rows === ROWS) return;
+  // keep the work centred on the sheet; shifting by whole squares is exactly reversible
+  const dx = Math.floor(cols / 2) - Math.floor(COLS / 2), dy = Math.floor(rows / 2) - Math.floor(ROWS / 2);
+  if ((dx || dy) && !picture) {
+    const shift = (k) => { const [x, y] = k.split(',').map(Number); return `${x + dx},${y + dy}`; };
+    stitches = new Map([...stitches].map(([k, v]) => [shift(k), v]));
+    blocks = new Map([...blocks].map(([k, v]) => [shift(k), v]));
+    regions = regions.map((rg) => ({ ...rg, cells: new Set([...rg.cells].map(shift)) }));
+    backs = backs.map((b) => ({ ...b, a: [b.a[0] + dx, b.a[1] + dy], b: [b.b[0] + dx, b.b[1] + dy] }));
+  }
   COLS = cols; ROWS = rows;
   buildFabricHairs();
   guideDirty = sceneDirty = true;
   fit();
   syncUI();
+  schedulePicture();
 }
 
 // ---------- picture → thread ----------
 
 const pic = {
-  width: 60, colours: 8, removeBg: true, bgTolerance: 14, dither: false,
+  size: 0.85, colours: 8, removeBg: true, bgTolerance: 14, dither: false,
   light: 'half', mid: 'full', dark: 'satin', lightShare: 0.3, darkShare: 0.3,
   outline: true, outlineStrength: 0.5, outlineColour: 'shade'
 };
@@ -498,16 +524,23 @@ function loadPicture(file) {
 /** Rebuild the whole piece from the picture with the current settings. */
 function applyPicture() {
   if (!picture) return;
-  if (!picture.sample || picture.sample.width !== pic.width) picture.sample = { width: pic.width, ...samplePicture(picture.img, pic.width) };
+  // the picture fits inside the canvas at the chosen share of it, centred
+  const maxC = Math.max(4, Math.round(COLS * pic.size)), maxR = Math.max(4, Math.round(ROWS * pic.size));
+  const iw = picture.img.naturalWidth, ih = picture.img.naturalHeight;
+  const cols = Math.max(1, Math.min(maxC, Math.round(maxR * iw / ih)));
+  const sampleKey = `${cols}x${maxR}`;
+  if (!picture.sample || picture.sample.key !== sampleKey) picture.sample = { key: sampleKey, ...samplePicture(picture.img, cols, maxR) };
   const res = convertPicture(picture.sample, pic);
-  blocks = res.blocks;
-  stitches = res.stitches;
-  regions = res.regions.map((rg, i) => ({ ...rg, density: state.density, thread: state.fillThread, seed: hashStr(`pic${i}${rg.color}`) }));
+  const dx = Math.floor((COLS - res.cols) / 2), dy = Math.floor((ROWS - res.rows) / 2);
+  const shift = (k) => { const [x, y] = k.split(',').map(Number); return `${x + dx},${y + dy}`; };
+  blocks = new Map([...res.blocks].map(([k, v]) => [shift(k), v]));
+  stitches = new Map([...res.stitches].map(([k, v]) => [shift(k), v]));
+  regions = res.regions.map((rg, i) => ({ ...rg, cells: new Set([...rg.cells].map(shift)), density: state.density, thread: state.fillThread, seed: hashStr(`pic${i}${rg.color}`) }));
   const darkest = res.palette.filter((p) => !p.outline).sort((a, b) => a.L - b.L)[0];
   const fixed = pic.outlineColour === 'thread' ? state.color : pic.outlineColour === 'darkest' && darkest ? darkest.hex : null;
-  backs = res.backs.map((b) => ({ ...b, color: fixed || b.color, w: 0.6 }));   // outlines in a single strand
+  backs = res.backs.map((b) => ({ a: [b.a[0] + dx, b.a[1] + dy], b: [b.b[0] + dx, b.b[1] + dy], color: fixed || b.color, w: 0.6 }));   // outlines in a single strand
   picture.palette = res.palette;
-  setCanvasSize(res.cols, res.rows);
+  picture.size = [res.cols, res.rows];
   sceneDirty = guideDirty = true;
   syncPicUI();
 }
@@ -563,7 +596,7 @@ const pill = (key, options, label) => `<div class="pill" role="group" aria-label
   `<button data-set="${key}" data-val="${val}">${text}</button>`).join('')}</div>`;
 const slider = (key, label) => `<div class="slider"><label for="r-${key}">${label}</label>
   <input id="r-${key}" type="range" min="0" max="100" data-range="${key}"><output class="mono" id="o-${key}"></output></div>`;
-const PIC_FMT = { width: (v) => `${v} sq`, lightShare: (v) => `${v}%`, darkShare: (v) => `${v}%` };
+const PIC_FMT = { size: (v) => `${v}%`, lightShare: (v) => `${v}%`, darkShare: (v) => `${v}%` };
 const picSlider = (key, label, min, max, step, scale = 1) => `<div class="slider"><label for="p-${key}">${label}</label>
   <input id="p-${key}" type="range" min="${min}" max="${max}" step="${step}" data-pic="${key}" data-scale="${scale}"><output class="mono" id="po-${key}"></output></div>`;
 const picSwitch = (key, label) => `<button class="switch" role="switch" data-pic-toggle="${key}"><span class="track"><span class="knob"></span></span>${label}</button>`;
@@ -603,7 +636,7 @@ panel.innerHTML = `
         <div class="pic-meta"><span id="pic-name"></span><span class="mono" id="pic-size"></span></div>
         <button data-act="pic-choose">Change</button>
       </div>
-      ${picSlider('width', 'Width', 16, 120, 1)}
+      ${picSlider('size', 'Size', 20, 100, 1, 100)}
       ${picSlider('colours', 'Colours', 2, 24, 1)}
       ${picSwitch('removeBg', 'Remove background')}
       ${picSlider('bgTolerance', 'Tolerance', 2, 40, 1)}
@@ -655,6 +688,18 @@ panel.innerHTML = `
   </section>
   <section>
     <h2>Canvas</h2>
+    ${pill('canvasPreset', [...Object.entries(CANVAS_PRESETS).map(([k, [n]]) => [k, n]), ['custom', 'Custom']], 'Canvas size')}
+    <div class="custom-size" id="custom-size" hidden>
+      <label>W <input type="number" id="canvas-w" min="${CANVAS_MIN}" max="${CANVAS_MAX}" step="10"></label>
+      <span aria-hidden="true">×</span>
+      <label>H <input type="number" id="canvas-h" min="${CANVAS_MIN}" max="${CANVAS_MAX}" step="10"></label>
+      <span class="sub">px</span>
+    </div>
+    <div class="row" style="margin-top:8px"><button data-act="rotate">Rotate</button><span class="mono sub" id="canvas-dims"></span></div>
+    <div class="slider"><label for="cell-size">Cell</label>
+      <input id="cell-size" type="range" min="${CELL_MIN}" max="${CELL_MAX}" step="1"><output class="mono" id="cell-out"></output></div>
+    <p class="hint" id="cell-hint"></p>
+    <div style="height:4px"></div>
     ${pill('surface', Object.entries(SURFACES).map(([k, s]) => [k, s.name]), 'Surface')}
     <div class="count-row">
       <span class="sub">Count</span>
@@ -689,6 +734,13 @@ panel.addEventListener('click', (e) => {
   if (!b) return;
   if (b.dataset.set) {
     const k = b.dataset.set, v = b.dataset.val;
+    if (k === 'canvasPreset') {
+      canvasSpec.preset = v;
+      if (CANVAS_PRESETS[v]) [, canvasSpec.w, canvasSpec.h] = CANVAS_PRESETS[v];
+      state.canvasPreset = v;
+      applyCanvas();
+      return;
+    }
     if (k === 'picOutlineColour') { pic.outlineColour = v; state.picOutlineColour = v; syncUI(); schedulePicture(); return; }
     set(k, k === 'strands' || k === 'count' ? Number(v) : v);
     if (k === 'stitch') set('tool', 'stitch');
@@ -700,6 +752,7 @@ panel.addEventListener('click', (e) => {
   if (b.dataset.picToggle) { pic[b.dataset.picToggle] = !pic[b.dataset.picToggle]; syncPicUI(); schedulePicture(); return; }
   if (b.dataset.floss) { set('color', b.dataset.floss); set('tool', 'stitch'); return; }
   const act = b.dataset.act;
+  if (act === 'rotate') { [canvasSpec.w, canvasSpec.h] = [canvasSpec.h, canvasSpec.w]; canvasSpec.preset = matchPreset(); state.canvasPreset = canvasSpec.preset; applyCanvas(); return; }
   if (act === 'pic-choose') { document.getElementById('pic-file').click(); return; }
   if (act === 'pic-close') { URL.revokeObjectURL(picture.url); picture = null; syncPicUI(); return; }
   if (act === 'undo') undo();
@@ -712,7 +765,16 @@ panel.addEventListener('change', (e) => {
   if (e.target.id === 'pic-file') { loadPicture(e.target.files[0]); e.target.value = ''; }
   if (e.target.dataset.picSelect) { pic[e.target.dataset.picSelect] = e.target.value; schedulePicture(); }
 });
+const matchPreset = () => (Object.entries(CANVAS_PRESETS).find(([, [, w, h]]) => w === canvasSpec.w && h === canvasSpec.h) || ['custom'])[0];
 panel.addEventListener('input', (e) => {
+  if (e.target.id === 'cell-size') { canvasSpec.cell = Number(e.target.value); applyCanvas(); return; }
+  if (e.target.id === 'canvas-w' || e.target.id === 'canvas-h') {
+    const v = Math.min(CANVAS_MAX, Math.max(CANVAS_MIN, Number(e.target.value) || 0));
+    if (Number(e.target.value) < CANVAS_MIN) return;   // wait until the number is complete
+    canvasSpec[e.target.id === 'canvas-w' ? 'w' : 'h'] = v;
+    applyCanvas();
+    return;
+  }
   if (e.target.dataset.pic) {
     pic[e.target.dataset.pic] = Number(e.target.value) / Number(e.target.dataset.scale);
     syncPicUI();
@@ -732,7 +794,8 @@ function syncPicUI() {
   if (!picture) return;
   document.getElementById('pic-thumb').src = picture.url;
   document.getElementById('pic-name').textContent = picture.name;
-  document.getElementById('pic-size').textContent = `${COLS}×${ROWS} squares · ${picture.palette?.length || 0} flosses`;
+  const [pc, pr] = picture.size || [0, 0];
+  document.getElementById('pic-size').textContent = `${pc}×${pr} squares · ${(picture.palette || []).filter((p) => !p.outline).length} flosses`;
   panel.querySelectorAll('[data-pic]').forEach((input) => {
     const k = input.dataset.pic, scale = Number(input.dataset.scale);
     if (document.activeElement !== input) input.value = Math.round(pic[k] * scale);
@@ -777,6 +840,13 @@ function syncUI() {
   document.getElementById('recents').innerHTML = recents.map((c) =>
     `<button data-set="color" data-val="${c}" aria-pressed="${c === state.color}" aria-label="${threadName(c)} ${c}" title="${threadName(c)}">${skein(c)}</button>`).join('');
   document.getElementById('guide-switch').setAttribute('aria-checked', String(state.guide));
+  document.getElementById('custom-size').hidden = canvasSpec.preset !== 'custom';
+  for (const [id, k] of [['canvas-w', 'w'], ['canvas-h', 'h']]) { const el = document.getElementById(id); if (document.activeElement !== el) el.value = canvasSpec[k]; }
+  document.getElementById('canvas-dims').textContent = `${canvasSpec.w} × ${canvasSpec.h} px`;
+  const cellEl = document.getElementById('cell-size');
+  if (document.activeElement !== cellEl) cellEl.value = canvasSpec.cell;
+  document.getElementById('cell-out').textContent = `${canvasSpec.cell} px`;
+  document.getElementById('cell-hint').textContent = `${COLS} × ${ROWS} squares. Smaller cells fit more squares on the canvas for finer detail.`;
   const cmW = COLS / state.count * 2.54, cmH = ROWS / state.count * 2.54;
   document.getElementById('count-hint').textContent =
     `Squares per inch. At ${state.count}, this ${COLS}×${ROWS} canvas stitches out to ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm. Higher counts mean smaller stitches and finer detail.`;
