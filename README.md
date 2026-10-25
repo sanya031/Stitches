@@ -4,7 +4,7 @@ A playground for realistic, interactive cross stitch and embroidery — draw sti
 
 Live at https://stitches-ruddy.vercel.app. Plain HTML, CSS and JavaScript, no build step.
 
-- **Home page: the thread lab** — a WebGL2 patch of Aida with a half-stitched strawberry kit you can keep stitching.
+- **Home page: the thread lab** — stitched calla lilies to start from, a full stitch editor, and Picture: turn a photo into stitching or into a pattern to stitch over.
 - **`/mockup/`** — the clickable mockup of the full editor: five screens (Stitch, Picture, Letters, Close-up, Embed).
 
 ## Run it
