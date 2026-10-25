@@ -174,13 +174,13 @@ const LEG_VS = SHARED + `
 layout(location = 0) in vec2 aCorner;  // u along 0..1, side -1/1
 layout(location = 1) in vec4 aEnds;    // hole a, hole b
 layout(location = 2) in vec4 aCol;     // rgb, seed
-layout(location = 3) in vec2 aBow;     // lateral bow, width multiplier
+layout(location = 3) in vec4 aBow;     // lateral bow, width multiplier, end a / end b enters the fabric (1) or carries on (0)
 uniform float uWidth, uFar, uShadow;
 uniform vec2 uShadowOff;
 out vec2 vUV;
 out vec3 vCol;
 out float vSeed, vLen, vPinch;
-flat out vec2 vAxis;
+flat out vec2 vAxis, vEnter;
 const float PAD = 1.25;   // extra ribbon width so edges can be antialiased in the fragment shader
 void main() {
   vec2 a = aEnds.xy, b = aEnds.zw, d = b - a;
@@ -188,13 +188,14 @@ void main() {
   vec2 A = d / L, N = vec2(-A.y, A.x);
   float u = aCorner.x;
   // thread compresses as it dives into a hole; at far zoom legs fatten into a colour blob
-  float pinch = mix(mix(0.55, 1.0, smoothstep(0.0, 0.2, min(u, 1.0 - u) * L / 1.414)), 1.0, uFar);
+  float endD = min(aBow.z > 0.5 ? u * L : 1e3, aBow.w > 0.5 ? (1.0 - u) * L : 1e3);
+  float pinch = mix(mix(0.55, 1.0, smoothstep(0.0, 0.28, endD)), 1.0, uFar);
   float hw = 0.5 * uWidth * aBow.y * mix(1.0, 1.8, uFar) * pinch;
   if (uShadow > 0.5) hw *= 1.25;
   vec2 P = a + d * u + N * aBow.x * 4.0 * u * (1.0 - u) + N * aCorner.y * hw * PAD;
   if (uShadow > 0.5) P += uShadowOff;
   vUV = vec2(u, aCorner.y * PAD);
-  vCol = aCol.rgb; vSeed = aCol.a; vLen = L; vPinch = pinch * aBow.y; vAxis = A;
+  vCol = aCol.rgb; vSeed = aCol.a; vLen = L; vPinch = pinch * aBow.y; vAxis = A; vEnter = aBow.zw;
   gl_Position = vec4(proj(P), 0, 1);
 }
 `;
@@ -203,7 +204,7 @@ const LEG_FS = SHARED + `
 in vec2 vUV;
 in vec3 vCol;
 in float vSeed, vLen, vPinch;
-flat in vec2 vAxis;
+flat in vec2 vAxis, vEnter;
 uniform float uWidth, uFar, uShadow, uTwist, uSheen, uStrands;
 out vec4 o;
 
@@ -211,7 +212,7 @@ const float COTA = 1.43;   // cot(helix angle) of the plies inside one strand
 
 void main() {
   float u = vUV.x, v = vUV.y, av = abs(v);
-  float endD = min(u, 1.0 - u) * vLen;   // distance to the hole, cells
+  float endD = min(vEnter.x > 0.5 ? u * vLen : 1e3, vEnter.y > 0.5 ? (1.0 - u) * vLen : 1e3);   // distance to where it enters the fabric, cells
   if (uShadow > 0.5) {
     o = vec4(0, 0, 0, (1.0 - smoothstep(0.1, 1.25, av)) * smoothstep(0.0, 0.2, endD) * 0.26);
     return;
@@ -373,7 +374,7 @@ function buffer(gl, data) {
   return b;
 }
 
-export const LEG_FLOATS = 10;   // ends(4) col+seed(4) bow,width(2)
+export const LEG_FLOATS = 12;   // ends(4) col+seed(4) bow,width,enterA,enterB(4)
 export const HAIR_FLOATS = 12;  // p0 p1(4) p2 width alpha(4) col+loop(4)
 export const LAYERS = 3;        // under legs, top legs, backstitch
 
@@ -396,7 +397,7 @@ export function createRenderer(canvas) {
     const buf = gl.createBuffer();
     return { buf, vao: makeVAO(gl, geomBuf, buf, layout), n: 0, floats };
   };
-  const layers = Array.from({ length: LAYERS }, () => dynamic(ribbonBuf, [4, 4, 2], LEG_FLOATS));
+  const layers = Array.from({ length: LAYERS }, () => dynamic(ribbonBuf, [4, 4, 4], LEG_FLOATS));
   const threadHairs = dynamic(hairBuf, [4, 4, 4], HAIR_FLOATS);
   const fabricHairs = dynamic(hairBuf, [4, 4, 4], HAIR_FLOATS);
   const fill = (set, arr) => {

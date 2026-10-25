@@ -19,12 +19,12 @@ Then open the URL it prints. Any static server works; opening `index.html` direc
 
 - **Tools:** Stitch, Fill, Pattern, Erase, Pan.
 - **Stitches:** full cross, half, quarter, three-quarter, backstitch.
-- **Fills:** cross, hatch, rows, columns, weave, tweed. Drag a rectangle, or click a pattern shape to fill it in its own colours.
+- **Fills:** long stitches laid across a whole shape: rows, columns, hatch, woven (3×3, 5×5, diagonal), satin blocks, fern, seed, French knots, burst; plus cross and tweed (one per square). Drag a rectangle, or click a pattern shape to fill it in its own colours. Density runs from open to solid satin. Fills and stitches mix freely in the same row.
 - **Pattern:** paint squares to plan your own design, then stitch or fill over it; "Show pattern" hides it.
 - **Canvas:** dot grid (default), Aida, linen or denim; count 11–18 squares per inch.
 - **Thread:** 20 colours plus custom, recent threads, 1–3 strands; twist, sheen and fuzz sliders.
 
-Scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo. Code: `index.html`, `lab/main.js` (editor), `lab/renderer.js` (WebGL2).
+Scroll or pinch to zoom, right-drag or hold Space to pan, Cmd/Ctrl+Z to undo. Code: `index.html`, `lab/main.js` (editor), `lab/fills.js` (fill generators), `lab/renderer.js` (WebGL2).
 
 ## Deploy to Vercel
 
