@@ -1,34 +1,38 @@
-// Thread icons: stitches and fills drawn as real thread, in SVG.
-// Each leg is a lens-shaped ribbon (puffy between holes, pinched where it enters one),
-// shaded round with a gradient across it, with twist ridges, a highlight and a soft shadow.
-// Fills come from the app's own generators (lab/fills.js), so icons match the canvas.
+// Thread icons: each stitch or fill as it sits in a single square on the canvas, between its four holes.
+// Drawing follows the WebGL renderer: lens-shaped legs pinched into the holes, two strands with a
+// groove between them, twist ridges at the helix angle, dark ends, matte round shading, a soft
+// contact shadow. Laid fills come from the app's own generator (lab/fills.js).
 import { regionLegs } from '../../lab/fills.js';
+
+const CORNERS = { tl: 'top left', tr: 'top right', bl: 'bottom left', br: 'bottom right' };
+const Q = { tl: 0, tr: 1, bl: 2, br: 3 };
 
 export const THREAD_ICONS = {
   'stitch-full': { group: 'Stitches', label: 'Full cross' },
   'stitch-half': { group: 'Stitches', label: 'Half stitch' },
-  'stitch-quarter': { group: 'Stitches', label: 'Quarter' },
-  'stitch-three-quarter': { group: 'Stitches', label: 'Three-quarter' },
+  ...Object.fromEntries(Object.entries(CORNERS).map(([k, n]) => [`stitch-quarter-${k}`, { group: 'Quarter', label: `Quarter, ${n}` }])),
+  ...Object.fromEntries(Object.entries(CORNERS).map(([k, n]) => [`stitch-three-quarter-${k}`, { group: 'Three-quarter', label: `Three-quarter, ${n}` }])),
   'stitch-back': { group: 'Stitches', label: 'Backstitch' },
-  'stitch-long': { group: 'Stitches', label: 'Long stitch' },
   'stitch-knot': { group: 'Stitches', label: 'French knot' },
-  'fill-cross': { group: 'Fills', label: 'Cross', kind: 'cross' },
-  'fill-tweed': { group: 'Fills', label: 'Tweed', kind: 'tweed' },
-  'fill-rows': { group: 'Fills', label: 'Rows', kind: 'rows' },
-  'fill-columns': { group: 'Fills', label: 'Columns', kind: 'columns' },
-  'fill-hatch': { group: 'Fills', label: 'Hatch /', kind: 'hatch' },
-  'fill-weave-3': { group: 'Fills', label: 'Weave 3×3', kind: 'weave3' },
-  'fill-weave-5': { group: 'Fills', label: 'Weave 5×5', kind: 'weave5' },
-  'fill-weave-diamond': { group: 'Fills', label: 'Weave ◇', kind: 'diamond' },
-  'fill-blocks': { group: 'Fills', label: 'Blocks', kind: 'blocks' },
-  'fill-fern': { group: 'Fills', label: 'Fern', kind: 'fern' },
-  'fill-seed': { group: 'Fills', label: 'Seed', kind: 'seed' },
-  'fill-knots': { group: 'Fills', label: 'Knots', kind: 'knots' },
-  'fill-burst': { group: 'Fills', label: 'Burst', kind: 'burst' }
+  'fill-cross': { group: 'Fills', label: 'Cross' },
+  'fill-tweed': { group: 'Fills', label: 'Tweed' },
+  'fill-rows': { group: 'Fills', label: 'Rows' },
+  'fill-columns': { group: 'Fills', label: 'Columns' },
+  'fill-hatch': { group: 'Fills', label: 'Hatch /' },
+  'fill-weave-3': { group: 'Fills', label: 'Weave 3×3' },
+  'fill-weave-5': { group: 'Fills', label: 'Weave 5×5' },
+  'fill-weave-diamond': { group: 'Fills', label: 'Weave ◇' },
+  'fill-blocks': { group: 'Fills', label: 'Blocks' },
+  'fill-fern': { group: 'Fills', label: 'Fern' },
+  'fill-seed': { group: 'Fills', label: 'Seed' },
+  'fill-knots': { group: 'Fills', label: 'Knots' },
+  'fill-burst': { group: 'Fills', label: 'Burst' }
 };
 
-const S = 48;              // drawing frame; scaled by the size option
-const HOLE = '#8F8A80';    // fabric holes: mid grey, visible on the dark bench and on cloth
+const S = 48, O = 6, C = 36;        // frame, the square's top-left corner and its size, px
+const HOLE = '#8F8A80';             // fabric holes: mid grey, visible on the dark bench and on cloth
+// thread widths in squares, as on the canvas at count 14: two strands for counted stitches, a fine strand for fills
+const W_STITCH = 0.3, W_FILL = 0.6 * 0.27 * 14 / 25.4;
 
 // ---------- colour ----------
 
@@ -47,89 +51,108 @@ function rng(seed) {
   };
 }
 
-// ---------- geometry ----------
+// ---------- geometry, in square units (0..1) ----------
 
-/** Counted-stitch legs in one square, as in the app: [from, to, layer]. q picks the corner (2 = bottom-left). */
-function cellLegs(x, y, type, q = 2) {
-  const TL = [x, y], TR = [x + 1, y], BL = [x, y + 1], BR = [x + 1, y + 1], C = [x + 0.5, y + 0.5];
+const TL = [0, 0], TR = [1, 0], BL = [0, 1], BR = [1, 1], CEN = [0.5, 0.5];
+
+/** Counted stitches in the square, as in the app: [from, to, layer]. */
+function counted(type, q = 2) {
   const corner = [TL, TR, BL, BR][q];
   switch (type) {
     case 'full': return [[BL, TR, 0], [TL, BR, 1]];
     case 'half': return [[BL, TR, 0]];
-    case 'quarter': return [[corner, C, 1]];
-    case 'threeq': return [q === 0 || q === 3 ? [BL, TR, 0] : [TL, BR, 0], [corner, C, 1]];
+    case 'quarter': return [[corner, CEN, 1]];
+    case 'threeq': return [q === 0 || q === 3 ? [BL, TR, 0] : [TL, BR, 0], [corner, CEN, 1]];
     default: return [];
   }
 }
 
-/** Legs in px with width, colour tone and which ends enter the fabric, plus the holes to draw. */
-function layout(name) {
-  const legs = [], holes = [];
-  const put = (o, C, list, w, extra = {}) => list.forEach(([a, b, layer, ea = 1, eb = 1, tone = 1]) =>
-    legs.push({ a: [o[0] + a[0] * C, o[1] + a[1] * C], b: [o[0] + b[0] * C, o[1] + b[1] * C], layer, w, ea, eb, tone, ...extra }));
-  const cellHoles = (o, C, cols, rows) => { for (let y = 0; y <= rows; y++) for (let x = 0; x <= cols; x++) holes.push([o[0] + x * C, o[1] + y * C]); };
-
-  const one = { 'stitch-full': 'full', 'stitch-half': 'half', 'stitch-quarter': 'quarter', 'stitch-three-quarter': 'threeq' }[name];
-  if (one) {
-    const o = [9, 9], C = 30;
-    cellHoles(o, C, 1, 1);
-    if (one === 'quarter' || one === 'threeq') holes.push([24, 24]);
-    put(o, C, cellLegs(0, 0, one), 9);
-    return { legs, holes };
-  }
-  if (name === 'stitch-back') {
-    const o = [6, 24], C = 18;
-    for (let i = 0; i <= 2; i++) holes.push([o[0] + i * C, o[1]]);
-    put(o, C, [[[0, 0], [1, 0], 2], [[1, 0], [2, 0], 2]], 7);
-    return { legs, holes };
-  }
-  if (name === 'stitch-long') {
-    holes.push([8, 40], [40, 8]);
-    put([0, 0], 1, [[[8, 40], [40, 8], 0]], 7.5);
-    return { legs, holes };
-  }
-  if (name === 'stitch-knot') {
-    // a French knot: thread wrapped into a tight coil, read as a five-point star of short wraps
-    const ring = Array.from({ length: 5 }, (_, k) => [24 + Math.cos(-Math.PI / 2 + k * 1.2566) * 10, 24 + Math.sin(-Math.PI / 2 + k * 1.2566) * 10]);
-    put([0, 0], 1, ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 8.5);
-    return { legs, holes };
-  }
-
-  // fills: a 3 × 3 patch of squares, 12 px each
-  const kind = THREAD_ICONS[name].kind, o = [6, 6], C = 12;
-  if (kind === 'cross' || kind === 'tweed') {
-    cellHoles(o, C, 3, 3);
-    const r = rng(11);
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
-      cellLegs(x, y, 'full').forEach(([a, b, layer]) => {
-        const k = r(), tone = kind === 'tweed' ? (k < 0.33 ? 0.7 : k < 0.66 ? 1.35 : 1) : 1;
-        put(o, C, [[a, b, layer, 1, 1, tone]], 4.2);
-      });
+/**
+ * Woven threads in the square: n each way at angle θ, each split at the midpoints between
+ * crossings so every piece holds one crossing; parity decides over or under.
+ */
+function woven(n, theta) {
+  const dA = [Math.cos(theta), Math.sin(theta)], nA = [-dA[1], dA[0]];
+  const s = (theta % (Math.PI / 2) === 0 ? 1 : Math.SQRT2) / n;
+  const offs = Array.from({ length: n }, (_, j) => (j - (n - 1) / 2) * s);
+  const at = (u, v, along, across) => [0.5 + along[0] * u + across[0] * v, 0.5 + along[1] * u + across[1] * v];
+  // the stretch of a line (through the centre, offset v across) that lies inside the square
+  const clip = (v, along, across) => {
+    let lo = -2, hi = 2;
+    for (const k of [0, 1]) {
+      const p = 0.5 + across[k] * v, d = along[k];
+      if (Math.abs(d) < 1e-9) { if (p < 0 || p > 1) return null; continue; }
+      const t0 = (0 - p) / d, t1 = (1 - p) / d;
+      lo = Math.max(lo, Math.min(t0, t1)); hi = Math.min(hi, Math.max(t0, t1));
     }
-    return { legs, holes };
-  }
-  // knots and seed: scattered evenly on a jittered grid, which reads better at icon size than pure chance
-  if (kind === 'knots' || kind === 'seed') {
-    const r = rng(kind === 'knots' ? 23 : 31), n = kind === 'knots' ? 3 : 4, cell = 36 / n;
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-      const c = [6 + (x + 0.5) * cell + (r() - 0.5) * cell * 0.35, 6 + (y + 0.5) * cell + (r() - 0.5) * cell * 0.35];
-      if (kind === 'knots') {
-        const rot = r() * Math.PI * 2, rad = 3.6;
-        const ring = Array.from({ length: 5 }, (_, k) => [c[0] + Math.cos(rot + k * 1.2566) * rad, c[1] + Math.sin(rot + k * 1.2566) * rad]);
-        put([0, 0], 1, ring.map((p, k) => [p, ring[(k + 2) % 5], 1, 1, 1, 0.92 + r() * 0.16]), 3.4);
-      } else {
-        const ang = r() * Math.PI, len = 4.2 + r() * 1.6, dx = Math.cos(ang) * len / 2, dy = Math.sin(ang) * len / 2;
-        put([0, 0], 1, [[[c[0] - dx, c[1] - dy], [c[0] + dx, c[1] + dy], 1, 1, 1, 0.88 + r() * 0.24]], 3.2);
+    return hi - lo > 0.05 ? [lo, hi] : null;
+  };
+  const legs = [];
+  const family = (along, across, overParity) => offs.forEach((v, j) => {
+    const seg = clip(v, along, across);
+    if (!seg) return;
+    const cross = offs.map((u, k) => ({ u, k })).filter((c) => c.u > seg[0] && c.u < seg[1]);
+    if (!cross.length) { legs.push([at(seg[0], v, along, across), at(seg[1], v, along, across), 0, 1, 1]); return; }
+    cross.forEach((c, i) => {
+      const from = i === 0 ? seg[0] : (cross[i - 1].u + c.u) / 2, to = i === cross.length - 1 ? seg[1] : (c.u + cross[i + 1].u) / 2;
+      legs.push([at(from, v, along, across), at(to, v, along, across), (j + c.k) % 2 === overParity ? 1 : 0, i === 0 ? 1 : 0, i === cross.length - 1 ? 1 : 0]);
+    });
+  });
+  family(dA, nA, 0);
+  family(nA, [-dA[0], -dA[1]], 1);
+  return legs;
+}
+
+/** Legs for an icon: { a, b, layer, w (squares), ea, eb, tone, strands }. */
+function layout(name) {
+  const legs = [];
+  const add = (list, w, strands, tone = () => 1) => list.forEach(([a, b, layer, ea = 1, eb = 1, t]) =>
+    legs.push({ a, b, layer, w, ea, eb, strands, tone: t ?? tone() }));
+  const r = rng(name.length * 131 + 7);
+
+  let m;
+  if (name === 'stitch-full' || name === 'fill-cross') add(counted('full'), W_STITCH, 2);
+  else if (name === 'fill-tweed') add(counted('full').map((l, i) => [...l, 1, 1, i ? 1.4 : 0.68]), W_STITCH, 2);
+  else if (name === 'stitch-half') add(counted('half'), W_STITCH, 2);
+  else if ((m = name.match(/^stitch-quarter-(\w\w)$/))) add(counted('quarter', Q[m[1]]), W_STITCH, 2);
+  else if ((m = name.match(/^stitch-three-quarter-(\w\w)$/))) add(counted('threeq', Q[m[1]]), W_STITCH, 2);
+  else if (name === 'stitch-back') add([[TL, BL, 2], [BL, BR, 2]], W_STITCH * 0.8, 2);   // an outline turning a corner
+  else if (name === 'stitch-knot') {
+    // thread wrapped into a tight coil: a five-point star of short wraps
+    const ring = Array.from({ length: 5 }, (_, k) => [0.5 + Math.cos(-Math.PI / 2 + k * 1.2566) * 0.2, 0.5 + Math.sin(-Math.PI / 2 + k * 1.2566) * 0.2]);
+    add(ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 0.2, 2, () => 0.92 + r() * 0.16);
+  } else if (name === 'fill-weave-3') add(woven(3, 0), W_FILL * 1.5, 1);
+  else if (name === 'fill-weave-5') add(woven(5, 0), W_FILL * 1.2, 1);
+  else if (name === 'fill-weave-diamond') add(woven(3, Math.PI / 4), W_FILL * 1.5, 1);
+  else if (name === 'fill-blocks') {
+    // four quarter blocks of satin, alternating direction
+    for (const [qx, qy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const across = (qx + qy) % 2 === 1, k = 4;
+      for (let i = 0; i < k; i++) {
+        const t = (i + 0.5) / k * 0.5;
+        const a = across ? [qx * 0.5 + t, qy * 0.5] : [qx * 0.5, qy * 0.5 + t];
+        const b = across ? [qx * 0.5 + t, qy * 0.5 + 0.5] : [qx * 0.5 + 0.5, qy * 0.5 + t];
+        add([[a, b, 0]], W_FILL * 1.2, 1);
       }
     }
-    return { legs, holes };
+  } else if (name === 'fill-seed') {
+    const pts = [[0.25, 0.25], [0.72, 0.22], [0.5, 0.52], [0.24, 0.76], [0.76, 0.74]];
+    add(pts.map(([x, y]) => {
+      const ang = r() * Math.PI, h = 0.13 + r() * 0.04, c = [x + (r() - 0.5) * 0.08, y + (r() - 0.5) * 0.08];
+      return [[c[0] - Math.cos(ang) * h, c[1] - Math.sin(ang) * h], [c[0] + Math.cos(ang) * h, c[1] + Math.sin(ang) * h], 1];
+    }), W_FILL * 1.4, 1, () => 0.88 + r() * 0.24);
+  } else if (name === 'fill-knots') {
+    for (const [x, y] of [[0.28, 0.3], [0.7, 0.38], [0.4, 0.72]]) {
+      const rot = r() * Math.PI * 2;
+      const ring = Array.from({ length: 5 }, (_, k) => [x + Math.cos(rot + k * 1.2566) * 0.1, y + Math.sin(rot + k * 1.2566) * 0.1]);
+      add(ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 0.1, 1, () => 0.9 + r() * 0.2);
+    }
+  } else {
+    // laid fills, exactly as the canvas lays them in one square
+    const kind = { 'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-fern': 'fern', 'fill-burst': 'burst' }[name];
+    add(regionLegs(kind, new Set(['0,0']), 0.85, 5, W_FILL).map((l) => [l.a, l.b, l.layer, l.ea, l.eb, l.tone]), W_FILL, 1);
   }
-  const mask = new Set();
-  for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) mask.add(`${x},${y}`);
-  // fill thread in squares: a little bolder than on the canvas, so it reads at icon size
-  const W = 0.24;
-  regionLegs(kind, mask, 0.85, 5, W).forEach((l) => put(o, C, [[l.a, l.b, l.layer, l.ea, l.eb, l.tone || 1]], W * C));
-  return { legs, holes };
+  return legs;
 }
 
 // ---------- drawing ----------
@@ -139,7 +162,6 @@ const f1 = (v) => (Math.round(v * 10) / 10).toString();
 /**
  * A leg's outline in its own frame: along +x from 0 to L, centred on y = 0.
  * Ends that enter the fabric pinch to 40% width; ends that carry on (woven) stay full.
- * Short legs are a single lens; long ones keep full width between short tapers.
  */
 function ribbonLocal(L, w, ea, eb) {
   const h = w / 2, h0a = ea ? h * 0.4 : h, h0b = eb ? h * 0.4 : h;
@@ -156,61 +178,72 @@ function ribbonLocal(L, w, ea, eb) {
 
 /**
  * Full SVG markup for a thread icon.
- * options: colour (thread, hex), size (px), paper (draw a linen tile behind), id (prefix for defs, unique per page)
+ * options: colour (thread, hex), size (px), paper (linen tile behind), id (prefix for defs, unique per page)
  */
 export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name } = {}) {
   if (!THREAD_ICONS[name]) throw new Error(`Unknown thread icon: ${name}`);
-  const { legs, holes } = layout(name);
+  const legs = layout(name);
   const r = rng(name.length * 97 + 3);
-  const defs = new Map(), shadows = [], body = [];
-  defs.set('blur', `<filter id="${id}-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.7"/></filter>`);
+  const defs = new Map(), body = [];
+  defs.set('blur', `<filter id="${id}-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.8"/></filter>`);
 
-  // Shading across the thread, shared by every leg of one tone. In a leg's own frame the
-  // light (top-left) falls on -y or +y depending on which way the leg points, hence two directions.
-  const shading = (base, litTop) => {
-    const key = `g${base.slice(1)}${litTop ? 't' : 'b'}`;
+  // Round shading across the thread, like the canvas: dark tucked-under sides, the lit side brighter.
+  // Two strands get a groove down the middle and their own roundness. Shared by every leg of one tone.
+  const shading = (base, litTop, strands) => {
+    const key = `g${base.slice(1)}${litTop ? 't' : 'b'}${strands}`;
     if (!defs.has(key)) {
-      const stops = [[0, darker(base, 0.72)], [0.28, lighter(base, 0.28)], [0.55, base], [1, darker(base, 0.5)]];
+      // the canvas lights thread so its crown sits a little above the dye colour
+      const dk = darker(base, 0.66), lt = lighter(base, 0.2), md = lighter(base, 0.06), vl = darker(base, 0.8);
+      const stops = strands > 1
+        ? [[0, dk], [0.17, lt], [0.38, md], [0.5, vl], [0.62, md], [0.8, base], [1, dk]]
+        : [[0, dk], [0.3, lt], [0.62, md], [1, dk]];
       defs.set(key, `<linearGradient id="${id}-${key}" x1="0" y1="${litTop ? 0 : 1}" x2="0" y2="${litTop ? 1 : 0}">`
         + stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('') + '</linearGradient>');
     }
     return `${id}-${key}`;
   };
-  // twist ridges at the helix angle, spaced to the thread's width (shared by legs of similar width)
-  const twist = (w) => {
-    const sp = Math.max(1.4, Math.round(w * 0.42 * 4) / 4), key = `t${String(sp).replace('.', '_')}`;
-    if (!defs.has(key)) defs.set(key, `<pattern id="${id}-${key}" patternUnits="userSpaceOnUse" width="${sp}" height="${sp}" patternTransform="rotate(55)">`
-      + `<rect width="${f1(sp * 0.36)}" height="${sp}" fill="#000" fill-opacity=".2"/></pattern>`);
+  // Twist: soft grooves at the helix angle (about 35° to the thread), one ply apart.
+  const twist = (wpx, strands) => {
+    if (!defs.has('groove')) defs.set('groove', `<linearGradient id="${id}-groove"><stop offset="0" stop-opacity="0"/><stop offset=".5" stop-opacity=".32"/><stop offset="1" stop-opacity="0"/></linearGradient>`);
+    const sp = Math.max(1.6, Math.round((wpx / strands) * 0.5 * 4) / 4), key = `t${String(sp).replace('.', '_')}`;
+    if (!defs.has(key)) defs.set(key, `<pattern id="${id}-${key}" patternUnits="userSpaceOnUse" width="${sp}" height="${sp}" patternTransform="rotate(-55)">`
+      + `<rect width="${sp}" height="${sp}" fill="url(#${id}-groove)"/></pattern>`);
+    return `${id}-${key}`;
+  };
+  // Dark where the thread dives into a hole.
+  const ends = (ea, eb) => {
+    const key = `e${ea}${eb}`;
+    if (!defs.has(key)) {
+      const s = [[0, ea ? 0.5 : 0], [0.16, 0], [0.84, 0], [1, eb ? 0.5 : 0]];
+      defs.set(key, `<linearGradient id="${id}-${key}">` + s.map(([o, a]) => `<stop offset="${o}" stop-opacity="${a}"/>`).join('') + '</linearGradient>');
+    }
     return `${id}-${key}`;
   };
 
   if (paper) body.push(`<rect width="${S}" height="${S}" rx="8" fill="#F2EEE6"/>`);
-  holes.forEach(([x, y]) => body.push(`<circle cx="${x}" cy="${y}" r="1.4" fill="${HOLE}"/>`));
+  for (const [x, y] of [[O, O], [O + C, O], [O, O + C], [O + C, O + C]]) body.push(`<circle cx="${x}" cy="${y}" r="1.7" fill="${HOLE}"/>`);
 
-  // Under legs, then top legs: each layer's shadows fall on everything already drawn.
-  const byLayer = new Map();
-  legs.forEach((l) => { if (!byLayer.has(l.layer)) byLayer.set(l.layer, []); byLayer.get(l.layer).push(l); });
-  for (const layer of [...byLayer.keys()].sort()) {
-    const layerShadows = [], layerBody = [];
-    for (const l of byLayer.get(layer)) {
+  // Under legs, then top legs, then backstitch: each layer's shadows fall on what is already drawn.
+  const layers = [...new Set(legs.map((l) => l.layer))].sort();
+  for (const layer of layers) {
+    const shadows = [], threads = [];
+    for (const l of legs.filter((x) => x.layer === layer)) {
       const j = (amt) => (r() - 0.5) * 2 * amt;   // hand tension: off-centre holes, uneven thickness
-      const a = l.ea ? [l.a[0] + j(0.5), l.a[1] + j(0.5)] : l.a, b = l.eb ? [l.b[0] + j(0.5), l.b[1] + j(0.5)] : l.b;
-      const w = l.w * (1 + j(0.08));
+      const px = (p) => [O + p[0] * C, O + p[1] * C];
+      const a = l.ea ? px(l.a).map((v) => v + j(0.45)) : px(l.a), b = l.eb ? px(l.b).map((v) => v + j(0.45)) : px(l.b);
+      const w = l.w * C * 1.08 * (1 + j(0.07));   // the canvas lets thread puff a little past its nominal width
       const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), deg = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (L < 0.5) continue;
       const d = ribbonLocal(L, w, l.ea, l.eb);
       const base = l.tone > 1 ? lighter(colour, (l.tone - 1) * 0.6) : darker(colour, l.tone);
-      // the leg's +y side faces the top-left light when its normal (-dy, dx) points up-left
-      const litTop = (dy - dx) < 0;
+      const litTop = (dy - dx) < 0;   // the light is top-left; does it reach this leg's -y side?
       const frame = `translate(${f1(a[0])} ${f1(a[1])}) rotate(${f1(deg)})`;
-      layerShadows.push(`<path transform="${frame}" d="${d}"/>`);
-      let g = `<g transform="${frame}"><path d="${d}" fill="url(#${shading(base, litTop)})"/><path d="${d}" fill="url(#${twist(w)})"/>`;
-      if (L > w * 1.2) {
-        const y = f1((litTop ? -1 : 1) * w * 0.18);
-        g += `<path d="M${f1(L * 0.25)} ${y}H${f1(L * 0.75)}" stroke="#fff" stroke-opacity=".32" stroke-width="${f1(w * 0.14)}" stroke-linecap="round"/>`;
-      }
-      layerBody.push(g + '</g>');
+      shadows.push(`<path transform="${frame}" d="${d}"/>`);
+      threads.push(`<g transform="${frame}"><path d="${d}" fill="url(#${shading(base, litTop, l.strands)})"/>`
+        + `<path d="${d}" fill="url(#${twist(w, l.strands)})"/>`
+        + (l.ea || l.eb ? `<path d="${d}" fill="url(#${ends(l.ea, l.eb)})"/>` : '') + '</g>');
     }
-    body.push(`<g transform="translate(.7 1.1)" fill="#000" fill-opacity=".3" filter="url(#${id}-blur)">${layerShadows.join('')}</g>`, ...layerBody);
+    body.push(`<g transform="translate(.6 1)" fill="#000" fill-opacity=".34" filter="url(#${id}-blur)">${shadows.join('')}</g>`, ...threads);
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;

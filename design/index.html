@@ -103,7 +103,7 @@
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
 
     const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B' };
-    const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836']];
+    const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
     document.getElementById('thread-colours').innerHTML = COLOURS.map(([n, c], i) =>
       `<button data-colour="${c}" aria-pressed="${i === 0}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
     document.getElementById('thread-colours').addEventListener('click', (e) => {
