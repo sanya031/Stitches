@@ -11,7 +11,7 @@ Live at https://stitches-ruddy.vercel.app. Plain HTML, CSS and JavaScript, no bu
 
 ## Icons
 
-Source of truth: `design/icons/icons.js`. After editing it, run `node design/icons/build.mjs` to regenerate `design/icons/svg/*.svg` and `design/icons/sprite.svg`. Rules: 24 px grid, 2 px padding, 1.75 stroke, round caps and joins, `currentColor`; stitch icons show fabric holes as dots.
+Two styles. **Line icons** (`design/icons/icons.js`) for every control. **Thread icons** (`design/icons/thread.js`) for stitches and fills, drawn as real thread in any colour: `threadSvg(name, { colour, size, paper })`. After editing either, run `node design/icons/build.mjs` to regenerate `design/icons/svg/*.svg`, `design/icons/sprite.svg` and `design/icons/thread/*.svg`. Rules: 24 px grid, 2 px padding, 1.75 stroke, round caps and joins, `currentColor`; stitch icons show fabric holes as dots.
 
 ## Run it
 

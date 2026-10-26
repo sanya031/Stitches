@@ -24,6 +24,7 @@ Plain HTML/CSS/JS, no build step. Two parts:
 
 **Design system** at `/design/`:
 - `design/icons/icons.js` — the icon set (name → group, label, SVG body) and `svg(name, opts)`. Edit here, then `node design/icons/build.mjs` writes `svg/*.svg` and `sprite.svg`. Rules: 24 grid, 2 px padding, 1.75 stroke, round caps/joins, currentColor, fabric holes as dots (r 1.25), stitch legs stop 1.5 short of a hole. Solid fills only where they mean something.
+- `design/icons/thread.js` — thread-style icons for stitches and fills: lens-shaped legs in their own rotated frame (shared gradient and twist pattern per colour), shadows in one blurred group per layer. Fills reuse `lab/fills.js` (knots and seed are evenly scattered for legibility). `threadSvg(name, { colour, size, paper, id })`; pass a unique `id` when several sit on one page.
 - `design/index.html` — gallery: sizes, stroke weight, bench/cloth backgrounds, click to copy.
 
 The mockup's SVG stitches are **stand-ins**. The lab's renderer replaces them; the mockup screens' layout and controls are what carry forward.
