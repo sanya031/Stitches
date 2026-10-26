@@ -7,6 +7,12 @@ Live at https://stitches-ruddy.vercel.app. Plain HTML, CSS and JavaScript, no bu
 - **Home page: the thread lab** — stitched calla lilies to start from, a full stitch editor, and Picture: turn a photo into stitching or into a pattern to stitch over.
 - **`/mockup/`** — the clickable mockup of the full editor: five screens (Stitch, Picture, Letters, Close-up, Embed).
 
+- **`/design/`** — the icon set: 70 line icons for tools, stitches, fills, actions, view, thread, canvas and product, with a gallery to preview sizes and stroke weights and copy SVGs.
+
+## Icons
+
+Source of truth: `design/icons/icons.js`. After editing it, run `node design/icons/build.mjs` to regenerate `design/icons/svg/*.svg` and `design/icons/sprite.svg`. Rules: 24 px grid, 2 px padding, 1.75 stroke, round caps and joins, `currentColor`; stitch icons show fabric holes as dots.
+
 ## Run it
 
 ```bash

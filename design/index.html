@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selvedge Icons</title>
+  <meta name="description" content="The Selvedge icon set: tools, stitches, fills, actions, thread and canvas icons on a 24 px grid.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ground: #121418; --panel: #16181D; --raised: #1E2128; --well: #0F1114; --line: #262A32; --line-3: #3A3F49;
+      --text: #EEE9E0; --muted: #B5BAC3; --dim: #9AA0AB; --accent: #E9B949; --accent-ink: #1A1305; --cloth: #ECE5D6;
+      --font: 'Instrument Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--ground); color: var(--text); font-family: var(--font); font-size: 14px; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+    header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+    header p { margin: 0; color: var(--muted); max-width: 64ch; line-height: 1.5; }
+    .mono { font-family: var(--mono); font-size: 12px; }
+    .bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 24px -16px 8px; padding: 12px 16px;
+      background: var(--ground); border-bottom: 1px solid var(--line); }
+    input[type="search"] { flex: 1 1 220px; min-height: 44px; padding: 0 14px; font: inherit; color: var(--text); background: var(--well); border: 1px solid var(--line-3); border-radius: 12px; }
+    .pill { display: flex; background: var(--well); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+    button { font: inherit; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 999px; min-height: 44px; min-width: 44px; padding: 0 14px; cursor: pointer; }
+    .pill button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .stroke { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+    .stroke input { width: 120px; height: 44px; accent-color: var(--accent); }
+    h2 { margin: 32px 0 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
+    .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 8px 12px; border-radius: 12px; min-height: 120px;
+      background: var(--panel); border: 1px solid var(--line); color: var(--text); text-align: center; }
+    .tile:hover { border-color: var(--line-3); }
+    .tile .art { display: grid; place-items: center; height: 52px; }
+    .tile .name { font-size: 13px; font-weight: 500; }
+    .tile .file { color: var(--dim); word-break: break-all; }
+    body.on-cloth .tile { background: var(--cloth); color: #2A2620; border-color: #D9D0BD; }
+    body.on-cloth .tile .file { color: #6B6456; }
+    .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 24px; }
+    .rule { padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+    .rule h3 { margin: 0 0 6px; font-size: 14px; }
+    .rule p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .anatomy { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+    .anatomy svg.frame { background: var(--well); border-radius: 8px; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+      font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .15s; }
+    .toast.show { opacity: 1; }
+    .empty { color: var(--dim); padding: 24px 0; }
+    @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Selvedge icons</h1>
+      <p>One line icon set for the stitch playground. Every icon sits on the same 24 px grid with a 1.75 stroke, so they can sit side by side in any control. Click an icon to copy its SVG.</p>
+    </header>
+
+    <div class="rules">
+      <div class="rule">
+        <h3>Grid</h3>
+        <p>24 × 24 viewBox, 2 px padding. Content lives inside 2 to 22.</p>
+        <div class="anatomy" id="anatomy"></div>
+      </div>
+      <div class="rule"><h3>Stroke</h3><p>1.75 px, round caps and joins, no fills. A solid shape is used only where it means something: a selected square, a pointer, a fabric hole.</p></div>
+      <div class="rule"><h3>Holes</h3><p>Stitch icons draw the fabric holes as dots, and legs stop just short of them, like thread going in. That is what makes them read as embroidery.</p></div>
+      <div class="rule"><h3>Colour</h3><p>Icons take the colour of their text (<span class="mono">currentColor</span>). On the dark workbench that is linen white; on the active pill it is the dark ink on brass.</p></div>
+    </div>
+
+    <div class="bar" role="toolbar" aria-label="Preview">
+      <input type="search" id="q" placeholder="Search icons" aria-label="Search icons">
+      <div class="pill" role="group" aria-label="Size" id="sizes">
+        <button data-size="16">16</button><button data-size="20">20</button><button data-size="24" aria-pressed="true">24</button><button data-size="32">32</button><button data-size="48">48</button>
+      </div>
+      <label class="stroke">Stroke <input type="range" id="stroke" min="1.25" max="2.5" step="0.25" value="1.75"><span class="mono" id="stroke-out">1.75</span></label>
+      <div class="pill" role="group" aria-label="Background" id="bgs">
+        <button data-bg="bench" aria-pressed="true">Bench</button><button data-bg="cloth">Cloth</button>
+      </div>
+    </div>
+
+    <main id="groups"></main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { ICONS, GROUPS, svg } from './icons/icons.js';
+
+    const view = { size: 24, stroke: 1.75, q: '' };
+    const groupsEl = document.getElementById('groups');
+
+    function render() {
+      const q = view.q.trim().toLowerCase();
+      const html = GROUPS.map((g) => {
+        const items = Object.entries(ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
+        if (!items.length) return '';
+        return `<h2>${g}</h2><div class="grid">${items.map(([name, i]) =>
+          `<button class="tile" data-name="${name}" title="Copy ${name}.svg"><span class="art">${svg(name, { size: view.size, stroke: view.stroke })}</span>`
+          + `<span class="name">${i.label}</span><span class="file mono">${name}</span></button>`).join('')}</div>`;
+      }).join('');
+      groupsEl.innerHTML = html || '<p class="empty">No icons match.</p>';
+    }
+
+    // anatomy: the full-strength icon over its padding and grid
+    document.getElementById('anatomy').innerHTML =
+      `<svg class="frame" width="96" height="96" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" fill="none" stroke="#3A3F49" stroke-width=".15" stroke-dasharray=".5 .5"/>
+        ${Array.from({ length: 23 }, (_, i) => `<path d="M${i + 1} 0v24M0 ${i + 1}h24" stroke="#262A32" stroke-width=".05"/>`).join('')}
+        <g color="#EEE9E0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ICONS['stitch-full'].body}</g>
+      </svg><span class="mono">stitch-full</span>`;
+
+    document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); });
+    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); });
+    document.getElementById('sizes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-size]'); if (!b) return;
+      view.size = Number(b.dataset.size);
+      document.querySelectorAll('[data-size]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      render();
+    });
+    document.getElementById('bgs').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-bg]'); if (!b) return;
+      document.body.classList.toggle('on-cloth', b.dataset.bg === 'cloth');
+      document.querySelectorAll('[data-bg]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    });
+
+    const toast = document.getElementById('toast');
+    let toastTimer;
+    groupsEl.addEventListener('click', async (e) => {
+      const t = e.target.closest('.tile'); if (!t) return;
+      const name = t.dataset.name;
+      try { await navigator.clipboard.writeText(svg(name)); toast.textContent = `Copied ${name}.svg`; }
+      catch { toast.textContent = `Copy blocked. The file is design/icons/svg/${name}.svg`; }
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+    });
+
+    render();
+  </script>
+</body>
+</html>

@@ -22,6 +22,10 @@ Plain HTML/CSS/JS, no build step. Two parts:
 - `mockup/js/screens/*.js` — one module per screen: `{ title, file, status, initial, render(state), actions }`. Wire controls with `data-act="name" data-arg="…"` (click), `data-input` (live input), `data-change` (sliders, commit on release).
 - `mockup/js/thread.js` — SVG stitch drawing (`crossSVG`, `cellsHTML`, `wornStitchSVG`), the strawberry motif, stitch picker icons.
 
+**Design system** at `/design/`:
+- `design/icons/icons.js` — the icon set (name → group, label, SVG body) and `svg(name, opts)`. Edit here, then `node design/icons/build.mjs` writes `svg/*.svg` and `sprite.svg`. Rules: 24 grid, 2 px padding, 1.75 stroke, round caps/joins, currentColor, fabric holes as dots (r 1.25), stitch legs stop 1.5 short of a hole. Solid fills only where they mean something.
+- `design/index.html` — gallery: sizes, stroke weight, bench/cloth backgrounds, click to copy.
+
 The mockup's SVG stitches are **stand-ins**. The lab's renderer replaces them; the mockup screens' layout and controls are what carry forward.
 
 Run locally: `npx serve .` (or any static server — ES modules need http, not file://). Deploys to Vercel as a static site (`vercel.json` only redirects the old `/prototype/` link to `/`); every push to `main` redeploys https://stitches-ruddy.vercel.app.
