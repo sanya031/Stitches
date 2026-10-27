@@ -47,7 +47,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / Math.m
 
 export function createZoomMotion(settings) {
   const states = new Map();   // host element → { p, v, target, tween, timer }
-  let raf = 0, last = 0, frozen = null;   // frozen: a progress every icon is held at, for inspecting a frame
+  let raf = 0, last = 0;
 
   const NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
@@ -81,6 +81,7 @@ export function createZoomMotion(settings) {
       g.style.transformOrigin = `${fx}px ${fy}px`;
       g.style.transform = `scale(${sc})`;
       g.style.transition = 'none';
+      g.style.willChange = 'transform, opacity';
     }
 
     // reveal: a soft circle from the anchor square's centre out past the farthest corner
@@ -131,7 +132,7 @@ export function createZoomMotion(settings) {
   };
   const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
   const state = (host) => { if (!states.has(host)) states.set(host, { p: 0, v: 0, target: 0, tween: null, timer: 0 }); return states.get(host); };
-  const aim = (host, target) => { if (frozen != null) return; const s = state(host); s.target = target; kick(); };
+  const aim = (host, target) => { const s = state(host); s.target = target; kick(); };
 
   // events on the page, delegated so re-rendered tiles keep working
   const hostOf = (e) => e.target.closest?.('.tz-host');
@@ -158,14 +159,9 @@ export function createZoomMotion(settings) {
 
   return {
     /** Paint a freshly rendered host at its current progress (after a re-render). */
-    sync(host) { const s = state(host); if (frozen != null) s.p = s.target = frozen; paint(host, s); },
+    sync(host) { paint(host, state(host)); },
     /** Repaint every icon, e.g. after the anchor or reveal dials change while nothing is moving. */
     repaint() { document.querySelectorAll('.tz-host').forEach((h) => paint(h, state(h))); },
-    /** Hold every icon at progress p (null lets them go back to following the pointer). */
-    freeze(p) {
-      frozen = p;
-      document.querySelectorAll('.tz-host').forEach((h) => { const s = state(h); if (p == null) { s.target = 0; kick(); } else { s.p = p; s.v = 0; s.target = p; paint(h, s); } });
-    },
     /** Send every host on the page to a target, e.g. to compare all patches at once. */
     all(target) { document.querySelectorAll('.tz-host').forEach((h) => aim(h, target)); },
   };

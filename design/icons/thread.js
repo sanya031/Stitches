@@ -105,9 +105,17 @@ function layout(name, n = 1) {
       'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-weave-3': 'weave3', 'fill-weave-5': 'weave5',
       'fill-weave-diamond': 'diamond', 'fill-blocks': 'blocks', 'fill-fern': 'fern', 'fill-seed': 'seed', 'fill-knots': 'knots', 'fill-burst': 'burst'
     }[name];
-    const mask = new Set();
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask.add(`${x},${y}`);
-    add(regionLegs(kind, mask, 0.85, 5, W_FILL).map((l) => [l.a, l.b, l.layer, l.ea, l.eb, l.tone]), W_FILL, 1);
+    const asLegs = (list, x = 0, y = 0) => list.map((l) => [[l.a[0] + x, l.a[1] + y], [l.b[0] + x, l.b[1] + y], l.layer, l.ea, l.eb, l.tone]);
+    if (kind === 'seed' || kind === 'knots' || kind === 'burst') {
+      // scattered and radial fills are stitched square by square: the first square is exactly the single icon,
+      // the others are the same fill with their own scatter, so the hovered square doesn't change as it zooms out
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) add(asLegs(regionLegs(kind, new Set(['0,0']), 0.85, x || y ? 5 + (y * n + x) * 7919 : 5, W_FILL), x, y), W_FILL, 1);
+    } else {
+      // laid and woven fills run on across squares as one thread, exactly as the canvas lays them
+      const mask = new Set();
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask.add(`${x},${y}`);
+      add(asLegs(regionLegs(kind, mask, 0.85, 5, W_FILL)), W_FILL, 1);
+    }
   }
   return legs;
 }
@@ -139,10 +147,10 @@ function ribbonLocal(L, w, ea, eb) {
  * frame: 'square' (the single square, default), 'patch' (a ZOOM × ZOOM patch of the same stitch or fill, as the canvas
  * lays it, in the same square of the frame) or 'zoom' (both, animated on hover: the square zooms out into the patch).
  * n: squares per side of the patch. animate: false leaves out the CSS animation, for a page that drives .tz-one/.tz-many itself.
+ * holes: opacity of the fabric holes (0 hides them).
  */
-export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, frame = 'square', n = ZOOM, animate = true } = {}) {
+export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, frame = 'square', n = ZOOM, animate = true, holes = 0.35 } = {}) {
   if (!THREAD_ICONS[name]) throw new Error(`Unknown thread icon: ${name}`);
-  const r = rng(name.length * 97 + 3);
   const defs = new Map(), body = [];
   defs.set('blur', `<filter id="${id}-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.8"/></filter>`);
 
@@ -183,13 +191,20 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
   // each layer's shadows falling on what is already drawn. Everything scales with the square.
   const draw = (legs, n) => {
     const cell = C / n, k = cell / C, out = [];
-    const hole = n === 1 ? 1.7 : 0.9;
-    for (let y = 0; y <= n; y++) for (let x = 0; x <= n; x++) out.push(`<circle cx="${f1(O + x * cell)}" cy="${f1(O + y * cell)}" r="${hole}" fill="${HOLE}"/>`);
+    // holes shrink with the zoom like everything else, and sit faint in the background: they are the cloth
+    if (holes > 0) {
+      const dots = [];
+      for (let y = 0; y <= n; y++) for (let x = 0; x <= n; x++) dots.push(`<circle cx="${f1(O + x * cell)}" cy="${f1(O + y * cell)}" r="${+(1.7 / n).toFixed(2)}"/>`);
+      out.push(`<g fill="${HOLE}" fill-opacity="${holes}">${dots.join('')}</g>`);
+    }
     const layers = [...new Set(legs.map((l) => l.layer))].sort();
     for (const layer of layers) {
       const shadows = [], threads = [];
       for (const l of legs.filter((x) => x.layer === layer)) {
-        const j = (amt) => (r() - 0.5) * 2 * amt;   // hand tension: off-centre holes, uneven thickness
+        // hand tension: off-centre holes, uneven thickness. Seeded by where the leg is, so the same stitch
+        // wobbles the same way in the single square and in the patch (no jump as one hands over to the other)
+        const lr = rng(Math.round(l.a[0] * 977 + l.a[1] * 7919 + l.b[0] * 6271 + l.b[1] * 3571 + layer * 101));
+        const j = (amt) => (lr() - 0.5) * 2 * amt;
         const px = (p) => [O + p[0] * cell, O + p[1] * cell];
         const a = l.ea ? px(l.a).map((v) => v + j(0.45 * k)) : px(l.a), b = l.eb ? px(l.b).map((v) => v + j(0.45 * k)) : px(l.b);
         const w = l.w * cell * 1.08 * (1 + j(0.07));   // the canvas lets thread puff a little past its nominal width

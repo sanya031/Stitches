@@ -57,6 +57,8 @@
     .tile.thread .art, .tile.prim .art { height: auto; min-height: 52px; will-change: transform; }
     /* thread and primitive grids size to the icons (sizes come from the Hover zoom dials) */
     .grid.big { grid-template-columns: repeat(auto-fill, minmax(var(--tile, 124px), 1fr)); }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .patch-note { color: var(--dim); }
     #prim-colours { width: max-content; max-width: 100%; flex-wrap: wrap; margin-bottom: 8px; }
     #prim-colours button { display: inline-flex; align-items: center; gap: 8px; }
     h3.sub { margin: 20px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
@@ -90,6 +92,9 @@
       <div class="pill" role="group" aria-label="Frame" id="frames">
         <button data-frame="zoom" aria-pressed="true">Hover zoom</button><button data-frame="square">First frame</button><button data-frame="patch">Last frame</button>
       </div>
+      <div class="pill" role="group" aria-label="Holes" id="holes">
+        <button data-holes="0.3" aria-pressed="true">Faint holes</button><button data-holes="0">No holes</button><button data-holes="1">Full holes</button>
+      </div>
       <div class="pill" role="group" aria-label="Background" id="bgs">
         <button data-bg="bench" aria-pressed="true">Bench</button><button data-bg="cloth">Cloth</button>
       </div>
@@ -97,14 +102,16 @@
 
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
-      <p class="lede">Tune the hover with the <strong>Hover zoom</strong> panel (top right): the spring for zooming out and back, hover delay, where the hovered stitch anchors (top left by default: it shrinks in place and the rest of the patch spreads out to its right and below), how the others are revealed, patch size, icon sizes and colours. Values are kept in this browser; <em>Copy</em> in the panel gives them to you.</p>
-      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one: it shrinks in place and the rest of a 4 × 4 patch, laid as the canvas lays it, spreads out around it. <em>First frame</em> and <em>Last frame</em> show the two ends on their own, on the same grid: the patch's top-left square is exactly the single square at a quarter size, so scaling the patch 4× about the frame's top-left corner of the square (6, 6 on the 48 frame) lines them up. The downloadable <span class="mono">*-zoom</span> files still use the earlier centred CSS zoom.</p>
+      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works.</p>
+      <p class="lede">Hover one: it shrinks in place and the rest of a patch of the same stitch spreads out to its right and below, laid the way it is stitched. The patch has fewer squares at smaller sizes so you can still read it. Tune how fast and how smooth with the <strong>Hover zoom</strong> panel (top right). <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch's top-left square is exactly the single square, scaled down. The downloadable <span class="mono">*-zoom</span> files still use the earlier centred CSS zoom.</p>
+      <div class="controls"><div class="pill" role="group" aria-label="Thread icon size" id="thread-sizes"></div><span class="mono patch-note" id="thread-n"></span></div>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
     </section>
     <section aria-labelledby="prim-title">
       <h2 id="prim-title" style="margin-top:48px">Primitives · stitches and fills</h2>
-      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. They zoom out the same way, anchored on the square's top-left corner (5, 5 on the 24 grid).</p>
+      <p class="lede">Every thread icon as clean lines on one square: the four holes (faint, they are the cloth), then the stitch. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. The patch is the same drawing with more squares: laid and woven fills run on as one thread, counted and scattered stitches repeat square by square.</p>
+      <div class="controls"><div class="pill" role="group" aria-label="Primitive size" id="prim-sizes"></div><span class="mono patch-note" id="prim-n"></span></div>
       <div class="pill" role="group" aria-label="Primitive colour" id="prim-colours"></div>
       <div id="prim-groups"></div>
     </section>
@@ -120,129 +127,116 @@
     import { createZoomMotion } from './zoom-motion.js';
     import { createDialKit, createDialRoot } from 'https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js';
 
-    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', n: 4, primSize: 72, primStroke: 1.75, primColour: '#EEE9E0', threadSize: 96, hold: null };
+    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', primSize: 72, primColour: '#EEE9E0', threadSize: 96, holes: 0.3 };
     // files per frame, for the copy toast
     const DIRS = { thread: { square: 'thread', patch: 'thread-patch', zoom: 'thread-zoom' }, prim: { square: 'primitive', patch: 'primitive-patch', zoom: 'primitive-zoom' } };
     const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
     const PRIM_COLOURS = [['Linen', '#EEE9E0'], ['Brass', '#E9B949'], ...COLOURS.filter(([n]) => n !== 'White')];
 
-    // any CSS colour (the DialKit picker can give oklch or p3) as #rrggbb, which the thread shading needs
-    const probe = document.createElement('canvas').getContext('2d');
-    const toHex = (c) => {
-      probe.fillStyle = '#000'; probe.fillStyle = c;
-      const v = probe.fillStyle;
-      if (v.startsWith('#')) return v;
-      const m = v.match(/[\d.]+/g) || [0, 0, 0];
-      return '#' + m.slice(0, 3).map((x) => Math.round(Number(x)).toString(16).padStart(2, '0')).join('');
-    };
 
+    // The panel holds only what shapes the motion: how long it takes and how smooth it is.
     createDialRoot({ position: 'top-right', theme: 'dark' });
     const kit = createDialKit('Hover zoom', {
-      motion: {
-        trigger: { type: 'select', options: [{ value: 'hover', label: 'Spring on hover' }, { value: 'scrub', label: 'Scrub with pointer' }], default: 'hover' },
-        zoomOut: { type: 'spring', visualDuration: 0.9, bounce: 0.12 },
-        zoomBack: { type: 'spring', visualDuration: 0.6, bounce: 0 },
-        hoverDelay: [140, 0, 600, 10],
-        evenZoom: true,
-        lift: [0, 0, 0.2, 0.01],
-      },
-      // where the hovered stitch sits in the patch; top left = the others appear to its right and below
-      layout: {
-        anchor: { type: 'pad', x: [0, 0, 1, 0.01], y: [1, 0, 1, 0.01], labels: { x: 'Across', y: 'Up' } },
-        patch: [4, 3, 6, 1],
-      },
-      reveal: {
-        style: { type: 'select', options: [{ value: 'sweep', label: 'Sweep from stitch' }, { value: 'fade', label: 'Fade in' }], default: 'sweep' },
-        start: [0.05, 0, 1, 0.01],
-        end: [0.85, 0, 1, 0.01],
-        softness: [0.45, 0, 0.95, 0.01],
-        handoffStart: [0.88, 0, 1, 0.01],
-        handoffEnd: [1, 0, 1, 0.01],
-      },
-      // hold every icon at one point of the zoom, to look at a frame
-      inspect: { freeze: false, at: [0.5, 0, 1, 0.01] },
-      zoomAll: { type: 'action', label: 'Zoom all out' },
-      zoomBackAll: { type: 'action', label: 'Zoom all back' },
-      icons: {
-        primitiveSize: [72, 24, 200, 1],
-        primitiveStroke: [1.75, 1, 3, 0.05],
-        primitiveColour: '#EEE9E0',
-        threadSize: [96, 32, 200, 1],
-        threadColour: '#C8343B',
-      },
-    }, {
-      id: 'selvedge-hover-zoom-2', persist: true,
-      onAction: (a) => motion.all(a === 'zoomAll' ? 1 : 0),
-    });
-    // the dials' folders, flattened to what zoom-motion.js reads
+      duration: [0.45, 0.15, 1.5, 0.01],
+      smoothness: [0.6, 0, 1, 0.01],
+    }, { id: 'selvedge-hover-zoom-3', persist: true });
+    // what zoom-motion.js reads, derived from the two dials: smoother = less overshoot and a softer reveal edge
     const motionSettings = () => {
-      const v = kit.getValues();
-      return { ...v.motion, anchor: v.layout.anchor, reveal: v.reveal.style, revealStart: v.reveal.start, revealEnd: v.reveal.end,
-        softness: v.reveal.softness, handoffStart: v.reveal.handoffStart, handoffEnd: v.reveal.handoffEnd };
+      const { duration, smoothness } = kit.getValues();
+      return {
+        trigger: 'hover', hoverDelay: 60, evenZoom: true, lift: 0, anchor: { x: 0, y: 1 },
+        zoomOut: { type: 'spring', visualDuration: duration, bounce: 0.3 * (1 - smoothness) },
+        zoomBack: { type: 'spring', visualDuration: duration * 0.8, bounce: 0 },
+        reveal: 'sweep', revealStart: 0.05, revealEnd: 0.85, softness: 0.25 + 0.45 * smoothness, handoffStart: 0.88, handoffEnd: 1,
+      };
     };
     const motion = createZoomMotion(motionSettings);
+    kit.subscribe(() => motion.repaint());
 
-    document.getElementById('prim-colours').innerHTML = PRIM_COLOURS.map(([n, c]) =>
-      `<button data-pcolour="${c}" aria-pressed="false"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
+    // the patch gets fewer squares as the icon gets smaller, so each square stays big enough to read
+    // (primitives: about 10 px a square; thread: about 18 px, where the thread still shows)
+    const clampN = (v) => Math.max(2, Math.min(6, Math.round(v)));
+    const nPrim = () => clampN((view.primSize * 14) / 24 / 10.5), nThread = () => clampN((view.threadSize * 36) / 48 / 18);
+
+    const pills = (id, values, current, attr) => {
+      document.getElementById(id).innerHTML = values.map((v) => `<button ${attr}="${v}" aria-pressed="${v === current}">${v}</button>`).join('');
+    };
+    pills('prim-sizes', [24, 32, 48, 72, 96, 128], view.primSize, 'data-psize');
+    pills('thread-sizes', [48, 64, 96, 128, 160], view.threadSize, 'data-tsize');
+    document.getElementById('prim-sizes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-psize]'); if (!b) return;
+      view.primSize = Number(b.dataset.psize);
+      document.querySelectorAll('[data-psize]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderPrim();
+    });
+    document.getElementById('thread-sizes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tsize]'); if (!b) return;
+      view.threadSize = Number(b.dataset.tsize);
+      document.querySelectorAll('[data-tsize]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderThread();
+    });
+
+    document.getElementById('prim-colours').innerHTML = PRIM_COLOURS.map(([n, c], i) =>
+      `<button data-pcolour="${c}" aria-pressed="${i === 0}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
     document.getElementById('prim-colours').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-pcolour]'); if (b) kit.setValue('icons.primitiveColour', b.dataset.pcolour);
+      const b = e.target.closest('[data-pcolour]'); if (!b) return;
+      view.primColour = b.dataset.pcolour;
+      document.querySelectorAll('[data-pcolour]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderPrim();
     });
     document.getElementById('thread-colours').innerHTML = COLOURS.map(([n, c], i) =>
       `<button data-colour="${c}" aria-pressed="${i === 0}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
     document.getElementById('thread-colours').addEventListener('click', (e) => {
       const b = e.target.closest('[data-colour]'); if (!b) return;
-      kit.setValue('icons.threadColour', b.dataset.colour);
+      view.colour = b.dataset.colour;
+      document.querySelectorAll('[data-colour]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderThread();
+    });
+    document.getElementById('holes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-holes]'); if (!b) return;
+      view.holes = Number(b.dataset.holes);
+      document.querySelectorAll('[data-holes]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderThread();
+      renderPrim();
     });
 
     // zoom icons on this page are driven by zoom-motion.js, so they leave out their own CSS animation
-    const zoomReady = (el, o, c) => el.querySelectorAll('.tz-host').forEach((h) => {
+    const zoomReady = (el, o, c, n) => el.querySelectorAll('.tz-host').forEach((h) => {
       const svg = h.querySelector('svg'); if (!svg || view.frame !== 'zoom') return;
-      svg.dataset.n = view.n; svg.dataset.o = o; svg.dataset.c = c;
+      svg.dataset.n = n; svg.dataset.o = o; svg.dataset.c = c;
       motion.sync(h);
     });
 
     const onCloth = () => document.body.classList.contains('on-cloth');   // linen primitives would vanish on cloth: use the ink
 
     function renderThread() {
-      const q = view.q.trim().toLowerCase(), size = view.threadSize;
+      const q = view.q.trim().toLowerCase(), size = view.threadSize, n = nThread();
+      document.getElementById('thread-n').textContent = `${n} × ${n} patch at ${size} px`;
       const groups = [...new Set(Object.values(THREAD_ICONS).map((i) => i.group))];
       document.getElementById('thread-groups').innerHTML = groups.map((g) => {
         const items = Object.entries(THREAD_ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
-          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `t-${name}-${view.frame}`, frame: view.frame, n: view.n, animate: false })}</span>`
+          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: onCloth(), id: `t-${name}-${view.frame}`, frame: view.frame, n, animate: false, holes: view.holes })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">${DIRS.thread[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
-      zoomReady(document.getElementById('thread-groups'), 6, 36);
+      zoomReady(document.getElementById('thread-groups'), 6, 36, n);
     }
     function renderPrim() {
-      const q = view.q.trim().toLowerCase(), size = view.primSize;
+      const q = view.q.trim().toLowerCase(), size = view.primSize, n = nPrim();
+      document.getElementById('prim-n').textContent = `${n} × ${n} patch at ${size} px`;
+      const colour = onCloth() && view.primColour.toUpperCase() === '#EEE9E0' ? 'currentColor' : view.primColour;
       const groups = [...new Set(Object.values(PRIMITIVES).map((i) => i.group))];
       document.getElementById('prim-groups').innerHTML = groups.map((g) => {
         const items = Object.entries(PRIMITIVES).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
-          `<button class="tile prim tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art" style="color:${onCloth() && view.primColour.toUpperCase() === '#EEE9E0' ? 'currentColor' : view.primColour}">${primitiveSvg(name, { size, stroke: view.primStroke, frame: view.frame, id: `p-${name}-${view.frame}`, n: view.n, animate: false })}</span>`
+          `<button class="tile prim tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art" style="color:${colour}">${primitiveSvg(name, { size, stroke: view.stroke, frame: view.frame, id: `p-${name}-${view.frame}`, n, animate: false, holes: view.holes })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">${DIRS.prim[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
-      zoomReady(document.getElementById('prim-groups'), 5, 14);
+      zoomReady(document.getElementById('prim-groups'), 5, 14, n);
     }
 
-    // dials → view; only what changes the drawing re-renders (motion settings are read live by zoom-motion.js)
-    kit.subscribe((v) => {
-      const next = { n: v.layout.patch, primSize: v.icons.primitiveSize, primStroke: v.icons.primitiveStroke, primColour: v.icons.primitiveColour,
-        threadSize: v.icons.threadSize, colour: toHex(v.icons.threadColour) };
-      const changed = (keys) => keys.some((k) => view[k] !== next[k]);
-      const redrawThread = changed(['n', 'threadSize', 'colour']), redrawPrim = changed(['n', 'primSize', 'primStroke', 'primColour']);
-      Object.assign(view, next);
-      document.querySelectorAll('[data-colour]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.colour.toLowerCase() === view.colour.toLowerCase())));
-      document.querySelectorAll('[data-pcolour]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.pcolour.toLowerCase() === String(view.primColour).toLowerCase())));
-      if (redrawThread) renderThread();
-      if (redrawPrim) renderPrim();
-      if (!redrawThread && !redrawPrim) motion.repaint();   // anchor and reveal show even at rest mid-zoom
-      const hold = v.inspect.freeze ? v.inspect.at : null;
-      if (hold !== view.hold) { view.hold = hold; motion.freeze(hold); }
-    });
     const groupsEl = document.getElementById('groups');
 
     function render() {
@@ -266,7 +260,7 @@
       </svg><span class="mono">stitch-full</span>`;
 
     document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); renderThread(); renderPrim(); });
-    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); });
+    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); renderPrim(); });
     document.getElementById('sizes').addEventListener('click', (e) => {
       const b = e.target.closest('[data-size]'); if (!b) return;
       view.size = Number(b.dataset.size);
@@ -294,8 +288,8 @@
       const t = e.target.closest('.tile'); if (!t) return;
       const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
       const ids = { square: '', patch: 'p', zoom: 'z' }[view.frame];
-      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}`, n: view.n })
-        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}`, n: view.n, stroke: view.primStroke }) : svg(name);
+      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}`, n: nThread(), holes: view.holes })
+        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}`, n: nPrim(), stroke: view.stroke, holes: view.holes }) : svg(name);
       const file = `design/icons/${thread ? DIRS.thread[view.frame] : prim ? DIRS.prim[view.frame] : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }
