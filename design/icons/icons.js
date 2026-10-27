@@ -35,13 +35,14 @@ export const ICONS = {
       + '<path class="a1" opacity="0" d="M14.5 6.5l3 3M17.5 6.5l-3 3"/><path class="a2" opacity="0" d="M6.5 14.5l3 3M9.5 14.5l-3 3"/>',
     hover: [['.a1', 'opacity:0', 'opacity:1', 0.3, 'ease-out', null, 0.05], ['.a2', 'opacity:0', 'opacity:1', 0.3, 'ease-out', null, 0.3]],
   },
-  // a marquee: corners whole, sides broken by small gaps; on hover the pointer moves in and stays
+  // a marquee the size of the pattern square, one small gap in each side, the pointer sitting half in over its
+  // corner (the outline stops short of the pointer); on hover the pointer moves a little further in and stays
   'tool-select': {
     group: 'Tools', label: 'Select',
-    body: '<path d="M3.5 6.25V6A2.5 2.5 0 0 1 6 3.5h.25M12.25 3.5h.25A2.5 2.5 0 0 1 15 6v.25M15 12.25v.25a2.5 2.5 0 0 1-2.5 2.5h-.25M6.25 15H6a2.5 2.5 0 0 1-2.5-2.5v-.25'
-      + 'M9 3.5h.5M15 9v.5M9 15h.5M3.5 9v.5"/>'
-      + '<path class="a1" d="M16 16L21 17.9L18.6 18.6L17.9 21Z"/>',
-    hover: [['.a1', 'transform:none', 'transform:translate(-4px,-4px)', 0.45, EASE]],
+    body: '<path d="M13 20.5h-2M8 20.5H6a2.5 2.5 0 0 1-2.5-2.5v-4.5'
+      + 'M3.5 10.5V6A2.5 2.5 0 0 1 6 3.5h4.5M13.5 3.5H18a2.5 2.5 0 0 1 2.5 2.5v2M20.5 11v2"/>'
+      + '<path class="a1" d="M12.75 12.75L20.75 15.75L17.45 17.45L15.75 20.75Z"/>',
+    hover: [['.a1', 'transform:none', 'transform:translate(-1.5px,-1.5px)', 0.45, EASE]],
   },
   'tool-wand': {
     group: 'Tools', label: 'Select colour',
