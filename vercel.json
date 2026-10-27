@@ -1,6 +1,8 @@
 {
   "redirects": [
     { "source": "/prototype", "destination": "/", "permanent": true },
-    { "source": "/prototype/(.*)", "destination": "/", "permanent": true }
+    { "source": "/prototype/(.*)", "destination": "/", "permanent": true },
+    { "source": "/design", "destination": "/design/", "permanent": true },
+    { "source": "/mockup", "destination": "/mockup/", "permanent": true }
   ]
 }

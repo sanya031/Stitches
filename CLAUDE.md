@@ -33,7 +33,7 @@ Plain HTML/CSS/JS, no build step. Two parts:
 
 The mockup's SVG stitches are **stand-ins**. The lab's renderer replaces them; the mockup screens' layout and controls are what carry forward.
 
-Run locally: `npx serve .` (or any static server — ES modules need http, not file://). Deploys to Vercel as a static site (`vercel.json` only redirects the old `/prototype/` link to `/`); every push to `main` redeploys https://stitches-ruddy.vercel.app.
+Run locally: `npx serve .` (or any static server — ES modules need http, not file://). Deploys to Vercel as a static site (`vercel.json` redirects the old `/prototype/` link to `/`, and `/design` and `/mockup` to their trailing-slash URLs, since the pages load their scripts by relative path); every push to `main` redeploys https://stitches-ruddy.vercel.app.
 
 ## Product
 
