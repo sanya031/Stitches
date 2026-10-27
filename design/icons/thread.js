@@ -30,12 +30,12 @@ export const THREAD_ICONS = {
   'fill-burst': { group: 'Fills', label: 'Burst' }
 };
 
-const S = 48, O = 6, C = 36;        // frame, the square's top-left corner and its size, px
+const S = 48, C_FULL = 36;        // frame, the square's top-left corner and its size, px
 // hover preview: a ZOOM × ZOOM patch by default; the hovered square becomes its top-left square
 export const ZOOM = 4;
 const HOLE = '#8F8A80';             // fabric holes: mid grey, visible on the dark bench and on cloth
 // thread widths in squares, as on the canvas at count 14: two strands for counted stitches, a fine strand for fills
-const W_STITCH = 0.3, W_FILL = 0.6 * 0.27 * 14 / 25.4;
+const W_STITCH_14 = 0.3;
 
 // ---------- colour ----------
 
@@ -71,8 +71,10 @@ function counted(type, q = 2) {
 }
 
 /** Legs for an icon on an n × n patch of squares (n = 1: the single square): { a, b, layer, w (squares), ea, eb, tone, strands }. */
-function layout(name, n = 1) {
+function layout(name, n = 1, { strands, count = 14, density = 0.85 } = {}) {
   const legs = [];
+  // strands and count, when given, set thread width from the real sizes: a strand is 0.27 mm, a square 25.4 / count mm
+  const W_STITCH = strands == null ? W_STITCH_14 : strands * 0.27 * count / 25.4, W_FILL = 0.6 * 0.27 * count / 25.4, NS = strands == null ? 2 : Math.max(1, Math.round(strands));   // in-between widths (mid-drag) keep whole strands
   const add = (list, w, strands, tone = () => 1) => list.forEach(([a, b, layer, ea = 1, eb = 1, t]) =>
     legs.push({ a, b, layer, w, ea, eb, strands, tone: t ?? tone() }));
   const r = rng(name.length * 131 + 7);
@@ -84,16 +86,16 @@ function layout(name, n = 1) {
   };
 
   let m;
-  if (name === 'stitch-full' || name === 'fill-cross') add(each(counted('full')), W_STITCH, 2);
-  else if (name === 'fill-tweed') add(each(counted('full').map((l, i) => [...l, 1, 1, i ? 1.4 : 0.68])), W_STITCH, 2);
-  else if (name === 'stitch-half') add(each(counted('half')), W_STITCH, 2);
-  else if ((m = name.match(/^stitch-quarter-(\w\w)$/))) add(each(counted('quarter', Q[m[1]])), W_STITCH, 2);
-  else if ((m = name.match(/^stitch-three-quarter-(\w\w)$/))) add(each(counted('threeq', Q[m[1]])), W_STITCH, 2);
+  if (name === 'stitch-full' || name === 'fill-cross') add(each(counted('full')), W_STITCH, NS);
+  else if (name === 'fill-tweed') add(each(counted('full').map((l, i) => [...l, 1, 1, i ? 1.4 : 0.68])), W_STITCH, NS);
+  else if (name === 'stitch-half') add(each(counted('half')), W_STITCH, NS);
+  else if ((m = name.match(/^stitch-quarter-(\w\w)$/))) add(each(counted('quarter', Q[m[1]])), W_STITCH, NS);
+  else if ((m = name.match(/^stitch-three-quarter-(\w\w)$/))) add(each(counted('threeq', Q[m[1]])), W_STITCH, NS);
   else if (name === 'stitch-back') {
     // an outline turning a corner; on a patch, a stepped outline down the diagonal
     const steps = [];
     for (let k = 0; k < n; k++) steps.push([[k, k], [k, k + 1], 2], [[k, k + 1], [k + 1, k + 1], 2]);
-    add(steps, W_STITCH * 0.8, 2);
+    add(steps, W_STITCH * 0.8, NS);
   } else if (name === 'stitch-knot') {
     // thread wrapped into a tight coil: a five-point star of short wraps
     const ring = Array.from({ length: 5 }, (_, k) => [0.5 + Math.cos(-Math.PI / 2 + k * 1.2566) * 0.2, 0.5 + Math.sin(-Math.PI / 2 + k * 1.2566) * 0.2]);
@@ -108,12 +110,12 @@ function layout(name, n = 1) {
     if (kind === 'seed' || kind === 'knots' || kind === 'burst') {
       // scattered and radial fills are stitched square by square: the first square is exactly the single icon,
       // the others are the same fill with their own scatter, so the hovered square doesn't change as it zooms out
-      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) add(asLegs(regionLegs(kind, new Set(['0,0']), 0.85, x || y ? 5 + (y * n + x) * 7919 : 5, W_FILL), x, y), W_FILL, 1);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) add(asLegs(regionLegs(kind, new Set(['0,0']), density, x || y ? 5 + (y * n + x) * 7919 : 5, W_FILL), x, y), W_FILL, 1);
     } else {
       // laid and woven fills run on across squares as one thread, exactly as the canvas lays them
       const mask = new Set();
       for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask.add(`${x},${y}`);
-      add(asLegs(regionLegs(kind, mask, 0.85, 5, W_FILL)), W_FILL, 1);
+      add(asLegs(regionLegs(kind, mask, density, 5, W_FILL)), W_FILL, 1);
     }
   }
   return legs;
@@ -148,8 +150,12 @@ function ribbonLocal(L, w, ea, eb) {
  * patch sweeps out from it, see zoom-css.js).
  * n: squares per side of the patch. animate: false leaves out the CSS animation, for a page that drives .tz-one/.tz-many itself.
  * holes: opacity of the fabric holes (0 hides them).
+ * strands, count, density: thread as stitched (2 strands on 14 count, fills at 0.85 by default); scale: the square's size in the frame.
  */
-export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, frame = 'square', n = ZOOM, animate = true, holes = 0.35 } = {}) {
+export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, frame = 'square', n = ZOOM, animate = true, holes = 0.35, strands, count, density, scale = 1 } = {}) {
+  const thread = { strands, count, density };
+  // scale shrinks the square about the frame's centre, as a higher count shrinks the squares of the cloth
+  const C = C_FULL * scale, O = (S - C) / 2;
   if (!THREAD_ICONS[name]) throw new Error(`Unknown thread icon: ${name}`);
   const defs = new Map(), body = [];
   defs.set('blur', `<filter id="${id}-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.8"/></filter>`);
@@ -161,9 +167,10 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
     if (!defs.has(key)) {
       // the canvas lights thread so its crown sits a little above the dye colour
       const dk = darker(base, 0.66), lt = lighter(base, 0.2), md = lighter(base, 0.06), vl = darker(base, 0.8);
-      const stops = strands > 1
-        ? [[0, dk], [0.17, lt], [0.38, md], [0.5, vl], [0.62, md], [0.8, base], [1, dk]]
-        : [[0, dk], [0.3, lt], [0.62, md], [1, dk]];
+      const hump = [[0, dk], [0.3, lt], [0.62, md], [1, dk]];
+      const stops = strands === 2 ? [[0, dk], [0.17, lt], [0.38, md], [0.5, vl], [0.62, md], [0.8, base], [1, dk]]
+        : strands > 2 ? Array.from({ length: strands }, (_, i) => [[i, vl], [i + 0.3, lt], [i + 0.62, md], [i + 1, vl]]).flat().map(([o, c]) => [+(o / strands).toFixed(3), c])
+        : hump;
       defs.set(key, `<linearGradient id="${id}-${key}" x1="0" y1="${litTop ? 0 : 1}" x2="0" y2="${litTop ? 1 : 0}">`
         + stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('') + '</linearGradient>');
     }
@@ -227,11 +234,11 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
   if (paper) body.push(`<rect width="${S}" height="${S}" rx="8" fill="#F2EEE6"/>`);
   // blur for the patch's finer shadows
   if (frame !== 'square') defs.set('blurn', `<filter id="${id}-blurn" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.35"/></filter>`);
-  const one = frame === 'patch' ? '' : draw(layout(name), 1);   // drawn first so its hand jitter matches the plain icon
+  const one = frame === 'patch' ? '' : draw(layout(name, 1, thread), 1);   // drawn first so its hand jitter matches the plain icon
   if (frame === 'square') body.push(one);
-  else if (frame === 'patch') body.push(draw(layout(name, n), n));
-  else if (animate) body.push(zoomMarkup({ id, o: O, c: C, n, many: draw(layout(name, n), n), one }));
-  else body.push(`<g class="tz-many">${draw(layout(name, n), n)}</g>`, `<g class="tz-one">${one}</g>`);
+  else if (frame === 'patch') body.push(draw(layout(name, n, thread), n));
+  else if (animate) body.push(zoomMarkup({ id, o: O, c: C, n, many: draw(layout(name, n, thread), n), one }));
+  else body.push(`<g class="tz-many">${draw(layout(name, n, thread), n)}</g>`, `<g class="tz-one">${one}</g>`);
 
   const svgId = frame === 'square' ? '' : ` id="${id}"`;
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;

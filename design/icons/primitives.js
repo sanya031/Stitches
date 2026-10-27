@@ -67,9 +67,9 @@ function weave(under, over) {
 }
 
 /** Laid lines across a box: horizontal (rows) or vertical, four to a square, evenly spaced across squares. */
-function laid(x0, y0, x1, y1, across) {
+function laid(x0, y0, x1, y1, across, per = 4) {
   const out = [], from = across ? y0 : x0, to = across ? y1 : x1;
-  for (let v = Math.floor(from) + 0.125; v < to; v += 0.25) {
+  for (let v = Math.floor(from) + 0.5 / per; v < to; v += 1 / per) {
     if (v < from || v > to) continue;
     out.push(across ? [[x0 + I, v], [x1 - I, v]] : [[v, y0 + I], [v, y1 - I]]);
   }
@@ -89,7 +89,9 @@ const KNOTS = [[0.693, 0.307], [0.7, 0.671]];
  * Everything one primitive draws on an n × n patch, in squares:
  * { stitch: [legs at full stroke], fine: [legs at fine stroke], faint: [legs at full stroke, faded], rings: [[x, y, r]], curls: [d strings] }
  */
-function art(name, n) {
+function art(name, n, density) {
+  // density (0..1), when given, sets lines a square for laid fills: 2 when open, 10 when packed; 4 by default
+  const per = density == null ? 4 : Math.round(2 + density * 8);
   const a = { stitch: [], fine: [], faint: [], rings: [], fineRings: [], curls: [] };
   let m;
   if (name === 'stitch-full' || name === 'fill-cross') a.stitch = each(n, [COUNTED.up, COUNTED.down]);
@@ -106,10 +108,10 @@ function art(name, n) {
       a.rings.push([x + 0.5, y + 0.5, 3.25 / 14]);
       a.curls.push(`M${f3(x + 0.5)} ${f3(y + 0.386)}a.114 .114 0 1 1-.114 .114`);
     }
-  } else if (name === 'fill-rows' || name === 'fill-columns') a.fine = laid(0, 0, n, n, name === 'fill-rows');
+  } else if (name === 'fill-rows' || name === 'fill-columns') a.fine = laid(0, 0, n, n, name === 'fill-rows', per);
   else if (name === 'fill-hatch') {
     // one direction of diagonals, three to a square
-    for (let c = 1 / 3; c < 2 * n; c += 1 / 3) { const s = clip([c, 0], [-1, 1], I, n - I); if (s) a.fine.push(s); }
+    for (let c = 1 / (per - 1); c < 2 * n; c += 1 / (per - 1)) { const s = clip([c, 0], [-1, 1], I, n - I); if (s) a.fine.push(s); }
   } else if (name === 'fill-weave-3' || name === 'fill-weave-5') {
     // one (or two) threads each way per square, over and under in a checker, the across thread on top first
     const at = name === 'fill-weave-3' ? [0.5] : [0.25, 0.75], H = [], V = [];
@@ -158,7 +160,7 @@ function art(name, n) {
     // satin blocks of 2 × 2 squares, rows and columns in turn; one square of it is rows
     for (let by = 0; by < n; by += 2) for (let bx = 0; bx < n; bx += 2) {
       const x1 = Math.min(n, bx + 2), y1 = Math.min(n, by + 2);
-      a.fine.push(...laid(bx, by, x1, y1, ((bx + by) / 2) % 2 === 0));
+      a.fine.push(...laid(bx, by, x1, y1, ((bx + by) / 2) % 2 === 0, per));
     }
   } else if (name === 'fill-fern') {
     // a column of Vs in every square
@@ -180,8 +182,10 @@ function art(name, n) {
 }
 
 /** The drawing of an n × n patch in the 5..19 square (n = 1: the single icon). */
-function body(name, n, stroke, holes) {
-  const a = art(name, n), k = 14 / n, S = f3(stroke / 14), F = f3((stroke * 0.7) / 14);
+function body(name, n, stroke, holes, { strands = 2, density, scale = 1 } = {}) {
+  // strands thicken the stitch stroke (2 is the standard 1.75); scale shrinks the square about the centre, like a higher
+  // count, while the stitch keeps its width: thread doesn't get thinner on finer fabric
+  const a = art(name, n, density), k = (14 * scale) / n, S = f3((stroke * strands) / 2 / 14 / scale), at = f3(12 - 7 * scale), F = f3((stroke * 0.7) / 14);
   let out = '';
   if (holes > 0) {
     let d = '';
@@ -194,7 +198,7 @@ function body(name, n, stroke, holes) {
   for (const [x, y, r] of a.rings) out += `<circle cx="${f3(x)}" cy="${f3(y)}" r="${f3(r)}" stroke-width="${S}"/>`;
   for (const [x, y, r] of a.fineRings) out += `<circle cx="${f3(x)}" cy="${f3(y)}" r="${f3(r)}" stroke-width="${F}"/>`;
   if (a.curls.length) out += `<path d="${a.curls.join('')}" stroke-width="${S}"/>`;
-  return `<g transform="translate(5 5) scale(${f3(k)})">${out}</g>`;
+  return `<g transform="translate(${at} ${at}) scale(${f3(k)})">${out}</g>`;
 }
 
 /**
@@ -203,16 +207,18 @@ function body(name, n, stroke, holes) {
  * or 'zoom' (both, animated on hover: the square zooms out into the patch). id: unique per page for 'zoom'.
  * holes: opacity of the fabric holes (0 hides them). animate: false leaves out the CSS animation, for a page
  * that drives .tz-one/.tz-many itself.
+ * strands (stitch stroke × strands / 2), density (lines a square in laid fills), scale (the square's size, for count).
  */
-export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 'square', id = `p-${name}`, n = ZOOM, animate = true, holes = 0.3 } = {}) {
+export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 'square', id = `p-${name}`, n = ZOOM, animate = true, holes = 0.3, strands, density, scale } = {}) {
+  const t = { strands, density, scale };
   if (!PRIMITIVES[name]) throw new Error(`Unknown primitive: ${name}`);
   const label = title ? `<title>${title}</title>` : '';
   const aria = title ? 'role="img"' : 'aria-hidden="true"';
   let inner;
-  if (frame === 'square') inner = body(name, 1, stroke, holes);
-  else if (frame === 'patch') inner = body(name, n, stroke, holes);
-  else if (animate) inner = zoomMarkup({ id, o: 5, c: 14, n, many: body(name, n, stroke, holes), one: body(name, 1, stroke, holes) });
-  else inner = `<g class="tz-many">${body(name, n, stroke, holes)}</g><g class="tz-one">${body(name, 1, stroke, holes)}</g>`;
+  if (frame === 'square') inner = body(name, 1, stroke, holes, t);
+  else if (frame === 'patch') inner = body(name, n, stroke, holes, t);
+  else if (animate) inner = zoomMarkup({ id, o: 5, c: 14, n, many: body(name, n, stroke, holes, t), one: body(name, 1, stroke, holes, t) });
+  else inner = `<g class="tz-many">${body(name, n, stroke, holes, t)}</g><g class="tz-one">${body(name, 1, stroke, holes, t)}</g>`;
   const svgId = frame === 'zoom' ? ` id="${id}"` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" ${aria}>${label}${inner}</svg>`;
 }
