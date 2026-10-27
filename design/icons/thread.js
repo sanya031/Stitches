@@ -1,7 +1,7 @@
 // Thread icons: each stitch or fill as it sits in a single square on the canvas, between its four holes.
 // Drawing follows the WebGL renderer: lens-shaped legs pinched into the holes, two strands with a
 // groove between them, twist ridges at the helix angle, dark ends, matte round shading, a soft
-// contact shadow. Laid fills come from the app's own generator (lab/fills.js).
+// contact shadow. Fills come from the app's own generator (lab/fills.js), exactly as one square of them.
 import { regionLegs } from '../../lab/fills.js';
 
 const CORNERS = { tl: 'top left', tr: 'top right', bl: 'bottom left', br: 'bottom right' };
@@ -67,42 +67,6 @@ function counted(type, q = 2) {
   }
 }
 
-/**
- * Woven threads in the square: n each way at angle θ, each split at the midpoints between
- * crossings so every piece holds one crossing; parity decides over or under.
- */
-function woven(n, theta) {
-  const dA = [Math.cos(theta), Math.sin(theta)], nA = [-dA[1], dA[0]];
-  const s = (theta % (Math.PI / 2) === 0 ? 1 : Math.SQRT2) / n;
-  const offs = Array.from({ length: n }, (_, j) => (j - (n - 1) / 2) * s);
-  const at = (u, v, along, across) => [0.5 + along[0] * u + across[0] * v, 0.5 + along[1] * u + across[1] * v];
-  // the stretch of a line (through the centre, offset v across) that lies inside the square
-  const clip = (v, along, across) => {
-    let lo = -2, hi = 2;
-    for (const k of [0, 1]) {
-      const p = 0.5 + across[k] * v, d = along[k];
-      if (Math.abs(d) < 1e-9) { if (p < 0 || p > 1) return null; continue; }
-      const t0 = (0 - p) / d, t1 = (1 - p) / d;
-      lo = Math.max(lo, Math.min(t0, t1)); hi = Math.min(hi, Math.max(t0, t1));
-    }
-    return hi - lo > 0.05 ? [lo, hi] : null;
-  };
-  const legs = [];
-  const family = (along, across, overParity) => offs.forEach((v, j) => {
-    const seg = clip(v, along, across);
-    if (!seg) return;
-    const cross = offs.map((u, k) => ({ u, k })).filter((c) => c.u > seg[0] && c.u < seg[1]);
-    if (!cross.length) { legs.push([at(seg[0], v, along, across), at(seg[1], v, along, across), 0, 1, 1]); return; }
-    cross.forEach((c, i) => {
-      const from = i === 0 ? seg[0] : (cross[i - 1].u + c.u) / 2, to = i === cross.length - 1 ? seg[1] : (c.u + cross[i + 1].u) / 2;
-      legs.push([at(from, v, along, across), at(to, v, along, across), (j + c.k) % 2 === overParity ? 1 : 0, i === 0 ? 1 : 0, i === cross.length - 1 ? 1 : 0]);
-    });
-  });
-  family(dA, nA, 0);
-  family(nA, [-dA[0], -dA[1]], 1);
-  return legs;
-}
-
 /** Legs for an icon: { a, b, layer, w (squares), ea, eb, tone, strands }. */
 function layout(name) {
   const legs = [];
@@ -121,35 +85,12 @@ function layout(name) {
     // thread wrapped into a tight coil: a five-point star of short wraps
     const ring = Array.from({ length: 5 }, (_, k) => [0.5 + Math.cos(-Math.PI / 2 + k * 1.2566) * 0.2, 0.5 + Math.sin(-Math.PI / 2 + k * 1.2566) * 0.2]);
     add(ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 0.2, 2, () => 0.92 + r() * 0.16);
-  } else if (name === 'fill-weave-3') add(woven(3, 0), W_FILL * 1.5, 1);
-  else if (name === 'fill-weave-5') add(woven(5, 0), W_FILL * 1.2, 1);
-  else if (name === 'fill-weave-diamond') add(woven(3, Math.PI / 4), W_FILL * 1.5, 1);
-  else if (name === 'fill-blocks') {
-    // four quarter blocks of satin, alternating direction
-    for (const [qx, qy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-      const across = (qx + qy) % 2 === 1, k = 4;
-      for (let i = 0; i < k; i++) {
-        const t = (i + 0.5) / k * 0.5;
-        const a = across ? [qx * 0.5 + t, qy * 0.5] : [qx * 0.5, qy * 0.5 + t];
-        const b = across ? [qx * 0.5 + t, qy * 0.5 + 0.5] : [qx * 0.5 + 0.5, qy * 0.5 + t];
-        add([[a, b, 0]], W_FILL * 1.2, 1);
-      }
-    }
-  } else if (name === 'fill-seed') {
-    const pts = [[0.25, 0.25], [0.72, 0.22], [0.5, 0.52], [0.24, 0.76], [0.76, 0.74]];
-    add(pts.map(([x, y]) => {
-      const ang = r() * Math.PI, h = 0.13 + r() * 0.04, c = [x + (r() - 0.5) * 0.08, y + (r() - 0.5) * 0.08];
-      return [[c[0] - Math.cos(ang) * h, c[1] - Math.sin(ang) * h], [c[0] + Math.cos(ang) * h, c[1] + Math.sin(ang) * h], 1];
-    }), W_FILL * 1.4, 1, () => 0.88 + r() * 0.24);
-  } else if (name === 'fill-knots') {
-    for (const [x, y] of [[0.28, 0.3], [0.7, 0.38], [0.4, 0.72]]) {
-      const rot = r() * Math.PI * 2;
-      const ring = Array.from({ length: 5 }, (_, k) => [x + Math.cos(rot + k * 1.2566) * 0.1, y + Math.sin(rot + k * 1.2566) * 0.1]);
-      add(ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 0.1, 1, () => 0.9 + r() * 0.2);
-    }
   } else {
-    // laid fills, exactly as the canvas lays them in one square
-    const kind = { 'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-fern': 'fern', 'fill-burst': 'burst' }[name];
+    // every fill exactly as the canvas lays it in one square: same generator, same thread, same density
+    const kind = {
+      'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-weave-3': 'weave3', 'fill-weave-5': 'weave5',
+      'fill-weave-diamond': 'diamond', 'fill-blocks': 'blocks', 'fill-fern': 'fern', 'fill-seed': 'seed', 'fill-knots': 'knots', 'fill-burst': 'burst'
+    }[name];
     add(regionLegs(kind, new Set(['0,0']), 0.85, 5, W_FILL).map((l) => [l.a, l.b, l.layer, l.ea, l.eb, l.tone]), W_FILL, 1);
   }
   return legs;
