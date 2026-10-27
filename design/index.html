@@ -93,6 +93,11 @@
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
     </section>
+    <section aria-labelledby="prim-title">
+      <h2 id="prim-title" style="margin-top:48px">Primitives · stitches and fills</h2>
+      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another.</p>
+      <div id="prim-groups"></div>
+    </section>
     <h2 style="margin-top:48px">Line icons</h2>
     <main id="groups"></main>
   </div>
@@ -101,6 +106,7 @@
   <script type="module">
     import { ICONS, GROUPS, svg } from './icons/icons.js';
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
+    import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
 
     const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B' };
     const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
@@ -125,6 +131,17 @@
           + `<span class="name">${i.label}</span><span class="file mono">thread/${name}</span></button>`).join('')}</div>`;
       }).join('');
     }
+    function renderPrim() {
+      const q = view.q.trim().toLowerCase();
+      const groups = [...new Set(Object.values(PRIMITIVES).map((i) => i.group))];
+      document.getElementById('prim-groups').innerHTML = groups.map((g) => {
+        const items = Object.entries(PRIMITIVES).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
+        if (!items.length) return '';
+        return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
+          `<button class="tile" data-prim="${name}" title="Copy ${name}.svg"><span class="art">${primitiveSvg(name, { size: view.size, stroke: view.stroke })}</span>`
+          + `<span class="name">${i.label}</span><span class="file mono">primitive/${name}</span></button>`).join('')}</div>`;
+      }).join('');
+    }
     const groupsEl = document.getElementById('groups');
 
     function render() {
@@ -147,14 +164,15 @@
         <g color="#EEE9E0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ICONS['stitch-full'].body}</g>
       </svg><span class="mono">stitch-full</span>`;
 
-    document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); renderThread(); });
-    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); });
+    document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); renderThread(); renderPrim(); });
+    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); renderPrim(); });
     document.getElementById('sizes').addEventListener('click', (e) => {
       const b = e.target.closest('[data-size]'); if (!b) return;
       view.size = Number(b.dataset.size);
       document.querySelectorAll('[data-size]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       render();
       renderThread();
+      renderPrim();
     });
     document.getElementById('bgs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-bg]'); if (!b) return;
@@ -167,9 +185,9 @@
     let toastTimer;
     document.addEventListener('click', async (e) => {
       const t = e.target.closest('.tile'); if (!t) return;
-      const thread = t.dataset.thread, name = thread || t.dataset.name;
-      const text = thread ? threadSvg(thread, { colour: view.colour }) : svg(name);
-      const file = thread ? `design/icons/thread/${name}.svg` : `design/icons/svg/${name}.svg`;
+      const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
+      const text = thread ? threadSvg(thread, { colour: view.colour }) : prim ? primitiveSvg(prim) : svg(name);
+      const file = `design/icons/${thread ? 'thread' : prim ? 'primitive' : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }
       toast.classList.add('show');
@@ -179,6 +197,7 @@
 
     render();
     renderThread();
+    renderPrim();
   </script>
 </body>
 </html>
