@@ -33,5 +33,11 @@ const threadOut = join(here, 'thread');
 mkdirSync(threadOut, { recursive: true });
 for (const f of readdirSync(threadOut)) if (f.endsWith('.svg')) unlinkSync(join(threadOut, f));
 for (const name of Object.keys(THREAD_ICONS)) writeFileSync(join(threadOut, `${name}.svg`), threadSvg(name) + '\n');
+// the same with the hover preview: inline them (an <img> shows only the single square); hovering an
+// ancestor with class tz-host also plays it
+const zoomOut = join(here, 'thread-zoom');
+mkdirSync(zoomOut, { recursive: true });
+for (const f of readdirSync(zoomOut)) if (f.endsWith('.svg')) unlinkSync(join(zoomOut, f));
+for (const name of Object.keys(THREAD_ICONS)) writeFileSync(join(zoomOut, `${name}.svg`), threadSvg(name, { zoom: true, id: `tz-${name}` }) + '\n');
 
-console.log(`${Object.keys(ICONS).length} icons → svg/ and sprite.svg; ${Object.keys(THREAD_ICONS).length} thread icons → thread/; ${Object.keys(PRIMITIVES).length} primitives → primitive/`);
+console.log(`${Object.keys(ICONS).length} icons → svg/ and sprite.svg; ${Object.keys(THREAD_ICONS).length} thread icons → thread/ and thread-zoom/; ${Object.keys(PRIMITIVES).length} primitives → primitive/`);

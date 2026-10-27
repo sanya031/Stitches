@@ -30,6 +30,8 @@ export const THREAD_ICONS = {
 };
 
 const S = 48, O = 6, C = 36;        // frame, the square's top-left corner and its size, px
+// hover preview: a 4 × 4 patch, zooming out from its square (1, 1); the point that stays put is O + C / 3
+const ZOOM = 4, ZOOM_AT = O + C / 3;
 const HOLE = '#8F8A80';             // fabric holes: mid grey, visible on the dark bench and on cloth
 // thread widths in squares, as on the canvas at count 14: two strands for counted stitches, a fine strand for fills
 const W_STITCH = 0.3, W_FILL = 0.6 * 0.27 * 14 / 25.4;
@@ -67,31 +69,43 @@ function counted(type, q = 2) {
   }
 }
 
-/** Legs for an icon: { a, b, layer, w (squares), ea, eb, tone, strands }. */
-function layout(name) {
+/** Legs for an icon on an n × n patch of squares (n = 1: the single square): { a, b, layer, w (squares), ea, eb, tone, strands }. */
+function layout(name, n = 1) {
   const legs = [];
   const add = (list, w, strands, tone = () => 1) => list.forEach(([a, b, layer, ea = 1, eb = 1, t]) =>
     legs.push({ a, b, layer, w, ea, eb, strands, tone: t ?? tone() }));
   const r = rng(name.length * 131 + 7);
+  // a counted stitch repeats in every square, as the canvas lays a row of them
+  const each = (list) => {
+    const out = [];
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) for (const [a, b, ...rest] of list) out.push([[a[0] + x, a[1] + y], [b[0] + x, b[1] + y], ...rest]);
+    return out;
+  };
 
   let m;
-  if (name === 'stitch-full' || name === 'fill-cross') add(counted('full'), W_STITCH, 2);
-  else if (name === 'fill-tweed') add(counted('full').map((l, i) => [...l, 1, 1, i ? 1.4 : 0.68]), W_STITCH, 2);
-  else if (name === 'stitch-half') add(counted('half'), W_STITCH, 2);
-  else if ((m = name.match(/^stitch-quarter-(\w\w)$/))) add(counted('quarter', Q[m[1]]), W_STITCH, 2);
-  else if ((m = name.match(/^stitch-three-quarter-(\w\w)$/))) add(counted('threeq', Q[m[1]]), W_STITCH, 2);
-  else if (name === 'stitch-back') add([[TL, BL, 2], [BL, BR, 2]], W_STITCH * 0.8, 2);   // an outline turning a corner
-  else if (name === 'stitch-knot') {
+  if (name === 'stitch-full' || name === 'fill-cross') add(each(counted('full')), W_STITCH, 2);
+  else if (name === 'fill-tweed') add(each(counted('full').map((l, i) => [...l, 1, 1, i ? 1.4 : 0.68])), W_STITCH, 2);
+  else if (name === 'stitch-half') add(each(counted('half')), W_STITCH, 2);
+  else if ((m = name.match(/^stitch-quarter-(\w\w)$/))) add(each(counted('quarter', Q[m[1]])), W_STITCH, 2);
+  else if ((m = name.match(/^stitch-three-quarter-(\w\w)$/))) add(each(counted('threeq', Q[m[1]])), W_STITCH, 2);
+  else if (name === 'stitch-back') {
+    // an outline turning a corner; on a patch, a stepped outline down the diagonal
+    const steps = [];
+    for (let k = 0; k < n; k++) steps.push([[k, k], [k, k + 1], 2], [[k, k + 1], [k + 1, k + 1], 2]);
+    add(steps, W_STITCH * 0.8, 2);
+  } else if (name === 'stitch-knot') {
     // thread wrapped into a tight coil: a five-point star of short wraps
     const ring = Array.from({ length: 5 }, (_, k) => [0.5 + Math.cos(-Math.PI / 2 + k * 1.2566) * 0.2, 0.5 + Math.sin(-Math.PI / 2 + k * 1.2566) * 0.2]);
-    add(ring.map((p, k) => [p, ring[(k + 2) % 5], 1]), 0.2, 2, () => 0.92 + r() * 0.16);
+    add(each(ring.map((p, k) => [p, ring[(k + 2) % 5], 1])), 0.2, 2, () => 0.92 + r() * 0.16);
   } else {
-    // every fill exactly as the canvas lays it in one square: same generator, same thread, same density
+    // every fill exactly as the canvas lays it over these squares: same generator, same thread, same density
     const kind = {
       'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-weave-3': 'weave3', 'fill-weave-5': 'weave5',
       'fill-weave-diamond': 'diamond', 'fill-blocks': 'blocks', 'fill-fern': 'fern', 'fill-seed': 'seed', 'fill-knots': 'knots', 'fill-burst': 'burst'
     }[name];
-    add(regionLegs(kind, new Set(['0,0']), 0.85, 5, W_FILL).map((l) => [l.a, l.b, l.layer, l.ea, l.eb, l.tone]), W_FILL, 1);
+    const mask = new Set();
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask.add(`${x},${y}`);
+    add(regionLegs(kind, mask, 0.85, 5, W_FILL).map((l) => [l.a, l.b, l.layer, l.ea, l.eb, l.tone]), W_FILL, 1);
   }
   return legs;
 }
@@ -119,11 +133,11 @@ function ribbonLocal(L, w, ea, eb) {
 
 /**
  * Full SVG markup for a thread icon.
- * options: colour (thread, hex), size (px), paper (linen tile behind), id (prefix for defs, unique per page)
+ * options: colour (thread, hex), size (px), paper (linen tile behind), id (prefix for defs, unique per page),
+ * zoom (on hover the square zooms out to a ZOOM × ZOOM patch of the same stitch or fill, as the canvas lays it)
  */
-export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name } = {}) {
+export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, zoom = false } = {}) {
   if (!THREAD_ICONS[name]) throw new Error(`Unknown thread icon: ${name}`);
-  const legs = layout(name);
   const r = rng(name.length * 97 + 3);
   const defs = new Map(), body = [];
   defs.set('blur', `<filter id="${id}-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.8"/></filter>`);
@@ -161,31 +175,53 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
     return `${id}-${key}`;
   };
 
-  if (paper) body.push(`<rect width="${S}" height="${S}" rx="8" fill="#F2EEE6"/>`);
-  for (const [x, y] of [[O, O], [O + C, O], [O, O + C], [O + C, O + C]]) body.push(`<circle cx="${x}" cy="${y}" r="1.7" fill="${HOLE}"/>`);
-
-  // Under legs, then top legs, then backstitch: each layer's shadows fall on what is already drawn.
-  const layers = [...new Set(legs.map((l) => l.layer))].sort();
-  for (const layer of layers) {
-    const shadows = [], threads = [];
-    for (const l of legs.filter((x) => x.layer === layer)) {
-      const j = (amt) => (r() - 0.5) * 2 * amt;   // hand tension: off-centre holes, uneven thickness
-      const px = (p) => [O + p[0] * C, O + p[1] * C];
-      const a = l.ea ? px(l.a).map((v) => v + j(0.45)) : px(l.a), b = l.eb ? px(l.b).map((v) => v + j(0.45)) : px(l.b);
-      const w = l.w * C * 1.08 * (1 + j(0.07));   // the canvas lets thread puff a little past its nominal width
-      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), deg = Math.atan2(dy, dx) * 180 / Math.PI;
-      if (L < 0.5) continue;
-      const d = ribbonLocal(L, w, l.ea, l.eb);
-      const base = l.tone > 1 ? lighter(colour, (l.tone - 1) * 0.6) : darker(colour, l.tone);
-      const litTop = (dy - dx) < 0;   // the light is top-left; does it reach this leg's -y side?
-      const frame = `translate(${f1(a[0])} ${f1(a[1])}) rotate(${f1(deg)})`;
-      shadows.push(`<path transform="${frame}" d="${d}"/>`);
-      threads.push(`<g transform="${frame}"><path d="${d}" fill="url(#${shading(base, litTop, l.strands)})"/>`
-        + `<path d="${d}" fill="url(#${twist(w, l.strands)})"/>`
-        + (l.ea || l.eb ? `<path d="${d}" fill="url(#${ends(l.ea, l.eb)})"/>` : '') + '</g>');
+  // One patch of n × n squares inside the frame: holes, then under legs, top legs, backstitch,
+  // each layer's shadows falling on what is already drawn. Everything scales with the square.
+  const draw = (legs, n) => {
+    const cell = C / n, k = cell / C, out = [];
+    const hole = n === 1 ? 1.7 : 0.9;
+    for (let y = 0; y <= n; y++) for (let x = 0; x <= n; x++) out.push(`<circle cx="${f1(O + x * cell)}" cy="${f1(O + y * cell)}" r="${hole}" fill="${HOLE}"/>`);
+    const layers = [...new Set(legs.map((l) => l.layer))].sort();
+    for (const layer of layers) {
+      const shadows = [], threads = [];
+      for (const l of legs.filter((x) => x.layer === layer)) {
+        const j = (amt) => (r() - 0.5) * 2 * amt;   // hand tension: off-centre holes, uneven thickness
+        const px = (p) => [O + p[0] * cell, O + p[1] * cell];
+        const a = l.ea ? px(l.a).map((v) => v + j(0.45 * k)) : px(l.a), b = l.eb ? px(l.b).map((v) => v + j(0.45 * k)) : px(l.b);
+        const w = l.w * cell * 1.08 * (1 + j(0.07));   // the canvas lets thread puff a little past its nominal width
+        const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), deg = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (L < 0.5 * k) continue;
+        const d = ribbonLocal(L, w, l.ea, l.eb);
+        const base = l.tone > 1 ? lighter(colour, (l.tone - 1) * 0.6) : darker(colour, l.tone);
+        const litTop = (dy - dx) < 0;   // the light is top-left; does it reach this leg's -y side?
+        const frame = `translate(${f1(a[0])} ${f1(a[1])}) rotate(${f1(deg)})`;
+        shadows.push(`<path transform="${frame}" d="${d}"/>`);
+        threads.push(`<g transform="${frame}"><path d="${d}" fill="url(#${shading(base, litTop, l.strands)})"/>`
+          + (n === 1 ? `<path d="${d}" fill="url(#${twist(w, l.strands)})"/>` : '')   // ridges are lost at patch scale
+          + (l.ea || l.eb ? `<path d="${d}" fill="url(#${ends(l.ea, l.eb)})"/>` : '') + '</g>');
+      }
+      out.push(`<g transform="translate(${f1(0.6 * Math.sqrt(k))} ${f1(Math.sqrt(k))})" fill="#000" fill-opacity=".34" filter="url(#${id}-blur${n === 1 ? '' : 'n'})">${shadows.join('')}</g>`, ...threads);
     }
-    body.push(`<g transform="translate(.6 1)" fill="#000" fill-opacity=".34" filter="url(#${id}-blur)">${shadows.join('')}</g>`, ...threads);
+    return out.join('');
+  };
+
+  if (paper) body.push(`<rect width="${S}" height="${S}" rx="8" fill="#F2EEE6"/>`);
+  const one = draw(layout(name), 1);   // drawn first so its hand jitter matches the plain icon
+  if (!zoom) body.push(one);
+  else {
+    // The patch is drawn at its zoomed-out size and starts magnified ZOOM× about one of its inner squares,
+    // so that square fills the frame exactly where the single square sits. On hover the single square
+    // shrinks into that spot as the patch settles to 1×: one continuous zoom out.
+    defs.set('blurn', `<filter id="${id}-blurn" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.35"/></filter>`);
+    const o = `${ZOOM_AT}px ${ZOOM_AT}px`;
+    body.push(`<style>#${id} .tz-one,#${id} .tz-many{transform-origin:${o};transition:transform .5s cubic-bezier(.3,0,.2,1),opacity .3s ease}`
+      + `#${id} .tz-many{transform:scale(${ZOOM});opacity:0}`
+      + `#${id}:hover .tz-one,.tz-host:hover #${id} .tz-one,.tz-host:focus-visible #${id} .tz-one{transform:scale(${1 / ZOOM});opacity:0;transition-delay:0s,.12s}`
+      + `#${id}:hover .tz-many,.tz-host:hover #${id} .tz-many,.tz-host:focus-visible #${id} .tz-many{transform:scale(1);opacity:1}`
+      + `@media (prefers-reduced-motion:reduce){#${id} .tz-one,#${id} .tz-many{transform:none!important;transition:opacity .2s}}</style>`,
+      `<g class="tz-many">${draw(layout(name, ZOOM), ZOOM)}</g>`, `<g class="tz-one">${one}</g>`);
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;
+  const svgId = zoom ? ` id="${id}"` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;
 }

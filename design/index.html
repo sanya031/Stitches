@@ -89,7 +89,7 @@
 
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
-      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works.</p>
+      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one to zoom out to a 4 × 4 patch of it, laid as the canvas lays it.</p>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
     </section>
@@ -127,7 +127,7 @@
         const items = Object.entries(THREAD_ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile thread" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `${name}-${size}` })}</span>`
+          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `tz-${name}-${size}`, zoom: true })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">thread/${name}</span></button>`).join('')}</div>`;
       }).join('');
     }
@@ -186,8 +186,8 @@
     document.addEventListener('click', async (e) => {
       const t = e.target.closest('.tile'); if (!t) return;
       const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
-      const text = thread ? threadSvg(thread, { colour: view.colour }) : prim ? primitiveSvg(prim) : svg(name);
-      const file = `design/icons/${thread ? 'thread' : prim ? 'primitive' : 'svg'}/${name}.svg`;
+      const text = thread ? threadSvg(thread, { colour: view.colour, zoom: true, id: `tz-${thread}` }) : prim ? primitiveSvg(prim) : svg(name);
+      const file = `design/icons/${thread ? 'thread-zoom' : prim ? 'primitive' : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }
       toast.classList.add('show');
