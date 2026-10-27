@@ -3,6 +3,7 @@
 // groove between them, twist ridges at the helix angle, dark ends, matte round shading, a soft
 // contact shadow. Fills come from the app's own generator (lab/fills.js), exactly as one square of them.
 import { regionLegs } from '../../lab/fills.js';
+import { zoomMarkup } from './zoom-css.js';
 
 const CORNERS = { tl: 'top left', tr: 'top right', bl: 'bottom left', br: 'bottom right' };
 const Q = { tl: 0, tr: 1, bl: 2, br: 3 };
@@ -30,10 +31,8 @@ export const THREAD_ICONS = {
 };
 
 const S = 48, O = 6, C = 36;        // frame, the square's top-left corner and its size, px
-// hover preview: a ZOOM × ZOOM patch, zooming out from its square (1, 1)
+// hover preview: a ZOOM × ZOOM patch by default; the hovered square becomes its top-left square
 export const ZOOM = 4;
-/** The point that stays put while an n × n patch drawn in the square [o, o + c] zooms to its square (1, 1). */
-export const zoomAt = (o, c, n) => +(o + c / (n - 1)).toFixed(3);
 const HOLE = '#8F8A80';             // fabric holes: mid grey, visible on the dark bench and on cloth
 // thread widths in squares, as on the canvas at count 14: two strands for counted stitches, a fine strand for fills
 const W_STITCH = 0.3, W_FILL = 0.6 * 0.27 * 14 / 25.4;
@@ -145,7 +144,8 @@ function ribbonLocal(L, w, ea, eb) {
  * Full SVG markup for a thread icon.
  * options: colour (thread, hex), size (px), paper (linen tile behind), id (prefix for defs, unique per page),
  * frame: 'square' (the single square, default), 'patch' (a ZOOM × ZOOM patch of the same stitch or fill, as the canvas
- * lays it, in the same square of the frame) or 'zoom' (both, animated on hover: the square zooms out into the patch).
+ * lays it, in the same square of the frame) or 'zoom' (both, animated on hover: the stitch shrinks in place and the
+ * patch sweeps out from it, see zoom-css.js).
  * n: squares per side of the patch. animate: false leaves out the CSS animation, for a page that drives .tz-one/.tz-many itself.
  * holes: opacity of the fabric holes (0 hides them).
  */
@@ -230,23 +230,9 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
   const one = frame === 'patch' ? '' : draw(layout(name), 1);   // drawn first so its hand jitter matches the plain icon
   if (frame === 'square') body.push(one);
   else if (frame === 'patch') body.push(draw(layout(name, n), n));
-  else body.push(animate ? zoomStyle(id, zoomAt(O, C, n), n) : '', `<g class="tz-many">${draw(layout(name, n), n)}</g>`, `<g class="tz-one">${one}</g>`);
+  else if (animate) body.push(zoomMarkup({ id, o: O, c: C, n, many: draw(layout(name, n), n), one }));
+  else body.push(`<g class="tz-many">${draw(layout(name, n), n)}</g>`, `<g class="tz-one">${one}</g>`);
 
   const svgId = frame === 'square' ? '' : ` id="${id}"`;
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;
-}
-
-/**
- * The hover zoom between the frames, as a <style> scoped to one svg (#id). The patch starts magnified n×
- * about `at` (in viewBox units), so its square (1, 1) fills the frame exactly where the single square sits; on
- * hover the single square shrinks into that spot as the patch settles to 1×: one continuous zoom out.
- * Plays on hovering the svg or any ancestor with class tz-host. Reduced motion gets a crossfade.
- */
-export function zoomStyle(id, at, n = ZOOM) {
-  const o = `${at}px ${at}px`, on = (part) => `#${id}:hover .${part},.tz-host:hover #${id} .${part},.tz-host:focus-visible #${id} .${part}`;
-  return `<style>#${id} .tz-one,#${id} .tz-many{transform-origin:${o};transition:transform .5s cubic-bezier(.3,0,.2,1),opacity .3s ease}`
-    + `#${id} .tz-many{transform:scale(${n});opacity:0}`
-    + `${on('tz-one')}{transform:scale(${1 / n});opacity:0;transition-delay:0s,.12s}`
-    + `${on('tz-many')}{transform:scale(1);opacity:1}`
-    + `@media (prefers-reduced-motion:reduce){#${id} .tz-one,#${id} .tz-many{transform:none!important;transition:opacity .2s}}</style>`;
 }

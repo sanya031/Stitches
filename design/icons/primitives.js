@@ -13,7 +13,8 @@
 // the 5..19 square. The single icon is n = 1; the patch is the same thing with more squares, so its first
 // square is exactly the single icon at 1/n size: lines, strokes and holes all shrink together, as in a
 // real zoom out. Laid and woven fills run on across squares as one thread, the way they are stitched.
-import { THREAD_ICONS, ZOOM, zoomStyle, zoomAt } from './thread.js';
+import { THREAD_ICONS, ZOOM } from './thread.js';
+import { zoomMarkup } from './zoom-css.js';
 
 /** name → { group, label }, in the thread set's order */
 export const PRIMITIVES = Object.fromEntries(Object.entries(THREAD_ICONS).map(([name, i]) => [name, { ...i }]));
@@ -210,7 +211,8 @@ export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 's
   let inner;
   if (frame === 'square') inner = body(name, 1, stroke, holes);
   else if (frame === 'patch') inner = body(name, n, stroke, holes);
-  else inner = (animate ? zoomStyle(id, zoomAt(5, 14, n), n) : '') + `<g class="tz-many">${body(name, n, stroke, holes)}</g><g class="tz-one">${body(name, 1, stroke, holes)}</g>`;
+  else if (animate) inner = zoomMarkup({ id, o: 5, c: 14, n, many: body(name, n, stroke, holes), one: body(name, 1, stroke, holes) });
+  else inner = `<g class="tz-many">${body(name, n, stroke, holes)}</g><g class="tz-one">${body(name, 1, stroke, holes)}</g>`;
   const svgId = frame === 'zoom' ? ` id="${id}"` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" ${aria}>${label}${inner}</svg>`;
 }

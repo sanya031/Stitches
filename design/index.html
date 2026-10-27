@@ -103,7 +103,7 @@
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
       <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works.</p>
-      <p class="lede">Hover one: it shrinks in place and the rest of a patch of the same stitch spreads out to its right and below, laid the way it is stitched. The patch has fewer squares at smaller sizes so you can still read it. Tune how fast and how smooth with the <strong>Hover zoom</strong> panel (top right). <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch's top-left square is exactly the single square, scaled down. The downloadable <span class="mono">*-zoom</span> files still use the earlier centred CSS zoom.</p>
+      <p class="lede">Hover one: it shrinks in place and the rest of a patch of the same stitch spreads out to its right and below, laid the way it is stitched. The patch has fewer squares at smaller sizes so you can still read it. Tune how fast and how smooth with the <strong>Hover zoom</strong> panel (top right). <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch's top-left square is exactly the single square, scaled down. The downloadable <span class="mono">*-zoom</span> files carry the same zoom as CSS, at the tuned duration and smoothness (in <span class="mono">icons/zoom-css.js</span>).</p>
       <div class="controls"><div class="pill" role="group" aria-label="Thread icon size" id="thread-sizes"></div><span class="mono patch-note" id="thread-n"></span></div>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
@@ -125,6 +125,7 @@
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
     import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
     import { createZoomMotion } from './zoom-motion.js';
+    import { TUNING, motionFrom } from './icons/zoom-css.js';
     import { createDialKit, createDialRoot } from 'https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js';
 
     const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', primSize: 72, primColour: '#EEE9E0', threadSize: 96, holes: 0.3 };
@@ -137,19 +138,11 @@
     // The panel holds only what shapes the motion: how long it takes and how smooth it is.
     createDialRoot({ position: 'top-right', theme: 'dark' });
     const kit = createDialKit('Hover zoom', {
-      duration: [0.4, 0.15, 1.5, 0.01],
-      smoothness: [0.6, 0, 1, 0.01],
+      duration: [TUNING.duration, 0.15, 1.5, 0.01],
+      smoothness: [TUNING.smoothness, 0, 1, 0.01],
     }, { id: 'selvedge-hover-zoom-3', persist: true });
-    // what zoom-motion.js reads, derived from the two dials: smoother = less overshoot and a softer reveal edge
-    const motionSettings = () => {
-      const { duration, smoothness } = kit.getValues();
-      return {
-        trigger: 'hover', hoverDelay: 60, evenZoom: true, lift: 0, anchor: { x: 0, y: 1 },
-        zoomOut: { type: 'spring', visualDuration: duration, bounce: 0.3 * (1 - smoothness) },
-        zoomBack: { type: 'spring', visualDuration: duration * 0.8, bounce: 0 },
-        reveal: 'sweep', revealStart: 0.05, revealEnd: 0.85, softness: 0.25 + 0.45 * smoothness, handoffStart: 0.88, handoffEnd: 1,
-      };
-    };
+    // what zoom-motion.js reads, derived from the two dials (the same derivation bakes the exported *-zoom files)
+    const motionSettings = () => motionFrom(kit.getValues());
     const motion = createZoomMotion(motionSettings);
     kit.subscribe(() => motion.repaint());
 
