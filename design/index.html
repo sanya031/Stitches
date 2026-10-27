@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/styles.css">
   <style>
     :root {
       --ground: #121418; --panel: #16181D; --raised: #1E2128; --well: #0F1114; --line: #262A32; --line-3: #3A3F49;
@@ -53,7 +54,11 @@
     .swatch { width: 20px; height: 20px; border-radius: 50%; display: inline-block; border: 1px solid rgba(255,255,255,.2); }
     #thread-colours { width: max-content; max-width: 100%; flex-wrap: wrap; margin-bottom: 8px; }
     #thread-colours button { display: inline-flex; align-items: center; gap: 8px; }
-    .tile.thread .art { height: auto; min-height: 52px; }
+    .tile.thread .art, .tile.prim .art { height: auto; min-height: 52px; will-change: transform; }
+    /* thread and primitive grids size to the icons (sizes come from the Hover zoom dials) */
+    .grid.big { grid-template-columns: repeat(auto-fill, minmax(var(--tile, 124px), 1fr)); }
+    #prim-colours { width: max-content; max-width: 100%; flex-wrap: wrap; margin-bottom: 8px; }
+    #prim-colours button { display: inline-flex; align-items: center; gap: 8px; }
     h3.sub { margin: 20px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
     @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
   </style>
@@ -92,6 +97,7 @@
 
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
+      <p class="lede">Tune the hover with the <strong>Hover zoom</strong> panel (top right): the spring for zooming out and back, hover delay, crossfade, patch size, icon sizes and colours. Values are kept in this browser; <em>Copy</em> in the panel gives them to you.</p>
       <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one to zoom out to a 4 × 4 patch of it, laid as the canvas lays it. <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch fills the same square, and scaling it 4× about the point 18, 18 (on the 48 frame) lands its second square from the top left exactly on the single square. That is the whole animation: patch 4× → 1×, square 1× → ¼×, both about that point.</p>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
@@ -99,6 +105,7 @@
     <section aria-labelledby="prim-title">
       <h2 id="prim-title" style="margin-top:48px">Primitives · stitches and fills</h2>
       <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. They zoom out the same way, about the point 9.67, 9.67 on the 24 grid.</p>
+      <div class="pill" role="group" aria-label="Primitive colour" id="prim-colours"></div>
       <div id="prim-groups"></div>
     </section>
     <h2 style="margin-top:48px">Line icons</h2>
@@ -110,43 +117,110 @@
     import { ICONS, GROUPS, svg } from './icons/icons.js';
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
     import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
+    import { zoomAt } from './icons/thread.js';
+    import { createZoomMotion } from './zoom-motion.js';
+    import { createDialKit, createDialRoot } from 'https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js';
 
-    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom' };
+    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', n: 4, primSize: 72, primStroke: 1.75, primColour: '#EEE9E0', threadSize: 96 };
     // files per frame, for the copy toast
     const DIRS = { thread: { square: 'thread', patch: 'thread-patch', zoom: 'thread-zoom' }, prim: { square: 'primitive', patch: 'primitive-patch', zoom: 'primitive-zoom' } };
     const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
+    const PRIM_COLOURS = [['Linen', '#EEE9E0'], ['Brass', '#E9B949'], ...COLOURS.filter(([n]) => n !== 'White')];
+
+    // any CSS colour (the DialKit picker can give oklch or p3) as #rrggbb, which the thread shading needs
+    const probe = document.createElement('canvas').getContext('2d');
+    const toHex = (c) => {
+      probe.fillStyle = '#000'; probe.fillStyle = c;
+      const v = probe.fillStyle;
+      if (v.startsWith('#')) return v;
+      const m = v.match(/[\d.]+/g) || [0, 0, 0];
+      return '#' + m.slice(0, 3).map((x) => Math.round(Number(x)).toString(16).padStart(2, '0')).join('');
+    };
+
+    createDialRoot({ position: 'top-right', theme: 'dark' });
+    const kit = createDialKit('Hover zoom', {
+      trigger: { type: 'select', options: [{ value: 'hover', label: 'Spring on hover' }, { value: 'scrub', label: 'Scrub with pointer' }], default: 'hover' },
+      zoomOut: { type: 'spring', visualDuration: 0.9, bounce: 0.12 },
+      zoomBack: { type: 'spring', visualDuration: 0.6, bounce: 0 },
+      hoverDelay: [140, 0, 600, 10],
+      fadeStart: [0.1, 0, 1, 0.01],
+      fadeEnd: [0.5, 0, 1, 0.01],
+      evenZoom: true,
+      lift: [0, 0, 0.2, 0.01],
+      patch: [4, 3, 6, 1],
+      zoomAll: { type: 'action', label: 'Zoom all out' },
+      zoomBackAll: { type: 'action', label: 'Zoom all back' },
+      icons: {
+        primitiveSize: [72, 24, 200, 1],
+        primitiveStroke: [1.75, 1, 3, 0.05],
+        primitiveColour: '#EEE9E0',
+        threadSize: [96, 32, 200, 1],
+        threadColour: '#C8343B',
+      },
+    }, {
+      id: 'selvedge-hover-zoom', persist: true,
+      onAction: (a) => motion.all(a === 'zoomAll' ? 1 : 0),
+    });
+    const motion = createZoomMotion(() => kit.getValues());
+
+    document.getElementById('prim-colours').innerHTML = PRIM_COLOURS.map(([n, c]) =>
+      `<button data-pcolour="${c}" aria-pressed="false"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
+    document.getElementById('prim-colours').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pcolour]'); if (b) kit.setValue('icons.primitiveColour', b.dataset.pcolour);
+    });
     document.getElementById('thread-colours').innerHTML = COLOURS.map(([n, c], i) =>
       `<button data-colour="${c}" aria-pressed="${i === 0}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
     document.getElementById('thread-colours').addEventListener('click', (e) => {
       const b = e.target.closest('[data-colour]'); if (!b) return;
-      view.colour = b.dataset.colour;
-      document.querySelectorAll('[data-colour]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      renderThread();
+      kit.setValue('icons.threadColour', b.dataset.colour);
     });
 
-    // thread icons stay at least 32 px: below that the thread detail is lost and the line icons do the job
+    // zoom icons on this page are driven by zoom-motion.js, so they leave out their own CSS animation
+    const zoomReady = (el, o, c) => el.querySelectorAll('.tz-host').forEach((h) => {
+      const svg = h.querySelector('svg'); if (!svg || view.frame !== 'zoom') return;
+      svg.dataset.n = view.n; svg.dataset.at = zoomAt(o, c, view.n);
+      motion.sync(h);
+    });
+
+    const onCloth = () => document.body.classList.contains('on-cloth');   // linen primitives would vanish on cloth: use the ink
+
     function renderThread() {
-      const q = view.q.trim().toLowerCase(), size = Math.max(32, view.size * 2);
+      const q = view.q.trim().toLowerCase(), size = view.threadSize;
       const groups = [...new Set(Object.values(THREAD_ICONS).map((i) => i.group))];
       document.getElementById('thread-groups').innerHTML = groups.map((g) => {
         const items = Object.entries(THREAD_ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
-        return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `t-${name}-${size}-${view.frame}`, frame: view.frame })}</span>`
+        return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
+          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `t-${name}-${view.frame}`, frame: view.frame, n: view.n, animate: false })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">${DIRS.thread[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
+      zoomReady(document.getElementById('thread-groups'), 6, 36);
     }
     function renderPrim() {
-      const q = view.q.trim().toLowerCase();
+      const q = view.q.trim().toLowerCase(), size = view.primSize;
       const groups = [...new Set(Object.values(PRIMITIVES).map((i) => i.group))];
       document.getElementById('prim-groups').innerHTML = groups.map((g) => {
         const items = Object.entries(PRIMITIVES).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
-        return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art">${primitiveSvg(name, { size: view.size, stroke: view.stroke, frame: view.frame, id: `p-${name}-${view.frame}` })}</span>`
+        return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
+          `<button class="tile prim tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art" style="color:${onCloth() && view.primColour.toUpperCase() === '#EEE9E0' ? 'currentColor' : view.primColour}">${primitiveSvg(name, { size, stroke: view.primStroke, frame: view.frame, id: `p-${name}-${view.frame}`, n: view.n, animate: false })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">${DIRS.prim[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
+      zoomReady(document.getElementById('prim-groups'), 5, 14);
     }
+
+    // dials → view; only what changes the drawing re-renders (motion settings are read live by zoom-motion.js)
+    kit.subscribe((v) => {
+      const next = { n: v.patch, primSize: v.icons.primitiveSize, primStroke: v.icons.primitiveStroke, primColour: v.icons.primitiveColour,
+        threadSize: v.icons.threadSize, colour: toHex(v.icons.threadColour) };
+      const changed = (keys) => keys.some((k) => view[k] !== next[k]);
+      const redrawThread = changed(['n', 'threadSize', 'colour']), redrawPrim = changed(['n', 'primSize', 'primStroke', 'primColour']);
+      Object.assign(view, next);
+      document.querySelectorAll('[data-colour]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.colour.toLowerCase() === view.colour.toLowerCase())));
+      document.querySelectorAll('[data-pcolour]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.pcolour.toLowerCase() === String(view.primColour).toLowerCase())));
+      if (redrawThread) renderThread();
+      if (redrawPrim) renderPrim();
+    });
     const groupsEl = document.getElementById('groups');
 
     function render() {
@@ -170,14 +244,12 @@
       </svg><span class="mono">stitch-full</span>`;
 
     document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); renderThread(); renderPrim(); });
-    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); renderPrim(); });
+    document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); });
     document.getElementById('sizes').addEventListener('click', (e) => {
       const b = e.target.closest('[data-size]'); if (!b) return;
       view.size = Number(b.dataset.size);
       document.querySelectorAll('[data-size]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       render();
-      renderThread();
-      renderPrim();
     });
     document.getElementById('frames').addEventListener('click', (e) => {
       const b = e.target.closest('[data-frame]'); if (!b) return;
@@ -191,6 +263,7 @@
       document.body.classList.toggle('on-cloth', b.dataset.bg === 'cloth');
       document.querySelectorAll('[data-bg]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       renderThread();
+      renderPrim();
     });
 
     const toast = document.getElementById('toast');
@@ -199,8 +272,8 @@
       const t = e.target.closest('.tile'); if (!t) return;
       const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
       const ids = { square: '', patch: 'p', zoom: 'z' }[view.frame];
-      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}` })
-        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}` }) : svg(name);
+      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}`, n: view.n })
+        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}`, n: view.n, stroke: view.primStroke }) : svg(name);
       const file = `design/icons/${thread ? DIRS.thread[view.frame] : prim ? DIRS.prim[view.frame] : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }

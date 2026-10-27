@@ -8,7 +8,7 @@
 // - fills use a finer stroke (0.7×), the way fills use a finer thread, and stay inside 6.5..17.5
 // - each fill keeps the shape one square of it has on the canvas, with fewer lines
 // - over and under: the thread that passes under has a gap where the other crosses it
-import { THREAD_ICONS, ZOOM, zoomStyle } from './thread.js';
+import { THREAD_ICONS, ZOOM, zoomStyle, zoomAt } from './thread.js';
 import { regionLegs } from '../../lab/fills.js';
 
 const dot = (x, y, r = 1.25) => `<circle cx="${x}" cy="${y}" r="${r}" fill="currentColor" stroke="none"/>`;
@@ -67,26 +67,27 @@ export const PRIMITIVES = Object.fromEntries(Object.entries(THREAD_ICONS).map(([
 // per square with the single icon's proportions; fills come from the canvas generator over the whole patch,
 // with a thicker nominal thread so there are fewer, cleaner lines. Thread passing under is cut by a mask.
 
-const PATCH_CELL = 14 / ZOOM, PATCH_W = 0.25, PATCH_DENSITY = 0.6;   // more open than the canvas, so lines stay apart at 24 px
-const P = (u) => +(5 + u * PATCH_CELL).toFixed(2);
-const seg = (a, b) => `M${P(a[0])} ${P(a[1])}L${P(b[0])} ${P(b[1])}`;
+const PATCH_W = 0.25, PATCH_DENSITY = 0.6;   // more open than the canvas, so lines stay apart at 24 px
 const inset = 1.5 / 14;   // the single icon's hole clearance, in squares
 const COUNTED = {
   up: [[inset, 1 - inset], [1 - inset, inset]], down: [[inset, inset], [1 - inset, 1 - inset]],
   tl: [[inset, inset], [0.5, 0.5]], tr: [[1 - inset, inset], [0.5, 0.5]], bl: [[inset, 1 - inset], [0.5, 0.5]], br: [[1 - inset, 1 - inset], [0.5, 0.5]]
-};
-const tile = (legs) => {
-  let d = '';
-  for (let y = 0; y < ZOOM; y++) for (let x = 0; x < ZOOM; x++) for (const [a, b] of legs) d += seg([a[0] + x, a[1] + y], [b[0] + x, b[1] + y]);
-  return d;
 };
 const FILL_KIND = {
   'fill-rows': 'rows', 'fill-columns': 'columns', 'fill-hatch': 'hatch', 'fill-weave-3': 'weave3', 'fill-weave-5': 'weave5',
   'fill-weave-diamond': 'diamond', 'fill-blocks': 'blocks', 'fill-fern': 'fern', 'fill-seed': 'seed', 'fill-knots': 'knots', 'fill-burst': 'burst'
 };
 
-function patchBody(name, id) {
-  const ph = Array.from({ length: (ZOOM + 1) ** 2 }, (_, i) => dot(P(i % (ZOOM + 1)), P(Math.floor(i / (ZOOM + 1))), 0.55)).join('');
+function patchBody(name, id, n = ZOOM) {
+  const cell = 14 / n, P = (u) => +(5 + u * cell).toFixed(2);
+  const seg = (a, b) => `M${P(a[0])} ${P(a[1])}L${P(b[0])} ${P(b[1])}`;
+  const tile = (legs) => {
+  let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) for (const [a, b] of legs) d += seg([a[0] + x, a[1] + y], [b[0] + x, b[1] + y]);
+  return d;
+};
+
+  const ph = Array.from({ length: (n + 1) ** 2 }, (_, i) => dot(P(i % (n + 1)), P(Math.floor(i / (n + 1))), 0.55)).join('');
   const stroke = (d, w = 'var(--patch)', extra = '') => `<path d="${d}" stroke-width="${w}"${extra}/>`;
   let m;
   if (name === 'stitch-full' || name === 'fill-cross') return ph + stroke(tile([COUNTED.up, COUNTED.down]));
@@ -97,23 +98,23 @@ function patchBody(name, id) {
   if (name === 'stitch-back') {
     // a stepped outline down the diagonal, each stitch stopping short of its holes
     let d = '';
-    for (let k = 0; k < ZOOM; k++) d += seg([k, k + inset], [k, k + 1 - inset]) + seg([k + inset, k + 1], [k + 1 - inset, k + 1]);
+    for (let k = 0; k < n; k++) d += seg([k, k + inset], [k, k + 1 - inset]) + seg([k + inset, k + 1], [k + 1 - inset, k + 1]);
     return ph + stroke(d);
   }
   if (name === 'stitch-knot') {
     let c = '';
-    for (let y = 0; y < ZOOM; y++) for (let x = 0; x < ZOOM; x++) c += `<circle cx="${P(x + 0.5)}" cy="${P(y + 0.5)}" r="${(PATCH_CELL * 0.24).toFixed(2)}" stroke-width="var(--patch-fine)"/>`;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) c += `<circle cx="${P(x + 0.5)}" cy="${P(y + 0.5)}" r="${(cell * 0.24).toFixed(2)}" stroke-width="var(--patch-fine)"/>`;
     return ph + c;
   }
   const mask = new Set();
-  for (let y = 0; y < ZOOM; y++) for (let x = 0; x < ZOOM; x++) mask.add(`${x},${y}`);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) mask.add(`${x},${y}`);
   const kind = FILL_KIND[name];
   let legs = regionLegs(kind, mask, PATCH_DENSITY, 5, PATCH_W);
   if (kind === 'seed') legs = legs.filter((_, i) => i % 3 === 0);   // scattered, not speckled
   if (kind === 'knots') return ph + legs.filter((_, i) => i % 10 === 0).map((l, i) => {
     // each knot is five legs round a centre; draw every other one as a small ring
     const ring = legs.slice(i * 10, i * 10 + 5), cx = ring.reduce((t, x) => t + x.a[0], 0) / 5, cy = ring.reduce((t, x) => t + x.a[1], 0) / 5;
-    return `<circle cx="${P(cx)}" cy="${P(cy)}" r="${(PATCH_CELL * 0.2).toFixed(2)}" stroke-width="var(--patch-fine)"/>`;
+    return `<circle cx="${P(cx)}" cy="${P(cy)}" r="${(cell * 0.2).toFixed(2)}" stroke-width="var(--patch-fine)"/>`;
   }).join('');
   const under = legs.filter((l) => l.layer === 0).map((l) => seg(l.a, l.b)).join('');
   const over = legs.filter((l) => l.layer === 1).map((l) => seg(l.a, l.b)).join('');
@@ -128,8 +129,9 @@ function patchBody(name, id) {
  * Full <svg> markup for one primitive. Fills draw at 0.7× the stroke.
  * frame: 'square' (the single square, default), 'patch' (the zoomed-out 4 × 4 patch, same square on the grid),
  * or 'zoom' (both, animated on hover: the square zooms out into the patch). id: unique per page for 'patch' and 'zoom'.
+ * n: squares per side of the patch. animate: false leaves out the CSS animation, for a page that drives .tz-one/.tz-many itself.
  */
-export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 'square', id = `p-${name}` } = {}) {
+export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 'square', id = `p-${name}`, n = ZOOM, animate = true } = {}) {
   const icon = PRIMITIVES[name];
   if (!icon) throw new Error(`Unknown primitive: ${name}`);
   const label = title ? `<title>${title}</title>` : '';
@@ -138,11 +140,8 @@ export function primitiveSvg(name, { size = 24, stroke = 1.75, title, frame = 's
   const fill = (body) => body.replace(/var\(--([\w-]+)\)/g, (_, k) => String(+vars[k].toFixed(2)));
   let body;
   if (frame === 'square') body = fill(icon.body);
-  else if (frame === 'patch') body = fill(patchBody(name, id));
-  else body = zoomStyle(id, ZOOM_AT_24) + `<g class="tz-many">${fill(patchBody(name, id))}</g><g class="tz-one">${fill(icon.body)}</g>`;
+  else if (frame === 'patch') body = fill(patchBody(name, id, n));
+  else body = (animate ? zoomStyle(id, zoomAt(5, 14, n), n) : '') + `<g class="tz-many">${fill(patchBody(name, id, n))}</g><g class="tz-one">${fill(icon.body)}</g>`;
   const svgId = frame === 'square' ? '' : ` id="${id}"`;
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" ${aria}>${label}${body}</svg>`;
 }
-
-// the patch's square (1, 1) sits exactly where the single square is drawn ×1/4; this point stays put
-const ZOOM_AT_24 = +(5 + 14 / 3).toFixed(3);
