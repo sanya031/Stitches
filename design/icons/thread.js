@@ -31,7 +31,8 @@ export const THREAD_ICONS = {
 
 const S = 48, O = 6, C = 36;        // frame, the square's top-left corner and its size, px
 // hover preview: a 4 × 4 patch, zooming out from its square (1, 1); the point that stays put is O + C / 3
-const ZOOM = 4, ZOOM_AT = O + C / 3;
+export const ZOOM = 4;
+const ZOOM_AT = O + C / 3;
 const HOLE = '#8F8A80';             // fabric holes: mid grey, visible on the dark bench and on cloth
 // thread widths in squares, as on the canvas at count 14: two strands for counted stitches, a fine strand for fills
 const W_STITCH = 0.3, W_FILL = 0.6 * 0.27 * 14 / 25.4;
@@ -134,9 +135,10 @@ function ribbonLocal(L, w, ea, eb) {
 /**
  * Full SVG markup for a thread icon.
  * options: colour (thread, hex), size (px), paper (linen tile behind), id (prefix for defs, unique per page),
- * zoom (on hover the square zooms out to a ZOOM × ZOOM patch of the same stitch or fill, as the canvas lays it)
+ * frame: 'square' (the single square, default), 'patch' (a ZOOM × ZOOM patch of the same stitch or fill, as the canvas
+ * lays it, in the same square of the frame) or 'zoom' (both, animated on hover: the square zooms out into the patch)
  */
-export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, zoom = false } = {}) {
+export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, id = name, frame = 'square' } = {}) {
   if (!THREAD_ICONS[name]) throw new Error(`Unknown thread icon: ${name}`);
   const r = rng(name.length * 97 + 3);
   const defs = new Map(), body = [];
@@ -206,22 +208,28 @@ export function threadSvg(name, { colour = '#C8343B', size = 48, paper = false, 
   };
 
   if (paper) body.push(`<rect width="${S}" height="${S}" rx="8" fill="#F2EEE6"/>`);
-  const one = draw(layout(name), 1);   // drawn first so its hand jitter matches the plain icon
-  if (!zoom) body.push(one);
-  else {
-    // The patch is drawn at its zoomed-out size and starts magnified ZOOM× about one of its inner squares,
-    // so that square fills the frame exactly where the single square sits. On hover the single square
-    // shrinks into that spot as the patch settles to 1×: one continuous zoom out.
-    defs.set('blurn', `<filter id="${id}-blurn" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.35"/></filter>`);
-    const o = `${ZOOM_AT}px ${ZOOM_AT}px`;
-    body.push(`<style>#${id} .tz-one,#${id} .tz-many{transform-origin:${o};transition:transform .5s cubic-bezier(.3,0,.2,1),opacity .3s ease}`
-      + `#${id} .tz-many{transform:scale(${ZOOM});opacity:0}`
-      + `#${id}:hover .tz-one,.tz-host:hover #${id} .tz-one,.tz-host:focus-visible #${id} .tz-one{transform:scale(${1 / ZOOM});opacity:0;transition-delay:0s,.12s}`
-      + `#${id}:hover .tz-many,.tz-host:hover #${id} .tz-many,.tz-host:focus-visible #${id} .tz-many{transform:scale(1);opacity:1}`
-      + `@media (prefers-reduced-motion:reduce){#${id} .tz-one,#${id} .tz-many{transform:none!important;transition:opacity .2s}}</style>`,
-      `<g class="tz-many">${draw(layout(name, ZOOM), ZOOM)}</g>`, `<g class="tz-one">${one}</g>`);
-  }
+  // blur for the patch's finer shadows
+  if (frame !== 'square') defs.set('blurn', `<filter id="${id}-blurn" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.35"/></filter>`);
+  const one = frame === 'patch' ? '' : draw(layout(name), 1);   // drawn first so its hand jitter matches the plain icon
+  if (frame === 'square') body.push(one);
+  else if (frame === 'patch') body.push(draw(layout(name, ZOOM), ZOOM));
+  else body.push(zoomStyle(id, ZOOM_AT), `<g class="tz-many">${draw(layout(name, ZOOM), ZOOM)}</g>`, `<g class="tz-one">${one}</g>`);
 
-  const svgId = zoom ? ` id="${id}"` : '';
+  const svgId = frame === 'square' ? '' : ` id="${id}"`;
   return `<svg xmlns="http://www.w3.org/2000/svg"${svgId} width="${size}" height="${size}" viewBox="0 0 ${S} ${S}" aria-hidden="true"><defs>${[...defs.values()].join('')}</defs>${body.join('')}</svg>`;
+}
+
+/**
+ * The hover zoom between the frames, as a <style> scoped to one svg (#id). The patch starts magnified ZOOM×
+ * about `at` (in viewBox units), so its square (1, 1) fills the frame exactly where the single square sits; on
+ * hover the single square shrinks into that spot as the patch settles to 1×: one continuous zoom out.
+ * Plays on hovering the svg or any ancestor with class tz-host. Reduced motion gets a crossfade.
+ */
+export function zoomStyle(id, at) {
+  const o = `${at}px ${at}px`, on = (part) => `#${id}:hover .${part},.tz-host:hover #${id} .${part},.tz-host:focus-visible #${id} .${part}`;
+  return `<style>#${id} .tz-one,#${id} .tz-many{transform-origin:${o};transition:transform .5s cubic-bezier(.3,0,.2,1),opacity .3s ease}`
+    + `#${id} .tz-many{transform:scale(${ZOOM});opacity:0}`
+    + `${on('tz-one')}{transform:scale(${1 / ZOOM});opacity:0;transition-delay:0s,.12s}`
+    + `${on('tz-many')}{transform:scale(1);opacity:1}`
+    + `@media (prefers-reduced-motion:reduce){#${id} .tz-one,#${id} .tz-many{transform:none!important;transition:opacity .2s}}</style>`;
 }

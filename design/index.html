@@ -82,6 +82,9 @@
         <button data-size="16">16</button><button data-size="20">20</button><button data-size="24" aria-pressed="true">24</button><button data-size="32">32</button><button data-size="48">48</button>
       </div>
       <label class="stroke">Stroke <input type="range" id="stroke" min="1.25" max="2.5" step="0.25" value="1.75"><span class="mono" id="stroke-out">1.75</span></label>
+      <div class="pill" role="group" aria-label="Frame" id="frames">
+        <button data-frame="zoom" aria-pressed="true">Hover zoom</button><button data-frame="square">First frame</button><button data-frame="patch">Last frame</button>
+      </div>
       <div class="pill" role="group" aria-label="Background" id="bgs">
         <button data-bg="bench" aria-pressed="true">Bench</button><button data-bg="cloth">Cloth</button>
       </div>
@@ -89,13 +92,13 @@
 
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
-      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one to zoom out to a 4 × 4 patch of it, laid as the canvas lays it.</p>
+      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one to zoom out to a 4 × 4 patch of it, laid as the canvas lays it. <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch fills the same square, and scaling it 4× about the point 18, 18 (on the 48 frame) lands its second square from the top left exactly on the single square. That is the whole animation: patch 4× → 1×, square 1× → ¼×, both about that point.</p>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
     </section>
     <section aria-labelledby="prim-title">
       <h2 id="prim-title" style="margin-top:48px">Primitives · stitches and fills</h2>
-      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another.</p>
+      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. They zoom out the same way, about the point 9.67, 9.67 on the 24 grid.</p>
       <div id="prim-groups"></div>
     </section>
     <h2 style="margin-top:48px">Line icons</h2>
@@ -108,7 +111,9 @@
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
     import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
 
-    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B' };
+    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom' };
+    // files per frame, for the copy toast
+    const DIRS = { thread: { square: 'thread', patch: 'thread-patch', zoom: 'thread-zoom' }, prim: { square: 'primitive', patch: 'primitive-patch', zoom: 'primitive-zoom' } };
     const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
     document.getElementById('thread-colours').innerHTML = COLOURS.map(([n, c], i) =>
       `<button data-colour="${c}" aria-pressed="${i === 0}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
@@ -127,8 +132,8 @@
         const items = Object.entries(THREAD_ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `tz-${name}-${size}`, zoom: true })}</span>`
-          + `<span class="name">${i.label}</span><span class="file mono">thread/${name}</span></button>`).join('')}</div>`;
+          `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: document.body.classList.contains('on-cloth'), id: `t-${name}-${size}-${view.frame}`, frame: view.frame })}</span>`
+          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.thread[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
     }
     function renderPrim() {
@@ -138,8 +143,8 @@
         const items = Object.entries(PRIMITIVES).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile" data-prim="${name}" title="Copy ${name}.svg"><span class="art">${primitiveSvg(name, { size: view.size, stroke: view.stroke })}</span>`
-          + `<span class="name">${i.label}</span><span class="file mono">primitive/${name}</span></button>`).join('')}</div>`;
+          `<button class="tile tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art">${primitiveSvg(name, { size: view.size, stroke: view.stroke, frame: view.frame, id: `p-${name}-${view.frame}` })}</span>`
+          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.prim[view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
     }
     const groupsEl = document.getElementById('groups');
@@ -174,6 +179,13 @@
       renderThread();
       renderPrim();
     });
+    document.getElementById('frames').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-frame]'); if (!b) return;
+      view.frame = b.dataset.frame;
+      document.querySelectorAll('[data-frame]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderThread();
+      renderPrim();
+    });
     document.getElementById('bgs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-bg]'); if (!b) return;
       document.body.classList.toggle('on-cloth', b.dataset.bg === 'cloth');
@@ -186,8 +198,10 @@
     document.addEventListener('click', async (e) => {
       const t = e.target.closest('.tile'); if (!t) return;
       const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
-      const text = thread ? threadSvg(thread, { colour: view.colour, zoom: true, id: `tz-${thread}` }) : prim ? primitiveSvg(prim) : svg(name);
-      const file = `design/icons/${thread ? 'thread-zoom' : prim ? 'primitive' : 'svg'}/${name}.svg`;
+      const ids = { square: '', patch: 'p', zoom: 'z' }[view.frame];
+      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}` })
+        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}` }) : svg(name);
+      const file = `design/icons/${thread ? DIRS.thread[view.frame] : prim ? DIRS.prim[view.frame] : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }
       toast.classList.add('show');
