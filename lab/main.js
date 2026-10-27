@@ -990,6 +990,179 @@ function syncSelectionUI() {
   document.getElementById('sel-pattern').setAttribute('aria-checked', String(recolourPattern));
 }
 
+// ---------- stage tips: what strands, count and density look like ----------
+// Hovering, focusing or dragging one of these controls shows every stage side by side, drawn at true size
+// (thread width and square size in the same mm the renderer uses), with the one you point at picked out.
+
+/** Thread legs drawn as their strands lying side by side, so 1 vs 6 strands reads at a glance. */
+function strandLegs(legs, S, pad, wSq, n, color) {
+  const rgb = hex(color), r = rng(11), wPx = wSq * S, per = wPx / n;
+  return legs.sort((a, b) => a[2] - b[2]).map(([a, b, layer]) => {
+    const ax = pad + a[0] * S, ay = pad + a[1] * S, bx = pad + b[0] * S, by = pad + b[1] * S;
+    const L = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / L, ny = (bx - ax) / L;
+    const base = rgb.map((v) => v * (layer === 0 ? 0.84 : 1));
+    // contact shadow under the whole thread, then each strand with its own shine
+    let out = `<path d="M${ax.toFixed(1)} ${ay.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}" stroke="#000" stroke-opacity=".18" stroke-width="${(wPx + 1.2).toFixed(2)}"/>`;
+    for (let i = 0; i < n; i++) {
+      const o = (i - (n - 1) / 2) * per, dx = nx * o, dy = ny * o, tone = 0.93 + r() * 0.12;
+      const d = `M${(ax + dx).toFixed(1)} ${(ay + dy).toFixed(1)}L${(bx + dx).toFixed(1)} ${(by + dy).toFixed(1)}`;
+      out += `<path d="${d}" stroke="${toHex(base.map((v) => v * tone))}" stroke-width="${(per * 1.08).toFixed(2)}"/>`;
+      if (per > 1.4) out += `<path d="${d}" stroke="#fff" stroke-opacity=".2" stroke-width="${(per * 0.3).toFixed(2)}"/>`;
+    }
+    return out;
+  }).join('');
+}
+
+/** One patch of fabric, cols × rows squares of S px, with legs drawn on it. Squares past the edge are clipped. */
+function patchSVG(w, h, S, legsSvg, cols, rows, pad = 0) {
+  const surf = SURFACES[state.surface], darkCloth = state.surface === 'denim';
+  let dots = '';
+  for (let y = 0; y <= rows; y++) for (let x = 0; x <= cols; x++) dots += `<circle cx="${(pad + x * S).toFixed(1)}" cy="${(pad + y * S).toFixed(1)}" r="${Math.min(1.5, S * 0.09).toFixed(2)}"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><rect width="${w}" height="${h}" fill="${surf.color}"/>`
+    + `<g fill="${darkCloth ? '#22334F' : '#8F8A80'}">${dots}</g><g fill="none" stroke-linecap="round">${legsSvg}</g></svg>`;
+}
+
+const crossesIn = (cols, rows) => {
+  const legs = [];
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) legs.push(...legsOf(x, y, { type: 'full' }));
+  return legs;
+};
+const HEART = ['.x.x.', 'xxxxx', '.xxx.', '..x..'];   // 5 × 4 squares
+const mm = (v) => (v < 1 ? v.toFixed(2) : v.toFixed(1));
+
+const STAGES = {
+  strands: {
+    title: 'Strands',
+    values: () => [1, 2, 3, 4, 6],
+    current: () => state.strands,
+    label: (v) => `${v}`,
+    draw(v) {
+      const S = 26, pad = 7, size = S * 2 + pad * 2;
+      return patchSVG(size, size, S, strandLegs(crossesIn(2, 2), S, pad, v * STRAND_MM * state.count / 25.4, v, state.color), 2, 2, pad);
+    },
+    say(v) {
+      const sq = 25.4 / state.count, th = v * STRAND_MM, cover = Math.min(100, Math.round((th / sq) * 100));
+      const words = {
+        1: 'One strand. Fine and see-through: the fabric shows. Good for outlines and soft shading.',
+        2: 'Two strands. The usual for cross stitch: covers the fabric cleanly without bulk.',
+        3: 'Three strands. Fuller and bolder. Best on bigger squares (11 count).',
+        4: 'Four strands. Thick and raised; the holes start to crowd.',
+        6: 'All six strands. Very chunky, for big squares or bold texture.'
+      }[v];
+      return [words, `${mm(th)} mm thread on ${mm(sq)} mm squares · fills about ${cover}% of a square's width`];
+    }
+  },
+  count: {
+    title: 'Count · squares per inch',
+    values: () => [11, 14, 16, 18],
+    current: () => state.count,
+    label: (v) => `${v}`,
+    // the same half inch of fabric and the same little heart at every count: as the squares shrink, so does the design
+    draw(v) {
+      const W = 68, S = (W * 2) / v, o = ((W - 5 * S) / 2) % S, n = Math.ceil((W - o) / S);
+      const sx = Math.round(((W - 5 * S) / 2 - o) / S), sy = Math.round(((W - 4 * S) / 2 - o) / S), legs = [];
+      HEART.forEach((row, y) => [...row].forEach((c, x) => { if (c === 'x') legs.push(...legsOf(x + sx, y + sy, { type: 'full' })); }));
+      return patchSVG(W, W, S, strandLegs(legs, S, o, state.strands * STRAND_MM * v / 25.4, state.strands, state.color), n, n, o);
+    },
+    say(v) {
+      const words = {
+        11: '11 count. Big squares, easy to see and count. Chunky, bold result.',
+        14: '14 count. The standard for most kits and first projects.',
+        16: '16 count. Smaller squares, more detail in the same space.',
+        18: '18 count. Fine and detailed, but harder on the eyes.'
+      }[v];
+      const cmW = COLS / v * 2.54, cmH = ROWS / v * 2.54;
+      return [words, `Same heart on ½ inch of fabric · this canvas stitches out to ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm`];
+    }
+  },
+  density: {
+    title: 'Density',
+    values: () => {
+      // four stops, with the one nearest the slider drawn at its exact value
+      const stops = [0.25, 0.5, 0.75, 1], near = stops.reduce((b, s) => (Math.abs(s - state.density) < Math.abs(b - state.density) ? s : b));
+      return stops.map((s) => (s === near ? state.density : s));
+    },
+    current: () => state.density,
+    label: (v) => `${Math.round(v * 100)}`,
+    draw(v) {
+      const S = 24, pad = 7, cols = 3, rows = 2, w = S * cols + pad * 2, h = S * rows + pad * 2;
+      let legs;
+      if (REGION_FILLS[state.fill]) {
+        const mask = new Set();
+        for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) mask.add(`${x},${y}`);
+        legs = regionLegs(state.fill, mask, v, 3, fillWidth(state.fillThread)).map((l) => [l.a, l.b, l.layer]);
+      } else legs = crossesIn(cols, rows);   // cross fills have no density: one cross a square
+      const n = Math.max(1, Math.round(FILL_THREADS[state.fillThread][1] * 2));
+      return patchSVG(w, h, S, strandLegs(legs, S, pad, fillWidth(state.fillThread), n, state.color), cols, rows, pad);
+    },
+    say(v) {
+      if (!REGION_FILLS[state.fill]) return ['Cross fills put one cross in every square, so density has no effect on them.', 'Pick a long-stitch fill to see it change'];
+      const words = v < 0.35 ? 'Loose. Lines sit far apart and the fabric shows through. Light and airy.'
+        : v < 0.65 ? 'Medium. Lines sit close, with some fabric peeking between them.'
+        : v < 0.92 ? 'Dense. Lines nearly touch: reads as solid colour from a distance.'
+        : 'Packed. Lines touch side by side, like satin. Fully covered.';
+      return [words, `${FILLS[state.fill][0]} in ${FILL_THREADS[state.fillThread][0].toLowerCase()} thread`];
+    }
+  }
+};
+
+const tip = document.createElement('div');
+tip.className = 'stage-tip';
+tip.setAttribute('role', 'tooltip');
+tip.id = 'stage-tip';
+tip.hidden = true;
+document.body.append(tip);
+let tipFor = null;   // { key, anchor, pick }
+
+function showTip(key, anchor, pick) {
+  const def = STAGES[key], values = def.values(), on = pick ?? def.current();
+  const near = values.reduce((b, v) => (Math.abs(v - on) < Math.abs(b - on) ? v : b));
+  tip.innerHTML = `<div class="stage-title">${def.title}</div><div class="stage-strip">${values.map((v) =>
+    `<figure class="stage${v === near ? ' on' : ''}${v === def.current() ? ' now' : ''}">${def.draw(v)}<figcaption class="mono">${def.label(v)}</figcaption></figure>`).join('')}</div>`
+    + (([a, b]) => `<p class="stage-say">${a}</p><p class="stage-note mono">${b}</p>`)(def.say(near));
+  tip.hidden = false;
+  tipFor = { key, anchor, pick };
+  anchor.setAttribute('aria-describedby', 'stage-tip');
+  // beside the panel, over the canvas, when there is room; otherwise above the control
+  const a = anchor.getBoundingClientRect(), p = panel.getBoundingClientRect(), t = tip.getBoundingClientRect(), gap = 12;
+  let x, y;
+  if (p.left - t.width - gap >= 8) { x = p.left - t.width - gap; y = a.top + a.height / 2 - t.height / 2; }
+  else { x = a.left + a.width / 2 - t.width / 2; y = a.top - t.height - gap; if (y < 8) y = a.bottom + gap; }
+  tip.style.left = `${Math.round(Math.min(innerWidth - t.width - 8, Math.max(8, x)))}px`;
+  tip.style.top = `${Math.round(Math.min(innerHeight - t.height - 8, Math.max(8, y)))}px`;
+}
+function hideTip() {
+  if (!tipFor) return;
+  tipFor.anchor.removeAttribute('aria-describedby');
+  tip.hidden = true;
+  tipFor = null;
+}
+const refreshTip = () => { if (tipFor) showTip(tipFor.key, tipFor.anchor, tipFor.pick); };
+
+/** The control a pointer or focus is on: a strands or count pill (and which option), or the density slider. */
+function tipTarget(el) {
+  const btn = el.closest?.('[data-set="strands"], [data-set="count"]');
+  if (btn) return { key: btn.dataset.set, anchor: btn.closest('.pill'), pick: Number(btn.dataset.val) };
+  const pillEl = el.closest?.('.pill');
+  if (pillEl?.querySelector('[data-set="strands"], [data-set="count"]')) return { key: pillEl.querySelector('[data-set]').dataset.set, anchor: pillEl, pick: null };
+  const range = el.closest?.('[data-range="density"]');
+  if (range) return { key: 'density', anchor: range.closest('.slider'), pick: null };
+  return null;
+}
+panel.addEventListener('pointerover', (e) => { const t = tipTarget(e.target); if (t) showTip(t.key, t.anchor, t.pick); });
+panel.addEventListener('pointerout', (e) => {
+  if (!tipFor) return;
+  const to = e.relatedTarget && tipTarget(e.relatedTarget);
+  if (to && to.anchor === tipFor.anchor) return;
+  if (document.activeElement && tipFor.anchor.contains(document.activeElement) && e.pointerType !== 'mouse') return;
+  hideTip();
+});
+panel.addEventListener('focusin', (e) => { const t = tipTarget(e.target); if (t && e.target.matches(':focus-visible')) showTip(t.key, t.anchor, t.pick); });
+panel.addEventListener('focusout', hideTip);
+panel.addEventListener('input', (e) => { if (e.target.dataset.range === 'density') { const t = tipTarget(e.target); showTip(t.key, t.anchor, null); } });
+panel.addEventListener('scroll', hideTip, { passive: true });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
+
 function syncUI() {
   panel.querySelectorAll('[data-set]').forEach((b) => b.setAttribute('aria-pressed', String(String(state[b.dataset.set]) === b.dataset.val)));
   for (const k of ['twist', 'sheen', 'fuzz', 'density']) {
@@ -1023,6 +1196,7 @@ function syncUI() {
   const cmW = COLS / state.count * 2.54, cmH = ROWS / state.count * 2.54;
   document.getElementById('count-hint').textContent =
     `Squares per inch. At ${state.count}, this ${COLS}×${ROWS} canvas stitches out to ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm. Higher counts mean smaller stitches and finer detail.`;
+  refreshTip();
   document.getElementById('size').textContent = `${SURFACES[state.surface].name} · count ${state.count} · ${state.strands} strand${state.strands > 1 ? 's' : ''} · ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm`;
   lastHud = '';
 }
