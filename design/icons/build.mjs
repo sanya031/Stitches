@@ -1,11 +1,11 @@
-// Writes svg/<name>.svg for every line icon, sprite.svg (one <symbol> per icon, primitives as p-<name>),
+// Writes svg/<name>.svg for every line icon, icons.css (their hover motion), sprite.svg (one <symbol> per icon, primitives as p-<name>),
 // and, for the thread-style stitch and fill icons and their clean line primitives, three versions each:
 // thread/ and primitive/ (single square), thread-patch/ and primitive-patch/ (4 × 4 patch), thread-zoom/ and primitive-zoom/.
 // Run from the repo root: node design/icons/build.mjs
 import { mkdirSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ICONS, svg } from './icons.js';
+import { ICONS, svg, iconCss } from './icons.js';
 import { THREAD_ICONS, threadSvg } from './thread.js';
 import { PRIMITIVES, primitiveSvg } from './primitives.js';
 
@@ -15,6 +15,8 @@ mkdirSync(out, { recursive: true });
 for (const f of readdirSync(out)) if (f.endsWith('.svg')) unlinkSync(join(out, f));   // icons removed from the source go too
 
 for (const name of Object.keys(ICONS)) writeFileSync(join(out, `${name}.svg`), svg(name) + '\n');
+// hover motion for the line icons: include icons.css on a page that inlines them
+writeFileSync(join(here, 'icons.css'), iconCss());
 
 const symbols = Object.entries(ICONS).map(([name, { body }]) =>
   `  <symbol id="i-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${body}</symbol>`);

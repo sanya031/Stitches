@@ -69,17 +69,17 @@
   <div class="wrap">
     <header>
       <h1>Selvedge icons</h1>
-      <p>One line icon set for the stitch playground. Every icon sits on the same 24 px grid with a 1.75 stroke, so they can sit side by side in any control. Click an icon to copy its SVG.</p>
+      <p>The icons for the stitch playground: line icons for the interface, and stitch and fill icons as thread and as clean primitives. Line icons share one 24 px grid, one 1.75 stroke and one size, and move on hover. Click an icon to copy its SVG.</p>
     </header>
 
     <div class="rules">
       <div class="rule">
         <h3>Grid</h3>
-        <p>24 × 24 viewBox, 2 px padding. Content lives inside 2 to 22.</p>
+        <p>24 × 24 viewBox. Ink stays in the 3 to 21 live area. A square icon spans 4 to 20, a round one is r 8.5, so every icon reads as the same size.</p>
         <div class="anatomy" id="anatomy"></div>
       </div>
-      <div class="rule"><h3>Stroke</h3><p>1.75 px, round caps and joins, no fills. A solid shape is used only where it means something: a selected square, a pointer, a fabric hole.</p></div>
-      <div class="rule"><h3>Holes</h3><p>Stitch icons draw the fabric holes as dots, and legs stop just short of them, like thread going in. That is what makes them read as embroidery.</p></div>
+      <div class="rule"><h3>Stroke only</h3><p>One 1.75 stroke, round caps and joins. No fills, no second tone, no opacity. A dot is a zero-length stroke, the stroke's own round cap.</p></div>
+      <div class="rule"><h3>Motion</h3><p>Hover an icon (or the control it sits in) and the part that does the work moves: the needle dips, the marquee marches, the hand grabs, the eraser rubs. Each move ends where it started; reduced motion keeps them still.</p></div>
       <div class="rule"><h3>Colour</h3><p>Icons take the colour of their text (<span class="mono">currentColor</span>). On the dark workbench that is linen white; on the active pill it is the dark ink on brass.</p></div>
     </div>
 
@@ -100,7 +100,10 @@
       </div>
     </div>
 
-    <section aria-labelledby="thread-title">
+    <h2 id="line-title">Line icons · interface</h2>
+    <main id="groups"></main>
+
+    <section aria-labelledby="thread-title" style="margin-top:48px">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
       <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works.</p>
       <p class="lede">Hover one: it shrinks in place and the rest of a patch of the same stitch spreads out to its right and below, laid the way it is stitched. The patch has fewer squares at smaller sizes so you can still read it. Tune how fast and how smooth with the <strong>Hover zoom</strong> panel (top right). <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch's top-left square is exactly the single square, scaled down. The downloadable <span class="mono">*-zoom</span> files carry the same zoom as CSS, at the tuned duration and smoothness (in <span class="mono">icons/zoom-css.js</span>).</p>
@@ -115,13 +118,11 @@
       <div class="pill" role="group" aria-label="Primitive colour" id="prim-colours"></div>
       <div id="prim-groups"></div>
     </section>
-    <h2 style="margin-top:48px">Line icons</h2>
-    <main id="groups"></main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script type="module">
-    import { ICONS, GROUPS, svg } from './icons/icons.js';
+    import { ICONS, GROUPS, svg, iconCss } from './icons/icons.js';
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
     import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
     import { createZoomMotion } from './zoom-motion.js';
@@ -238,7 +239,7 @@
         const items = Object.entries(ICONS).filter(([name, i]) => i.group === g && (!q || name.includes(q) || i.label.toLowerCase().includes(q)));
         if (!items.length) return '';
         return `<h2>${g}</h2><div class="grid">${items.map(([name, i]) =>
-          `<button class="tile" data-name="${name}" title="Copy ${name}.svg"><span class="art">${svg(name, { size: view.size, stroke: view.stroke })}</span>`
+          `<button class="tile si-host" data-name="${name}" title="Copy ${name}.svg"><span class="art">${svg(name, { size: view.size, stroke: view.stroke })}</span>`
           + `<span class="name">${i.label}</span><span class="file mono">${name}</span></button>`).join('')}</div>`;
       }).join('');
       groupsEl.innerHTML = html || '<p class="empty">No icons match.</p>';
@@ -249,8 +250,8 @@
       `<svg class="frame" width="96" height="96" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="2" y="2" width="20" height="20" fill="none" stroke="#3A3F49" stroke-width=".15" stroke-dasharray=".5 .5"/>
         ${Array.from({ length: 23 }, (_, i) => `<path d="M${i + 1} 0v24M0 ${i + 1}h24" stroke="#262A32" stroke-width=".05"/>`).join('')}
-        <g color="#EEE9E0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ICONS['stitch-full'].body}</g>
-      </svg><span class="mono">stitch-full</span>`;
+        <g color="#EEE9E0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ICONS['tool-select'].body}</g>
+      </svg><span class="mono">tool-select</span>`;
 
     document.getElementById('q').addEventListener('input', (e) => { view.q = e.target.value; render(); renderThread(); renderPrim(); });
     document.getElementById('stroke').addEventListener('input', (e) => { view.stroke = Number(e.target.value); document.getElementById('stroke-out').textContent = e.target.value; render(); renderPrim(); });
@@ -291,6 +292,7 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
     });
 
+    document.head.insertAdjacentHTML('beforeend', `<style>${iconCss()}</style>`);
     render();
     renderThread();
     renderPrim();
