@@ -2,12 +2,21 @@
 // each icon has a progress p (0 = the single square, 1 = the n × n patch) that a spring pulls toward the
 // pointer's intent. Leaving midway reverses from where it is, keeping its speed; nothing plays to the end.
 //
-//   p → patch scale  n^(1 - p)   (even zoom: equal steps of p feel like equal steps of camera distance)
-//       square scale n^(-p)      (always exactly the patch's square (1, 1), so the two stay registered)
-//       crossfade    square fades out over p in [fadeStart, fadeEnd], the patch fades in over the same span
+// The hovered stitch is the anchor: it shrinks in place toward its corner of the frame and stays on screen,
+// while the rest of the patch spreads out from it onto the cloth around it.
 //
-// Settings (all live): trigger 'hover' | 'scrub', zoomOut / zoomBack (DialKit TransitionConfig),
-// hoverDelay (ms), fadeStart, fadeEnd, evenZoom, lift (tile grows by this share at p = 1).
+//   anchor   the patch square (i, j) the hovered stitch becomes; top-left by default, so the others appear
+//            to its right and below. The fixed point is that square's matching spot in the frame:
+//            o + c · i / (n − 1), so the square ends exactly where the stitch shrank to.
+//   p → patch scale  n^(1 − p)   (even zoom: equal steps of p feel like equal steps of camera distance)
+//       stitch scale n^(−p)      (always exactly the patch's anchor square, so the two stay registered)
+//   reveal   'sweep': the other squares appear in a soft circle growing from the stitch over p in
+//            [revealStart, revealEnd]; 'fade': they fade in over the same span
+//   hand-off the stitch stays until p reaches [handoffStart, handoffEnd], then the patch's own anchor square
+//            takes over (for fills, where lines run on into the neighbours)
+//
+// Settings (all live): trigger 'hover' | 'scrub', zoomOut / zoomBack (DialKit TransitionConfig), hoverDelay (ms),
+// evenZoom, lift, anchor { x, y } (0..1, y up), reveal, revealStart, revealEnd, softness, handoffStart, handoffEnd.
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -38,22 +47,58 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / Math.m
 
 export function createZoomMotion(settings) {
   const states = new Map();   // host element → { p, v, target, tween, timer }
-  let raf = 0, last = 0;
+  let raf = 0, last = 0, frozen = null;   // frozen: a progress every icon is held at, for inspecting a frame
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+  /** The patch's reveal mask: everything starts hidden; a soft circle grows from the anchor; the anchor square stays covered until the hand-off. */
+  const maskFor = (svg, many) => {
+    if (svg._reveal) return svg._reveal;
+    const id = `${svg.id || 'z' + Math.random().toString(36).slice(2)}-reveal`;
+    let defs = svg.querySelector('defs');
+    if (!defs) { defs = el('defs', {}); svg.prepend(defs); }
+    const grad = el('radialGradient', { id: `${id}-g` });
+    const stopIn = el('stop', { offset: '0.6', 'stop-color': '#fff' }), stopOut = el('stop', { offset: '1', 'stop-color': '#000' });
+    grad.append(stopIn, stopOut);
+    const mask = el('mask', { id, maskUnits: 'userSpaceOnUse', x: -500, y: -500, width: 1000, height: 1000 });
+    const circle = el('circle', { fill: `url(#${id}-g)` }), cover = el('rect', { fill: '#000' });
+    mask.append(circle, cover);
+    defs.append(grad, mask);
+    many.setAttribute('mask', `url(#${id})`);
+    return (svg._reveal = { circle, cover, stopIn });
+  };
 
   const paint = (host, s) => {
     const svg = host.querySelector('svg'), one = svg?.querySelector('.tz-one'), many = svg?.querySelector('.tz-many');
     if (!one || !many) return;
-    const n = Number(svg.dataset.n || 4), p = s.p, cfg = settings();
-    const at = svg.dataset.at;
+    const cfg = settings(), p = s.p;
+    const n = Number(svg.dataset.n || 4), o = Number(svg.dataset.o), c = Number(svg.dataset.c), cell = c / n;
+    const i = Math.round(Math.min(1, Math.max(0, cfg.anchor.x)) * (n - 1)), j = Math.round((1 - Math.min(1, Math.max(0, cfg.anchor.y))) * (n - 1));
+    const fx = o + (c * i) / (n - 1), fy = o + (c * j) / (n - 1);
     const scale = reduced.matches ? 1 : cfg.evenZoom ? n ** (1 - p) : n - (n - 1) * p;
     for (const [g, sc] of [[many, scale], [one, scale / n]]) {
-      g.style.transformOrigin = `${at}px ${at}px`;
+      g.style.transformOrigin = `${fx}px ${fy}px`;
       g.style.transform = `scale(${sc})`;
       g.style.transition = 'none';
     }
-    const f = smooth(cfg.fadeStart, cfg.fadeEnd, p);
-    one.style.opacity = String(1 - f);
-    many.style.opacity = String(f);
+
+    // reveal: a soft circle from the anchor square's centre out past the farthest corner
+    const m = maskFor(svg, many), cx = o + (i + 0.5) * cell, cy = o + (j + 0.5) * cell;
+    const far = Math.max(...[[o, o], [o + c, o], [o, o + c], [o + c, o + c]].map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    const soft = Math.min(0.95, Math.max(0.02, cfg.softness)), r = smooth(cfg.revealStart, cfg.revealEnd, p);
+    const sweep = cfg.reveal === 'sweep' && !reduced.matches;
+    const radius = sweep ? (cell * 0.5 + (far / (1 - soft) + cell) * r) : far * 4;
+    m.circle.setAttribute('cx', cx); m.circle.setAttribute('cy', cy); m.circle.setAttribute('r', Math.max(0.01, radius));
+    m.stopIn.setAttribute('offset', String(1 - soft));
+    many.style.opacity = String(sweep ? (r > 0 ? 1 : 0) : r);
+
+    // hand-off: the stitch stays on top of its covered square, then gives way to the patch's own
+    const h = smooth(cfg.handoffStart, cfg.handoffEnd, p);
+    for (const [k, v] of Object.entries({ x: o + i * cell, y: o + j * cell, width: cell, height: cell })) m.cover.setAttribute(k, v);
+    m.cover.setAttribute('opacity', String(1 - h));
+    one.style.opacity = String(1 - h);
+
     const art = host.querySelector('.art');
     if (art) art.style.transform = cfg.lift ? `scale(${1 + cfg.lift * Math.min(1.2, Math.max(0, p))})` : '';
   };
@@ -86,7 +131,7 @@ export function createZoomMotion(settings) {
   };
   const kick = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
   const state = (host) => { if (!states.has(host)) states.set(host, { p: 0, v: 0, target: 0, tween: null, timer: 0 }); return states.get(host); };
-  const aim = (host, target) => { const s = state(host); s.target = target; kick(); };
+  const aim = (host, target) => { if (frozen != null) return; const s = state(host); s.target = target; kick(); };
 
   // events on the page, delegated so re-rendered tiles keep working
   const hostOf = (e) => e.target.closest?.('.tz-host');
@@ -113,7 +158,14 @@ export function createZoomMotion(settings) {
 
   return {
     /** Paint a freshly rendered host at its current progress (after a re-render). */
-    sync(host) { paint(host, state(host)); },
+    sync(host) { const s = state(host); if (frozen != null) s.p = s.target = frozen; paint(host, s); },
+    /** Repaint every icon, e.g. after the anchor or reveal dials change while nothing is moving. */
+    repaint() { document.querySelectorAll('.tz-host').forEach((h) => paint(h, state(h))); },
+    /** Hold every icon at progress p (null lets them go back to following the pointer). */
+    freeze(p) {
+      frozen = p;
+      document.querySelectorAll('.tz-host').forEach((h) => { const s = state(h); if (p == null) { s.target = 0; kick(); } else { s.p = p; s.v = 0; s.target = p; paint(h, s); } });
+    },
     /** Send every host on the page to a target, e.g. to compare all patches at once. */
     all(target) { document.querySelectorAll('.tz-host').forEach((h) => aim(h, target)); },
   };

@@ -97,14 +97,14 @@
 
     <section aria-labelledby="thread-title">
       <h2 id="thread-title">Thread icons · stitches and fills</h2>
-      <p class="lede">Tune the hover with the <strong>Hover zoom</strong> panel (top right): the spring for zooming out and back, hover delay, crossfade, patch size, icon sizes and colours. Values are kept in this browser; <em>Copy</em> in the panel gives them to you.</p>
-      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one to zoom out to a 4 × 4 patch of it, laid as the canvas lays it. <em>First frame</em> and <em>Last frame</em> show the two ends on their own: the patch fills the same square, and scaling it 4× about the point 18, 18 (on the 48 frame) lands its second square from the top left exactly on the single square. That is the whole animation: patch 4× → 1×, square 1× → ¼×, both about that point.</p>
+      <p class="lede">Tune the hover with the <strong>Hover zoom</strong> panel (top right): the spring for zooming out and back, hover delay, where the hovered stitch anchors (top left by default: it shrinks in place and the rest of the patch spreads out to its right and below), how the others are revealed, patch size, icon sizes and colours. Values are kept in this browser; <em>Copy</em> in the panel gives them to you.</p>
+      <p class="lede">The same stitches and fills drawn as real thread: lens-shaped legs pinched into the holes, round shading, twist ridges, a soft shadow. Fills come from the app's own fill generators. Any thread colour works. Hover one: it shrinks in place and the rest of a 4 × 4 patch, laid as the canvas lays it, spreads out around it. <em>First frame</em> and <em>Last frame</em> show the two ends on their own, on the same grid: the patch's top-left square is exactly the single square at a quarter size, so scaling the patch 4× about the frame's top-left corner of the square (6, 6 on the 48 frame) lines them up. The downloadable <span class="mono">*-zoom</span> files still use the earlier centred CSS zoom.</p>
       <div class="pill" role="group" aria-label="Thread colour" id="thread-colours"></div>
       <div id="thread-groups"></div>
     </section>
     <section aria-labelledby="prim-title">
       <h2 id="prim-title" style="margin-top:48px">Primitives · stitches and fills</h2>
-      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. They zoom out the same way, about the point 9.67, 9.67 on the 24 grid.</p>
+      <p class="lede">Every thread icon as clean lines on one square: the four holes, then the shape that square has on the canvas, with fewer lines. Stitches use the full stroke; fills a finer one, as they use a finer thread. A gap marks where a thread passes under another. They zoom out the same way, anchored on the square's top-left corner (5, 5 on the 24 grid).</p>
       <div class="pill" role="group" aria-label="Primitive colour" id="prim-colours"></div>
       <div id="prim-groups"></div>
     </section>
@@ -117,11 +117,10 @@
     import { ICONS, GROUPS, svg } from './icons/icons.js';
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
     import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
-    import { zoomAt } from './icons/thread.js';
     import { createZoomMotion } from './zoom-motion.js';
     import { createDialKit, createDialRoot } from 'https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js';
 
-    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', n: 4, primSize: 72, primStroke: 1.75, primColour: '#EEE9E0', threadSize: 96 };
+    const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', n: 4, primSize: 72, primStroke: 1.75, primColour: '#EEE9E0', threadSize: 96, hold: null };
     // files per frame, for the copy toast
     const DIRS = { thread: { square: 'thread', patch: 'thread-patch', zoom: 'thread-zoom' }, prim: { square: 'primitive', patch: 'primitive-patch', zoom: 'primitive-zoom' } };
     const COLOURS = [['Strawberry', '#C8343B'], ['Leaf', '#4F8A4B'], ['Sky', '#6FA8DC'], ['Butter', '#F2D06B'], ['Plum', '#6B2F5E'], ['Charcoal', '#3A3836'], ['Black', '#1E1D1C'], ['White', '#F8F6F0']];
@@ -139,15 +138,29 @@
 
     createDialRoot({ position: 'top-right', theme: 'dark' });
     const kit = createDialKit('Hover zoom', {
-      trigger: { type: 'select', options: [{ value: 'hover', label: 'Spring on hover' }, { value: 'scrub', label: 'Scrub with pointer' }], default: 'hover' },
-      zoomOut: { type: 'spring', visualDuration: 0.9, bounce: 0.12 },
-      zoomBack: { type: 'spring', visualDuration: 0.6, bounce: 0 },
-      hoverDelay: [140, 0, 600, 10],
-      fadeStart: [0.1, 0, 1, 0.01],
-      fadeEnd: [0.5, 0, 1, 0.01],
-      evenZoom: true,
-      lift: [0, 0, 0.2, 0.01],
-      patch: [4, 3, 6, 1],
+      motion: {
+        trigger: { type: 'select', options: [{ value: 'hover', label: 'Spring on hover' }, { value: 'scrub', label: 'Scrub with pointer' }], default: 'hover' },
+        zoomOut: { type: 'spring', visualDuration: 0.9, bounce: 0.12 },
+        zoomBack: { type: 'spring', visualDuration: 0.6, bounce: 0 },
+        hoverDelay: [140, 0, 600, 10],
+        evenZoom: true,
+        lift: [0, 0, 0.2, 0.01],
+      },
+      // where the hovered stitch sits in the patch; top left = the others appear to its right and below
+      layout: {
+        anchor: { type: 'pad', x: [0, 0, 1, 0.01], y: [1, 0, 1, 0.01], labels: { x: 'Across', y: 'Up' } },
+        patch: [4, 3, 6, 1],
+      },
+      reveal: {
+        style: { type: 'select', options: [{ value: 'sweep', label: 'Sweep from stitch' }, { value: 'fade', label: 'Fade in' }], default: 'sweep' },
+        start: [0.05, 0, 1, 0.01],
+        end: [0.85, 0, 1, 0.01],
+        softness: [0.45, 0, 0.95, 0.01],
+        handoffStart: [0.88, 0, 1, 0.01],
+        handoffEnd: [1, 0, 1, 0.01],
+      },
+      // hold every icon at one point of the zoom, to look at a frame
+      inspect: { freeze: false, at: [0.5, 0, 1, 0.01] },
       zoomAll: { type: 'action', label: 'Zoom all out' },
       zoomBackAll: { type: 'action', label: 'Zoom all back' },
       icons: {
@@ -158,10 +171,16 @@
         threadColour: '#C8343B',
       },
     }, {
-      id: 'selvedge-hover-zoom', persist: true,
+      id: 'selvedge-hover-zoom-2', persist: true,
       onAction: (a) => motion.all(a === 'zoomAll' ? 1 : 0),
     });
-    const motion = createZoomMotion(() => kit.getValues());
+    // the dials' folders, flattened to what zoom-motion.js reads
+    const motionSettings = () => {
+      const v = kit.getValues();
+      return { ...v.motion, anchor: v.layout.anchor, reveal: v.reveal.style, revealStart: v.reveal.start, revealEnd: v.reveal.end,
+        softness: v.reveal.softness, handoffStart: v.reveal.handoffStart, handoffEnd: v.reveal.handoffEnd };
+    };
+    const motion = createZoomMotion(motionSettings);
 
     document.getElementById('prim-colours').innerHTML = PRIM_COLOURS.map(([n, c]) =>
       `<button data-pcolour="${c}" aria-pressed="false"><span class="swatch" style="background:${c}"></span>${n}</button>`).join('');
@@ -178,7 +197,7 @@
     // zoom icons on this page are driven by zoom-motion.js, so they leave out their own CSS animation
     const zoomReady = (el, o, c) => el.querySelectorAll('.tz-host').forEach((h) => {
       const svg = h.querySelector('svg'); if (!svg || view.frame !== 'zoom') return;
-      svg.dataset.n = view.n; svg.dataset.at = zoomAt(o, c, view.n);
+      svg.dataset.n = view.n; svg.dataset.o = o; svg.dataset.c = c;
       motion.sync(h);
     });
 
@@ -211,7 +230,7 @@
 
     // dials → view; only what changes the drawing re-renders (motion settings are read live by zoom-motion.js)
     kit.subscribe((v) => {
-      const next = { n: v.patch, primSize: v.icons.primitiveSize, primStroke: v.icons.primitiveStroke, primColour: v.icons.primitiveColour,
+      const next = { n: v.layout.patch, primSize: v.icons.primitiveSize, primStroke: v.icons.primitiveStroke, primColour: v.icons.primitiveColour,
         threadSize: v.icons.threadSize, colour: toHex(v.icons.threadColour) };
       const changed = (keys) => keys.some((k) => view[k] !== next[k]);
       const redrawThread = changed(['n', 'threadSize', 'colour']), redrawPrim = changed(['n', 'primSize', 'primStroke', 'primColour']);
@@ -220,6 +239,9 @@
       document.querySelectorAll('[data-pcolour]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.pcolour.toLowerCase() === String(view.primColour).toLowerCase())));
       if (redrawThread) renderThread();
       if (redrawPrim) renderPrim();
+      if (!redrawThread && !redrawPrim) motion.repaint();   // anchor and reveal show even at rest mid-zoom
+      const hold = v.inspect.freeze ? v.inspect.at : null;
+      if (hold !== view.hold) { view.hold = hold; motion.freeze(hold); }
     });
     const groupsEl = document.getElementById('groups');
 
