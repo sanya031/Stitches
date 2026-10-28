@@ -251,7 +251,7 @@
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
           `<button class="tile thread tz-host" data-thread="${name}" title="Copy ${name}.svg"><span class="art">${threadSvg(name, { size, colour: view.colour, paper: onCloth(), id: `t-${name}-${view.frame}`, frame: view.frame, n, animate: false, holes: view.holes })}</span>`
-          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.thread[view.frame]}/${name}</span></button>`).join('')}</div>`;
+          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.thread[view.frame === 'zoom' ? 'square' : view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
       zoomReady(document.getElementById('thread-groups'), 6, 36, n);
     }
@@ -265,7 +265,7 @@
         if (!items.length) return '';
         return `<h3 class="sub">${g}</h3><div class="grid big" style="--tile:${size + 40}px">${items.map(([name, i]) =>
           `<button class="tile prim tz-host" data-prim="${name}" title="Copy ${name}.svg"><span class="art" style="color:${colour}">${primitiveSvg(name, { size, stroke: view.stroke, frame: view.frame, id: `p-${name}-${view.frame}`, n, animate: false, holes: view.holes })}</span>`
-          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.prim[view.frame]}/${name}</span></button>`).join('')}</div>`;
+          + `<span class="name">${i.label}</span><span class="file mono">${DIRS.prim[view.frame === 'zoom' ? 'square' : view.frame]}/${name}</span></button>`).join('')}</div>`;
       }).join('');
       zoomReady(document.getElementById('prim-groups'), 5, 14, n);
     }
@@ -320,10 +320,11 @@
     document.addEventListener('click', async (e) => {
       const t = e.target.closest('.tile'); if (!t) return;
       const thread = t.dataset.thread, prim = t.dataset.prim, name = thread || prim || t.dataset.name;
-      const ids = { square: '', patch: 'p', zoom: 'z' }[view.frame];
-      const text = thread ? threadSvg(thread, { colour: view.colour, frame: view.frame, id: `t${ids}-${thread}`, n: nThread(), holes: view.holes })
-        : prim ? primitiveSvg(prim, { frame: view.frame, id: `p${ids}-${prim}`, n: nPrim(), stroke: view.stroke, holes: view.holes }) : svg(name);
-      const file = `design/icons/${thread ? DIRS.thread[view.frame] : prim ? DIRS.prim[view.frame] : 'svg'}/${name}.svg`;
+      // the hover zoom copies as its resting state, the single square: no animation, no second frame
+      const frame = view.frame === 'zoom' ? 'square' : view.frame, ids = { square: '', patch: 'p' }[frame];
+      const text = thread ? threadSvg(thread, { colour: view.colour, frame, id: `t${ids}-${thread}`, n: nThread(), holes: view.holes })
+        : prim ? primitiveSvg(prim, { frame, id: `p${ids}-${prim}`, n: nPrim(), stroke: view.stroke, holes: view.holes }) : svg(name);
+      const file = `design/icons/${thread ? DIRS.thread[frame] : prim ? DIRS.prim[frame] : 'svg'}/${name}.svg`;
       try { await navigator.clipboard.writeText(text); toast.textContent = `Copied ${name}.svg`; }
       catch { toast.textContent = `Copy blocked. The file is ${file}`; }
       toast.classList.add('show');
