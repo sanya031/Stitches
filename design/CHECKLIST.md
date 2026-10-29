@@ -34,8 +34,8 @@ Colour
 - [x] Contrast check: 4.5:1 for text, 3:1 for control edges and icons, in both themes
 
 Type
-- [ ] Scale: display, title, section heading, body, label, caption, mono for numbers
-- [ ] Weights, line heights, letter spacing; tabular numbers for readouts
+- [x] Scale: title, heading, subheading, body, label, label-strong, caption, eyebrow in Golos Text; no mono, numbers use tabular figures
+- [x] Weights, line heights, letter spacing; tabular numbers for readouts
 
 Space and shape
 - [ ] Spacing scale (4-based)

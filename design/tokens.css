@@ -1,4 +1,6 @@
-/* Selvedge colour tokens.
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap');
+
+/* Selvedge tokens: colour, then type.
  *
  * 1. Palettes: tonal, one OKLCH lightness per step shared by every palette (step 500 = terracotta 500),
  *    so a step pair has about the same contrast in any hue. Primary: terracotta 500 is the brand colour.
@@ -143,4 +145,26 @@
     --on-danger: var(--neutral-950);
     --danger-subtle: var(--crimson-900);
   }
+}
+
+/* Type. One family, Golos Text (free, SIL Open Font License), for everything, numbers included:
+ * values, codes and measurements use the step they sit in plus --numeric (fixed-width digits),
+ * so readouts don't jiggle and columns line up. Line heights sit on a 2 px grid.
+ * Use as `font: var(--type-label);`; caption and eyebrow also set their letter-spacing token. */
+:root {
+  --font-ui: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600;
+  --numeric: tabular-nums;
+
+  --type-title: 600 20px/26px var(--font-ui);          /* sheet and dialog titles */
+  --type-heading: 600 15px/20px var(--font-ui);        /* panel section titles */
+  --type-subheading: 600 13px/18px var(--font-ui);     /* groups inside a section */
+  --type-body: 400 13px/18px var(--font-ui);           /* descriptions, inputs, menu items */
+  --type-label: 400 12px/16px var(--font-ui);          /* control labels */
+  --type-label-strong: 500 12px/16px var(--font-ui);   /* the selected label, values */
+  --type-caption: 400 11px/14px var(--font-ui);        /* hints, units, counts */
+  --type-eyebrow: 600 11px/14px var(--font-ui);        /* small group labels, in capitals */
+
+  --type-caption-tracking: 0.01em;
+  --type-eyebrow-tracking: 0.06em;
 }

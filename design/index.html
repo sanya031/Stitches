@@ -151,6 +151,15 @@
     .roles-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
     .roles-actions .ghost { border: 1px solid var(--line-3); }
     @media (max-width: 900px) { .roles-layout { grid-template-columns: 1fr; } }
+    /* type: each row is set with its own token from tokens.css, the spec read back from the sample */
+    .type-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .type-sample { color: var(--ink); font-variant-numeric: var(--numeric); overflow-wrap: anywhere; }
+    .type-meta { color: var(--dim); font-size: 12px; line-height: 1.5; }
+    .type-meta code { font: 12px var(--mono); color: var(--ink); }
+    .type-numbers { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 4px 24px; margin-top: 12px; }
+    .type-numbers div { display: flex; justify-content: space-between; font: var(--type-label); font-variant-numeric: var(--numeric); color: var(--ink); padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .type-numbers span:first-child { color: var(--dim); }
+    @media (max-width: 720px) { .type-row { grid-template-columns: 1fr; gap: 4px; } .type-numbers { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -212,6 +221,14 @@
         </div>
         <div class="role-list" id="role-list"></div>
       </div>
+    </section>
+
+    <section aria-labelledby="type-title">
+      <h2 id="type-title" style="margin-top:40px">Type · Golos Text</h2>
+      <p class="lede">One family for everything, free under the SIL Open Font License. Five sizes (20, 15, 13, 12, 11) and weight do the work: 400 for most text, 500 for the selected label and values, 600 for titles and headings. Line heights sit on a 2 px grid. Numbers, codes and measurements stay in Golos and add fixed-width digits (<span class="mono">--numeric</span>), so readouts don't jiggle and columns line up. Each sample is set with its own token from <span class="mono">tokens.css</span>.</p>
+      <div id="type-scale"></div>
+      <h3 class="sub">Numbers, codes and measurements</h3>
+      <div class="type-numbers" id="type-numbers"></div>
     </section>
 
     <section aria-labelledby="controls-title">
@@ -525,6 +542,28 @@
       toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
     });
     renderRoles();
+
+    // type: one row per step, set with the token itself; size, line height, weight and tracking read back from it
+    const TYPE_STEPS = [
+      ['title', 'Sheet and dialog titles', 'Piece settings'],
+      ['heading', 'Panel section titles', 'Stitch'],
+      ['subheading', 'Groups inside a section', 'Appearance'],
+      ['body', 'Descriptions, inputs, menu items', 'Turn a picture into thread'],
+      ['label', 'Control labels', 'Snap threshold'],
+      ['label-strong', 'The selected label, values', 'Full cross'],
+      ['caption', 'Hints, units, counts', '1 of 11 colours'],
+      ['eyebrow', 'Small group labels, in capitals', 'Layers']
+    ];
+    document.getElementById('type-scale').innerHTML = TYPE_STEPS.map(([step, use, sample]) => `<div class="type-row">
+      <span class="type-sample" data-step="${step}" style="font: var(--type-${step}); letter-spacing: var(--type-${step}-tracking, normal);${step === 'eyebrow' ? ' text-transform: uppercase;' : ''}">${sample}</span>
+      <span class="type-meta"><code>--type-${step}</code><br><span data-spec="${step}"></span><br>${use}</span></div>`).join('');
+    document.getElementById('type-numbers').innerHTML = [['Floss', 'DMC 3804'], ['Hex', 'E62D7D'], ['Fabric', '14 ct Aida'], ['Size', '120 × 90'], ['Stitches', '11,840'], ['Density', '65%'], ['Strands', '2'], ['Threshold', '0.80']]
+      .map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('');
+    const typeSpecs = () => document.querySelectorAll('.type-sample').forEach(el => {
+      const cs = getComputedStyle(el), ls = cs.letterSpacing === 'normal' ? '' : ` · tracking ${(parseFloat(cs.letterSpacing) / parseFloat(cs.fontSize)).toFixed(2)} em`;
+      document.querySelector(`[data-spec="${el.dataset.step}"]`).textContent = `${parseFloat(cs.fontSize)} / ${parseFloat(cs.lineHeight)} px · ${cs.fontWeight}${ls}`;
+    });
+    typeSpecs(); document.fonts.ready.then(typeSpecs);
 
     const toast = document.getElementById('toast');
     let toastTimer;
