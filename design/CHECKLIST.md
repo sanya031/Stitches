@@ -38,13 +38,13 @@ Type
 - [x] Weights, line heights, letter spacing; tabular numbers for readouts
 
 Space and shape
-- [ ] Spacing scale (4-based)
-- [ ] Radius scale (control, card, panel, pill)
-- [ ] Border widths
-- [ ] Elevation: shadows for floating controls, popovers and sheets in both themes
-- [ ] Sizes: 44 px targets, icon sizes, panel width
-- [ ] Motion: durations, easings and springs; reduced-motion rules
-- [ ] Layering order (z-index): canvas, floaters, panel, popovers, sheets, toasts
+- [x] Spacing scale (4-based)
+- [x] Radius scale (control, card, panel, pill)
+- [x] Border widths
+- [x] Elevation: shadows for floating controls, popovers and sheets in both themes
+- [x] Sizes: 44 px targets, icon sizes, panel width
+- [ ] Motion: durations, easings and springs; reduced-motion rules (paused: decide with the components)
+- [x] Layering order (z-index): canvas, floaters, panel, popovers, sheets, toasts
 
 Delivery
 - [x] One `tokens.css`: ramps as raw values, roles as variables, switched by `[data-theme]` and the system setting

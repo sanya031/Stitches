@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap');
 
-/* Selvedge tokens: colour, then type.
+/* Selvedge tokens: colour, type, then space and shape (motion comes with the components).
  *
  * 1. Palettes: tonal, one OKLCH lightness per step shared by every palette (step 500 = terracotta 500),
  *    so a step pair has about the same contrast in any hue. Primary: terracotta 500 is the brand colour.
@@ -69,6 +69,10 @@
   --danger-fill: var(--crimson-500);
   --on-danger: var(--neutral-50);
   --danger-subtle: var(--crimson-100);
+  /* Shadows: only for things that float over the canvas (bars, popovers, sheets); the panel stays flat */
+  --shadow-float: 0 1px 2px rgba(17,16,15,.08), 0 4px 12px rgba(17,16,15,.08);
+  --shadow-popover: 0 2px 4px rgba(17,16,15,.08), 0 12px 32px rgba(17,16,15,.14);
+  --shadow-sheet: 0 8px 16px rgba(17,16,15,.10), 0 24px 64px rgba(17,16,15,.22);
 }
 
 /* Roles, dark */
@@ -107,6 +111,10 @@
   --danger-fill: var(--crimson-400);
   --on-danger: var(--neutral-950);
   --danger-subtle: var(--crimson-900);
+  /* Shadows: deeper in dark; the raised surface and its border do most of the separating */
+  --shadow-float: 0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.35);
+  --shadow-popover: 0 2px 4px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+  --shadow-sheet: 0 8px 16px rgba(0,0,0,.45), 0 24px 64px rgba(0,0,0,.6);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -144,6 +152,10 @@
     --danger-fill: var(--crimson-400);
     --on-danger: var(--neutral-950);
     --danger-subtle: var(--crimson-900);
+    /* Shadows: deeper in dark; the raised surface and its border do most of the separating */
+    --shadow-float: 0 1px 2px rgba(0,0,0,.45), 0 4px 12px rgba(0,0,0,.35);
+    --shadow-popover: 0 2px 4px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+    --shadow-sheet: 0 8px 16px rgba(0,0,0,.45), 0 24px 64px rgba(0,0,0,.6);
   }
 }
 
@@ -167,4 +179,49 @@
 
   --type-caption-tracking: 0.01em;
   --type-eyebrow-tracking: 0.06em;
+}
+
+/* Space and shape. Motion is decided with the components. */
+:root {
+  /* Spacing: 4-based, plus 2 and 6 for tight spots; named by size in px */
+  --space-2: 2px; --space-4: 4px; --space-6: 6px; --space-8: 8px; --space-12: 12px; --space-16: 16px;
+  --space-20: 20px; --space-24: 24px; --space-32: 32px; --space-40: 40px; --space-48: 48px; --space-64: 64px;
+  --inline-gap: var(--space-6);         /* icon to its label */
+  --row-gap: var(--space-8);            /* between rows in a group */
+  --control-padding-x: var(--space-12); /* inside fields and buttons */
+  --panel-padding: var(--space-16);     /* inside the panel and popovers */
+  --section-gap: var(--space-24);       /* between panel sections */
+
+  /* Radius: an inner corner is the outer one minus the padding between them */
+  --radius-xs: 4px;    /* swatches, small badges */
+  --radius-sm: 6px;    /* stitch tiles, items in a grid */
+  --radius-md: 8px;    /* fields, grids, menus */
+  --radius-lg: 12px;   /* panel, popovers, floating bars */
+  --radius-xl: 16px;   /* sheets and dialogs */
+  --radius-pill: 999px;
+
+  /* Borders and focus: one 1 px line; focus is a 2 px ring in --focus, 2 px outside, keyboard only */
+  --border-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* Sizes: controls may look compact, but every pointer target is at least 44 px */
+  --target-min: 44px;
+  --control-sm: 32px;  /* dense grids, pills in a row */
+  --control-md: 36px;  /* fields, buttons in the panel */
+  --control-lg: 44px;  /* primary actions, floating bars */
+  --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+  --panel-width: 300px;
+  --toolbar-width: 52px;
+  --stitch-tile: 44px;
+
+  /* Layering, from the canvas up */
+  --z-canvas: 0;
+  --z-canvas-overlay: 10;  /* selection outline, guides */
+  --z-floating: 100;       /* tool bar, zoom, selection bar */
+  --z-panel: 200;
+  --z-popover: 300;
+  --z-sheet: 400;
+  --z-tooltip: 500;
+  --z-toast: 600;
 }

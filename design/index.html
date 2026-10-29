@@ -160,6 +160,26 @@
     .type-numbers div { display: flex; justify-content: space-between; font: var(--type-label); font-variant-numeric: var(--numeric); color: var(--ink); padding: 4px 0; border-bottom: 1px solid var(--line); }
     .type-numbers span:first-child { color: var(--dim); }
     @media (max-width: 720px) { .type-row { grid-template-columns: 1fr; gap: 4px; } .type-numbers { grid-template-columns: 1fr; } }
+    /* space and shape: every sample is drawn with the token it names, values read back from tokens.css */
+    .tok-row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; min-height: 28px; }
+    .tok-row code { font: 12px var(--mono); color: var(--ink); }
+    .tok-row .v { color: var(--dim); font-size: 12px; }
+    .space-bar { display: inline-block; height: 12px; border-radius: 2px; background: var(--terracotta-400); vertical-align: middle; margin-right: 10px; }
+    .tok-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+    .tok-card { display: grid; gap: 6px; align-content: start; }
+    .tok-card code { font: 12px var(--mono); color: var(--ink); }
+    .tok-card .v { color: var(--dim); font-size: 12px; line-height: 1.4; }
+    .radius-box { height: 64px; border: 1.5px solid var(--line-3); background: var(--raised); }
+    .shadow-stage { border-radius: 16px; padding: 24px 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; background: var(--surface-bench); }
+    .shadow-stage .tok-card code { color: var(--text-strong); }
+    .shadow-card { height: 64px; background: var(--surface-raised); border: var(--border-width) solid var(--border); }
+    .target-box { position: relative; width: 112px; height: var(--target-min); border: 1px dashed var(--line-3); border-radius: 6px; display: grid; place-items: center; }
+    .target-box span { width: 96px; border-radius: var(--radius-md); background: var(--raised); border: 1px solid var(--line-3); }
+    .layer-stack { display: grid; gap: 4px; }
+    .layer-stack div { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; padding: 8px 12px; border-radius: var(--radius-md); background: var(--panel); border: 1px solid var(--line); }
+    .layer-stack code { font: 12px var(--mono); color: var(--ink); }
+    .layer-stack .v { color: var(--dim); font-size: 12px; }
+    @media (max-width: 720px) { .tok-row, .layer-stack div { grid-template-columns: 1fr; gap: 2px; } .shadow-stage { grid-template-columns: 1fr; } .layer-stack div { margin-left: 0 !important; } }
   </style>
 </head>
 <body>
@@ -229,6 +249,31 @@
       <div id="type-scale"></div>
       <h3 class="sub">Numbers, codes and measurements</h3>
       <div class="type-numbers" id="type-numbers"></div>
+    </section>
+
+    <section aria-labelledby="shape-title">
+      <h2 id="shape-title" style="margin-top:40px">Space and shape</h2>
+      <p class="lede">Spacing, corners, lines, shadows, sizes and layering, each drawn with the token it names. Motion is decided with the components.</p>
+      <h3 class="sub">Spacing</h3>
+      <p class="lede">A 4-based scale with a 2 and a 6 for tight spots, named by size: <span class="mono">--space-12</span> is 12 px. Bars are drawn three times their size. A few named gaps cover the panel's common cases.</p>
+      <div id="space-scale"></div>
+      <div id="space-named" style="margin-top:12px"></div>
+      <h3 class="sub">Radius</h3>
+      <p class="lede">Nested corners stay parallel: an inner corner is the outer one minus the padding between them, so a 12 px panel with 4 px padding holds 8 px fields.</p>
+      <div class="tok-grid" id="radius-scale"></div>
+      <h3 class="sub">Borders and focus</h3>
+      <p class="lede">One 1 px line everywhere. Focus is a 2 px ring in <span class="mono">--focus</span>, 2 px outside the control, shown only when using the keyboard.</p>
+      <div class="tok-grid" id="border-scale"></div>
+      <h3 class="sub">Shadows</h3>
+      <p class="lede">Only for things that float over the canvas: the tool bar, zoom and selection bar, popovers, sheets. The panel, fields and selected items stay flat. Dark needs deeper shadows; there the raised surface and its border do most of the separating.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px" id="shadow-scale"></div>
+      <h3 class="sub">Sizes</h3>
+      <p class="lede">Controls may look compact, but every pointer target is at least 44 px (the dashed box), padded out invisibly where the control is smaller.</p>
+      <div class="tok-grid" id="size-controls"></div>
+      <div id="size-other" style="margin-top:12px"></div>
+      <h3 class="sub">Layering</h3>
+      <p class="lede">What sits above what, from the canvas up.</p>
+      <div class="layer-stack" id="layer-stack"></div>
     </section>
 
     <section aria-labelledby="controls-title">
@@ -564,6 +609,28 @@
       document.querySelector(`[data-spec="${el.dataset.step}"]`).textContent = `${parseFloat(cs.fontSize)} / ${parseFloat(cs.lineHeight)} px · ${cs.fontWeight}${ls}`;
     });
     typeSpecs(); document.fonts.ready.then(typeSpecs);
+
+    // space and shape: samples use the tokens; the values shown are read back from tokens.css
+    const tok = (name) => tokenStyle.getPropertyValue(name).trim();
+    const tokRow = (name, sample, note) => `<div class="tok-row"><code>${name}</code><span class="v">${sample || ''}${tok(name)}${note ? ` · ${note}` : ''}</span></div>`;
+    document.getElementById('space-scale').innerHTML = [2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64]
+      .map(n => tokRow(`--space-${n}`, `<span class="space-bar" style="width: calc(var(--space-${n}) * 3)"></span>`)).join('');
+    document.getElementById('space-named').innerHTML = [['--inline-gap', 'icon to its label'], ['--row-gap', 'between rows in a group'], ['--control-padding-x', 'inside fields and buttons'], ['--panel-padding', 'inside the panel and popovers'], ['--section-gap', 'between panel sections']]
+      .map(([n, use]) => tokRow(n, '', use)).join('');
+    const tokCard = (name, sample, use) => `<div class="tok-card">${sample}<code>${name}</code><span class="v">${tok(name)}${use ? ` · ${use}` : ''}</span></div>`;
+    document.getElementById('radius-scale').innerHTML = [['--radius-xs', 'swatches, small badges'], ['--radius-sm', 'stitch tiles, grid items'], ['--radius-md', 'fields, grids, menus'], ['--radius-lg', 'panel, popovers, floating bars'], ['--radius-xl', 'sheets and dialogs'], ['--radius-pill', 'pills, round buttons']]
+      .map(([n, use]) => tokCard(n, `<div class="radius-box" style="border-radius: var(${n})"></div>`, use)).join('');
+    document.getElementById('border-scale').innerHTML =
+      tokCard('--border-width', '<div class="radius-box" style="height:44px;border-radius:var(--radius-md);border:var(--border-width) solid var(--line-3)"></div>', 'every line') +
+      tokCard('--focus-width', '<div class="radius-box" style="height:44px;border-radius:var(--radius-md);border:1px solid var(--line-3);outline:var(--focus-width) solid var(--ink);outline-offset:var(--focus-offset)"></div>', `ring, ${tok('--focus-offset')} outside (--focus-offset)`);
+    document.getElementById('shadow-scale').innerHTML = ['light', 'dark'].map(theme => `<div class="shadow-stage" data-theme="${theme}">${[['--shadow-float', 'lg', 'bars'], ['--shadow-popover', 'lg', 'popovers'], ['--shadow-sheet', 'xl', 'sheets']]
+      .map(([n, r, use]) => `<div class="tok-card"><div class="shadow-card" style="border-radius: var(--radius-${r}); box-shadow: var(${n})"></div><code>${n}</code><span class="v" style="color:var(--text-muted)">${theme} · ${use}</span></div>`).join('')}</div>`).join('');
+    document.getElementById('size-controls').innerHTML = [['--control-sm', 'dense grids, pills in a row'], ['--control-md', 'fields, buttons in the panel'], ['--control-lg', 'primary actions, floating bars']]
+      .map(([n, use]) => tokCard(n, `<div class="target-box"><span style="height: var(${n})"></span></div>`, use)).join('');
+    document.getElementById('size-other').innerHTML = [['--target-min', 'smallest pointer target'], ['--icon-sm'], ['--icon-md'], ['--icon-lg'], ['--panel-width'], ['--toolbar-width'], ['--stitch-tile']]
+      .map(([n, use]) => tokRow(n, '', use)).join('');
+    const LAYERS = [['--z-toast', ''], ['--z-tooltip', ''], ['--z-sheet', 'dialogs'], ['--z-popover', 'menus, the colour picker'], ['--z-panel', 'the properties panel'], ['--z-floating', 'tool bar, zoom, selection bar'], ['--z-canvas-overlay', 'selection outline, guides'], ['--z-canvas', 'the cloth']];
+    document.getElementById('layer-stack').innerHTML = LAYERS.map(([n, use], i) => `<div style="margin-left:${(LAYERS.length - 1 - i) * 12}px"><code>${n}</code><span class="v">${tok(n)}${use ? ` · ${use}` : ''}</span></div>`).join('');
 
     const toast = document.getElementById('toast');
     let toastTimer;
