@@ -1,0 +1,27 @@
+/* Selvedge colour tokens: tonal palettes.
+ * Every palette shares one lightness per step (OKLCH; step 500 = terracotta 500), so a step pair
+ * has about the same contrast in any palette. Components use roles, not these raw steps (roles to come).
+ * Primary: terracotta 500 is the brand colour. Neutral: surfaces, text, borders, icons.
+ * Status: crimson for errors and destructive confirmation only. Brand: marketing, empty states and
+ * illustrations; components never use them. */
+:root {
+  /* Primary */
+  --terracotta-50: #FAF6F4; --terracotta-100: #F8E5DF; --terracotta-200: #F9CABB; --terracotta-300: #FBA083; --terracotta-400: #EB7049; --terracotta-500: #B84216;
+  --terracotta-600: #90320F; --terracotta-700: #702509; --terracotta-800: #531905; --terracotta-900: #381408; --terracotta-950: #1F0904;
+  /* Neutral */
+  --neutral-50: #FAF6EF; --neutral-100: #EDE9E2; --neutral-200: #D9D5CF; --neutral-300: #BDBAB5; --neutral-400: #9C9995; --neutral-500: #706E6A;
+  --neutral-600: #575552; --neutral-700: #42413E; --neutral-800: #302F2C; --neutral-900: #21201E; --neutral-950: #11100F;
+  /* Status */
+  --crimson-50: #FAF6F6; --crimson-100: #F5E5E7; --crimson-200: #F2CAD0; --crimson-300: #F0A1AE; --crimson-400: #E96A86; --crimson-500: #B73A5B;
+  --crimson-600: #902C46; --crimson-700: #6F2035; --crimson-800: #531526; --crimson-900: #38111A; --crimson-950: #1F080D;
+  /* Brand (not for components) */
+  --ochre-50: #FAF6EF; --ochre-100: #F7E8CA; --ochre-200: #F6D180; --ochre-300: #E4B33D; --ochre-400: #BF9131; --ochre-500: #8D6621;
+  --ochre-600: #704E17; --ochre-700: #573B10; --ochre-800: #412A09; --ochre-900: #2D1D0A; --ochre-950: #180E05;
+  --periwinkle-50: #F6F7F9; --periwinkle-100: #E5EAF3; --periwinkle-200: #CBD6ED; --periwinkle-300: #A6BBE5; --periwinkle-400: #7A99D9; --periwinkle-500: #4F6CAB;
+  --periwinkle-600: #38528F; --periwinkle-700: #243D78; --periwinkle-800: #142A63; --periwinkle-900: #0A1C4A; --periwinkle-950: #050E28;
+  --leaf-50: #F1F9F4; --leaf-100: #D2F3DE; --leaf-200: #ADE5C3; --leaf-300: #8DCBA6; --leaf-400: #6CAA86; --leaf-500: #447C5D;
+  --leaf-600: #346047; --leaf-700: #264A36; --leaf-800: #1A3627; --leaf-900: #14251B; --leaf-950: #09130D;
+  --lilac-50: #F7F6F9; --lilac-100: #EBE7F2; --lilac-200: #DAD0EC; --lilac-300: #C3B0E3; --lilac-400: #A48CC9; --lilac-500: #78619A;
+  --lilac-600: #5F487F; --lilac-700: #4A3369; --lilac-800: #382154; --lilac-900: #261839; --lilac-950: #140C1F;
+  --primary: var(--terracotta-500);
+}
