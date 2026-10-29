@@ -13,28 +13,29 @@
   <style>
     :root {
       --ground: #121418; --panel: #16181D; --raised: #1E2128; --well: #0F1114; --line: #262A32; --line-3: #3A3F49;
-      --text: #EEE9E0; --muted: #B5BAC3; --dim: #9AA0AB; --accent: #E9B949; --accent-ink: #1A1305; --cloth: #ECE5D6;
+      --ink: #EEE9E0; --muted: #B5BAC3; --dim: #9AA0AB; --brass: #E9B949; --brass-ink: #1A1305; --cloth: #ECE5D6;
       --font: 'Instrument Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      color-scheme: dark; /* the page itself stays the dark workbench; role demos set data-theme */
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--ground); color: var(--text); font-family: var(--font); font-size: 14px; }
-    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    html, body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 14px; }
+    :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
     .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
     header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
     header p { margin: 0; color: var(--muted); max-width: 64ch; line-height: 1.5; }
     .mono { font-family: var(--mono); font-size: 12px; }
     .bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 24px -16px 8px; padding: 12px 16px;
       background: var(--ground); border-bottom: 1px solid var(--line); }
-    input[type="search"] { flex: 1 1 220px; min-height: 44px; padding: 0 14px; font: inherit; color: var(--text); background: var(--well); border: 1px solid var(--line-3); border-radius: 12px; }
+    input[type="search"] { flex: 1 1 220px; min-height: 44px; padding: 0 14px; font: inherit; color: var(--ink); background: var(--well); border: 1px solid var(--line-3); border-radius: 12px; }
     .pill { display: flex; background: var(--well); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
-    button { font: inherit; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 999px; min-height: 44px; min-width: 44px; padding: 0 14px; cursor: pointer; }
-    .pill button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    button { font: inherit; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 999px; min-height: 44px; min-width: 44px; padding: 0 14px; cursor: pointer; }
+    .pill button[aria-pressed="true"] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
     .stroke { display: flex; align-items: center; gap: 10px; color: var(--muted); }
-    .stroke input { width: 120px; height: 44px; accent-color: var(--accent); }
+    .stroke input { width: 120px; height: 44px; accent-color: var(--brass); }
     h2 { margin: 32px 0 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
     .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 8px 12px; border-radius: 12px; min-height: 120px;
-      background: var(--panel); border: 1px solid var(--line); color: var(--text); text-align: center; }
+      background: var(--panel); border: 1px solid var(--line); color: var(--ink); text-align: center; }
     .tile:hover { border-color: var(--line-3); }
     .tile .art { display: grid; place-items: center; height: 52px; }
     .tile .name { font-size: 13px; font-weight: 500; }
@@ -47,7 +48,7 @@
     .rule p { margin: 0; color: var(--muted); line-height: 1.5; }
     .anatomy { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
     .anatomy svg.frame { background: var(--well); border-radius: 8px; }
-    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: var(--brass); color: var(--brass-ink);
       font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .15s; }
     .toast.show { opacity: 1; }
     .empty { color: var(--dim); padding: 24px 0; }
@@ -70,16 +71,16 @@
     .ss-label { color: var(--muted); }
     .ss-out { text-align: right; color: var(--dim); }
     .ss-track { position: relative; }
-    .ss input { width: 100%; height: 44px; margin: 0; accent-color: var(--accent); background: transparent; display: block; }
+    .ss input { width: 100%; height: 44px; margin: 0; accent-color: var(--brass); background: transparent; display: block; }
     .ss-bubble { position: absolute; bottom: calc(100% + 2px); left: 0; z-index: 5; display: grid; justify-items: center; gap: 6px; padding: 8px 8px 6px;
       background: var(--raised); border: 1px solid var(--line-3); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,.5);
       pointer-events: none; opacity: 0; transform: translateX(-50%) translateY(6px) scale(.86); transform-origin: 50% 100%;
       transition: opacity .18s ease, transform .22s cubic-bezier(.2,.9,.3,1.2); }
     .ss-on .ss-bubble { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); transition: opacity .12s ease, transform .26s cubic-bezier(.2,.9,.3,1.25); }
     .ss-art svg { display: block; border-radius: 10px; }
-    .ss-art[data-style="prim"] { color: var(--text); background: var(--well); border-radius: 10px; }
-    .ss-value { color: var(--accent); font-weight: 500; }
-    .ss-on .ss-out { color: var(--text); }
+    .ss-art[data-style="prim"] { color: var(--ink); background: var(--well); border-radius: 10px; }
+    .ss-value { color: var(--brass); font-weight: 500; }
+    .ss-on .ss-out { color: var(--ink); }
     @media (max-width: 720px) { .controls-demo { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { .ss-bubble, .ss-on .ss-bubble { transition: opacity .12s; transform: translateX(-50%); } }
     @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
@@ -91,10 +92,65 @@
     .ramp-name { align-self: center; color: var(--muted); }
     .chip { position: relative; display: grid; align-content: end; gap: 2px; min-height: 64px; padding: 6px; border-radius: 8px; border: 2px solid transparent; font: 11px var(--mono); text-align: left; cursor: pointer; }
     .chip:hover { border-color: var(--line-3); }
-    .chip.is-primary { border-color: var(--text); box-shadow: 0 0 0 2px var(--ground); min-height: 80px; }
+    .chip.is-primary { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ground); min-height: 80px; }
     .chip .tag { position: absolute; top: 6px; left: 6px; font: 600 11px var(--font); letter-spacing: .02em; }
     .ramp.muted-ramp .chip { min-height: 40px; }
-    @media (max-width: 900px) { .ramp { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); } .ramp-name { grid-column: 1 / -1; } }
+    .ramp.has-0 { grid-template-columns: 96px repeat(12, minmax(0, 1fr)); }
+    @media (max-width: 900px) { .ramp, .ramp.has-0 { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); } .ramp-name { grid-column: 1 / -1; } }
+    /* colour roles: a specimen drawn only with role tokens, numbered, with an editor beside it */
+    .roles-layout { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
+    .spec { background: var(--surface-bench); border-radius: 16px; padding: 16px; display: grid; gap: 12px; color: var(--text); font-size: 13px; position: relative; }
+    .spec-note { font-size: 11px; color: var(--text-muted); }
+    .spec .sp-float { justify-self: end; display: flex; gap: 2px; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 999px; position: relative; }
+    .spec .sp-float span { width: 32px; height: 32px; display: grid; place-items: center; color: var(--icon); }
+    .spec .sp-panel { background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px; display: grid; gap: 12px; position: relative; }
+    .spec .sp-h { font-size: 15px; font-weight: 600; color: var(--text-strong); position: relative; justify-self: start; }
+    .spec .sp-label { font-size: 12px; color: var(--text-muted); position: relative; justify-self: start; }
+    .spec .sp-body { color: var(--text); position: relative; justify-self: start; }
+    .spec .sp-field { background: var(--surface-field); border-radius: 8px; padding: 4px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; position: relative; }
+    .spec .sp-tile { height: 44px; border-radius: 6px; display: grid; place-items: center; color: var(--icon); position: relative; }
+    .spec .sp-tile.is-hover { color: var(--icon-active); }
+    .spec .sp-tile.is-sel { background: var(--surface-selected); color: var(--icon-active); }
+    .spec .sp-tile.is-focus { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--focus); }
+    .spec .sp-tile.is-off { color: var(--text-disabled); }
+    .spec .sp-states { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; font-size: 11px; color: var(--text-muted); text-align: center; }
+    .spec .sp-holes { display: grid; grid-template-columns: repeat(2, 6px); gap: 10px; }
+    .spec .sp-holes i { width: 4px; height: 4px; border-radius: 50%; background: var(--icon-faint); }
+    .spec .sp-slider { display: grid; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 10px; }
+    .spec .sp-track { position: relative; height: 4px; border-radius: 2px; background: var(--control-track); }
+    .spec .sp-track b { position: absolute; inset: 0 40% 0 0; border-radius: 2px; background: var(--control-fill); }
+    .spec .sp-track em { position: absolute; left: 60%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--surface-panel); border: 2px solid var(--control-fill); }
+    .spec .sp-input { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 8px; background: var(--surface-field); border: 1px solid var(--border); color: var(--text); position: relative; }
+    .spec .sp-rule { height: 1px; background: var(--border-subtle); position: relative; }
+    .spec .sp-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .spec .sp-btn { min-height: 40px; border-radius: 999px; display: grid; place-items: center; font-weight: 600; font-size: 12px; position: relative; }
+    .spec .b-accent { background: var(--accent); color: var(--on-accent); }
+    .spec .b-hover { background: var(--accent-hover); color: var(--on-accent); }
+    .spec .b-pressed { background: var(--accent-pressed); color: var(--on-accent); }
+    .spec .b-outline { border: 1px solid var(--border-strong); color: var(--text); font-weight: 400; }
+    .spec .b-danger { background: var(--danger-fill); color: var(--on-danger); }
+    .spec .sp-link { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; position: relative; justify-self: start; }
+    .spec .sp-error { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--danger-subtle); color: var(--text); position: relative; }
+    .spec .sp-error .ic { color: var(--danger); }
+    .mks { position: absolute; top: -9px; right: -6px; z-index: 2; display: flex; gap: 2px; pointer-events: none; }
+    .mks.inline { position: static; display: inline-flex; margin-left: 8px; vertical-align: 1px; }
+    .mk { min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--brass); color: var(--brass-ink); font: 600 10px/18px var(--mono); text-align: center; box-shadow: 0 0 0 1.5px var(--ground); }
+    .spec [data-hl] { outline: 2px dashed var(--brass); outline-offset: 2px; }
+    .role-list { display: grid; gap: 14px; }
+    .role-group h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+    .role-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) 132px 56px; align-items: center; gap: 8px; min-height: 36px; padding: 2px 6px; border-radius: 8px; }
+    .role-row:hover, .role-row:focus-within { background: var(--raised); }
+    .role-row .n { font: 600 10px/18px var(--mono); text-align: center; border-radius: 999px; background: var(--brass); color: var(--brass-ink); }
+    .role-row code { font: 12px var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+    .role-row .use { display: block; font: 11px var(--font); color: var(--dim); }
+    .role-row select { min-height: 36px; width: 100%; font: 12px var(--mono); color: var(--ink); background: var(--well); border: 1px solid var(--line-3); border-radius: 8px; padding: 0 6px; }
+    .role-row select.changed { border-color: var(--brass); }
+    .role-row .cr { font: 11px var(--mono); color: var(--dim); text-align: right; }
+    .role-row .cr.fail { color: #F0A1AE; }
+    .role-row .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--line-3); }
+    .roles-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+    .roles-actions .ghost { border: 1px solid var(--line-3); }
+    @media (max-width: 900px) { .roles-layout { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -119,6 +175,43 @@
       <h2 id="colour-title" style="margin-top:40px">Colour · tonal palettes</h2>
       <p class="lede">Every palette shares one lightness per step, set by the primary at 500, so any two steps have about the same contrast whatever the hue. Components will use roles (panel, text, border, accent…) that point at these steps, with a light and a dark value; the raw steps live in <span class="mono">tokens.css</span>. Click a swatch to copy its hex.</p>
       <div id="palettes"></div>
+    </section>
+
+    <section aria-labelledby="roles-title">
+      <h2 id="roles-title" style="margin-top:40px">Colour · roles</h2>
+      <p class="lede">What components use. Each role points at a palette step, with a light and a dark value. The specimen is only a way to see every role in place; it is not the panel design. Numbers on the specimen match the list. To try a change, pick another step: the specimen and the contrast update live, for the theme shown. Copy the changes as CSS when you are happy, and they go into <span class="mono">tokens.css</span>.</p>
+      <div class="roles-actions">
+        <div class="pill" role="group" aria-label="Theme" id="role-theme"><button data-theme-pick="light" aria-pressed="true">Light</button><button data-theme-pick="dark">Dark</button></div>
+        <button class="ghost" id="roles-copy">Copy changes as CSS</button>
+        <button class="ghost" id="roles-reset">Reset</button>
+        <span class="mono" id="roles-count" style="color:var(--dim)"></span>
+      </div>
+      <div class="roles-layout">
+        <div class="spec" id="spec" data-theme="light">
+          <span class="spec-note">Colour specimen, not the panel design</span>
+          <div class="sp-float" data-role="surface-raised border"><span><i class="si" aria-hidden="true">−</i></span><span>%</span><span>+</span></div>
+          <div class="sp-panel" data-role="surface-panel border-subtle">
+            <div class="sp-h" data-role="text-strong">Heading</div>
+            <div class="sp-label" data-role="text-muted">Label</div>
+            <div class="sp-field" data-role="surface-field">
+              <div class="sp-tile is-sel" data-role="surface-selected icon-active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+              <div class="sp-tile" data-role="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 18L18 6"/></svg></div>
+              <div class="sp-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+              <div class="sp-tile is-off" data-role="text-disabled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 6h12v12H6z"/></svg></div>
+              <div class="sp-tile" data-role="icon-faint"><span class="sp-holes"><i></i><i></i><i></i><i></i></span></div>
+            </div>
+            <div class="sp-states"><div><div class="sp-field" style="grid-template-columns:1fr"><div class="sp-tile">×</div></div>Rest</div><div><div class="sp-field" style="grid-template-columns:1fr"><div class="sp-tile is-hover">×</div></div>Hover</div><div><div class="sp-field" style="grid-template-columns:1fr"><div class="sp-tile is-sel">×</div></div>Selected</div><div><div class="sp-field" style="grid-template-columns:1fr"><div class="sp-tile is-focus" data-role="focus">×</div></div>Focus</div><div><div class="sp-field" style="grid-template-columns:1fr"><div class="sp-tile is-off">×</div></div>Disabled</div></div>
+            <div class="sp-rule" data-role="border-subtle"></div>
+            <div class="sp-slider"><span class="sp-label">Density</span><span class="sp-track" data-role="control-track control-fill"><b></b><em></em></span><span class="sp-body mono" data-role="text">60%</span></div>
+            <div class="sp-input" data-role="border">Text in a field</div>
+            <a class="sp-link" data-role="accent-text">A link</a>
+            <div class="sp-error" data-role="danger-subtle danger"><span class="ic">!</span>Something went wrong</div>
+            <div class="sp-btns"><span class="sp-btn b-accent" data-role="accent on-accent">Primary</span><span class="sp-btn b-hover" data-role="accent-hover">Hover</span><span class="sp-btn b-pressed" data-role="accent-pressed">Pressed</span></div>
+            <div class="sp-btns" style="grid-template-columns:1fr 1fr"><span class="sp-btn b-outline" data-role="border-strong">Secondary</span><span class="sp-btn b-danger" data-role="danger-fill on-danger">Delete</span></div>
+          </div>
+        </div>
+        <div class="role-list" id="role-list"></div>
+      </div>
     </section>
 
     <section aria-labelledby="controls-title">
@@ -338,7 +431,7 @@
     const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
     const PALETTE_GROUPS = [
       { title: 'Primary', note: 'Terracotta. 500 is the brand colour: primary buttons, the selected tool or stitch, slider fills, focus. Lighter steps are the accent on dark surfaces, darker ones on light.', ramps: ['terracotta'], primary: ['terracotta', 500] },
-      { title: 'Neutral', note: 'Slightly warm, between ivory and charcoal. Surfaces, text, borders and icons: most of the interface.', ramps: ['neutral'] },
+      { title: 'Neutral', note: 'A hint of warmth, so light mode is not beige and not cold. 0 is white. Surfaces, text, borders and icons: most of the interface.', ramps: ['neutral'] },
       { title: 'Accent', note: 'None. Terracotta is the only accent, so the threads on the cloth stay the most colourful thing on screen.', ramps: [] },
       { title: 'Status', note: 'Crimson, for errors and the last step of a delete, always with an icon and words. Saved, unsaved and tips use neutral text and icons.', ramps: ['crimson'] },
       { title: 'Other colours · brand', note: 'Ochre, periwinkle, leaf and lilac, on the same tones. For the website, empty states and illustrations; components never use them.', ramps: ['ochre', 'periwinkle', 'leaf', 'lilac'], small: true }
@@ -346,7 +439,7 @@
     const tokenStyle = getComputedStyle(document.documentElement);
     const lum = (hex) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
     document.getElementById('palettes').innerHTML = PALETTE_GROUPS.map(g => `<div class="palette-group"><h3>${g.title}</h3><p>${g.note}</p>${g.ramps.map(r =>
-      `<div class="ramp${g.small ? ' muted-ramp' : ''}"><span class="ramp-name">${r[0].toUpperCase() + r.slice(1)}</span>${STEPS.map(s => {
+      `<div class="ramp${g.small ? ' muted-ramp' : ''}${r === 'neutral' ? ' has-0' : ''}"><span class="ramp-name">${r[0].toUpperCase() + r.slice(1)}</span>${(r === 'neutral' ? [0, ...STEPS] : STEPS).map(s => {
         const hex = tokenStyle.getPropertyValue(`--${r}-${s}`).trim(), ink = lum(hex) > 0.18 ? '#11100F' : '#FAF6EF';
         const primary = g.primary && g.primary[0] === r && g.primary[1] === s;
         return `<button class="chip${primary ? ' is-primary' : ''}" style="background:${hex};color:${ink}" data-hex="${hex}" data-token="--${r}-${s}" aria-label="${r} ${s} ${hex}${primary ? ', primary' : ''}">${primary ? '<span class="tag">Primary</span>' : ''}<span>${s}</span><span>${hex.slice(1)}</span></button>`;
@@ -358,6 +451,80 @@
       catch { toast.textContent = `${chip.dataset.hex} (${chip.dataset.token})`; }
       toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
     });
+
+    // colour roles: number every role, mark it on the specimen, and let each be pointed at another step
+    const ROLE_GROUPS = [
+      ['Surfaces', [['surface-bench', 'Behind the canvas'], ['surface-panel', 'The panel'], ['surface-field', 'Grids, pills, inputs'], ['surface-raised', 'Floating controls, popovers'], ['surface-selected', 'The selected item', 'surface-field', 0]]],
+      ['Text and icons', [['text-strong', 'Headings', 'surface-panel', 4.5], ['text', 'Body text and values', 'surface-field', 4.5], ['text-muted', 'Labels', 'surface-field', 4.5], ['text-disabled', 'Disabled (may be faint)', 'surface-field', 0], ['icon', 'Icons at rest', 'surface-field', 3], ['icon-active', 'Selected and hovered icons', 'surface-selected', 4.5], ['icon-faint', 'Holes, cell markers', 'surface-field', 0]]],
+      ['Lines', [['border-subtle', 'Dividers, panel edge', 'surface-panel', 0], ['border', 'Field and popover edges', 'surface-panel', 0], ['border-strong', 'Outline buttons', 'surface-panel', 3]]],
+      ['Controls', [['control-track', 'Slider track'], ['control-fill', 'Slider fill and thumb', 'control-track', 3], ['focus', 'Keyboard focus ring', 'surface-panel', 3]]],
+      ['Accent · primary button and named exceptions', [['accent', 'Primary button', 'surface-panel', 3], ['accent-hover', 'Primary, hover'], ['accent-pressed', 'Primary, pressed'], ['on-accent', 'Text on the accent', 'accent', 4.5], ['accent-text', 'Links', 'surface-panel', 4.5]]],
+      ['Danger · errors', [['danger', 'Error icon and text', 'surface-panel', 4.5], ['danger-fill', 'Delete confirmation'], ['on-danger', 'Text on danger', 'danger-fill', 4.5], ['danger-subtle', 'Error background']]]
+    ];
+    const ROLES = ROLE_GROUPS.flatMap(([, rows]) => rows);
+    const NUM = Object.fromEntries(ROLES.map(([r], i) => [r, i + 1]));
+    const UI_STEPS = { neutral: [0, ...STEPS], terracotta: STEPS, crimson: STEPS };
+    const spec = document.getElementById('spec');
+    const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const hexOfToken = Object.fromEntries(Object.entries(UI_STEPS).flatMap(([p, steps]) => steps.map(s => [`--${p}-${s}`, tokenStyle.getPropertyValue(`--${p}-${s}`).trim().toUpperCase()])));
+    const tokenOfHex = Object.fromEntries(Object.entries(hexOfToken).map(([t, h]) => [h, t]));
+    // the shipped step for each role and theme, read back from tokens.css through a hidden probe
+    const DEFAULTS = {};
+    for (const theme of ['light', 'dark']) {
+      const probe = document.createElement('div'); probe.dataset.theme = theme; probe.hidden = true; document.body.append(probe);
+      const cs = getComputedStyle(probe);
+      DEFAULTS[theme] = Object.fromEntries(ROLES.map(([r]) => [r, tokenOfHex[cs.getPropertyValue(`--${r}`).trim().toUpperCase()]]));
+      probe.remove();
+    }
+    let roleTheme = 'light', roleEdits = { light: {}, dark: {} };
+    try { roleEdits = Object.assign(roleEdits, JSON.parse(localStorage.getItem('selvedge-role-edits') || '{}')); } catch {}
+    const saveEdits = () => { try { localStorage.setItem('selvedge-role-edits', JSON.stringify(roleEdits)); } catch {} };
+    // numbers on the specimen: one badge per role, on the elements tagged with it
+    spec.querySelectorAll('[data-role]').forEach(el => {
+      const box = document.createElement('span'); box.className = el.matches('.sp-h, .sp-label, .sp-link, .sp-body') ? 'mks inline' : 'mks';
+      box.innerHTML = el.dataset.role.split(' ').map(r => `<span class="mk">${NUM[r]}</span>`).join('');
+      el.append(box);
+    });
+    const stepLabel = (t) => t ? t.slice(2).replace('-', ' ') : '?';
+    function renderRoles() {
+      spec.dataset.theme = roleTheme;
+      spec.removeAttribute('style');
+      for (const [r, t] of Object.entries(roleEdits[roleTheme])) spec.style.setProperty(`--${r}`, `var(${t})`);
+      const cs = getComputedStyle(spec), val = (r) => cs.getPropertyValue(`--${r}`).trim().toUpperCase();
+      const edits = roleEdits[roleTheme];
+      document.getElementById('role-list').innerHTML = ROLE_GROUPS.map(([title, rows]) => `<div class="role-group"><h4>${title}</h4>${rows.map(([r, use, on, min]) => {
+        const current = edits[r] || DEFAULTS[roleTheme][r], c = on ? contrast(val(r), val(on)) : null;
+        const opts = Object.entries(UI_STEPS).map(([p, steps]) => `<optgroup label="${p}">${steps.map(s => `<option value="--${p}-${s}"${`--${p}-${s}` === current ? ' selected' : ''}>${p} ${s}</option>`).join('')}</optgroup>`).join('');
+        return `<div class="role-row" data-r="${r}"><span class="n">${NUM[r]}</span><span><code>--${r}</code><span class="use">${use}${on ? ` · on ${on}` : ''}</span></span>
+          <select aria-label="--${r} in ${roleTheme}" class="${edits[r] ? 'changed' : ''}">${opts}</select>
+          <span class="cr${c && min && c < min ? ' fail' : ''}" title="${on ? `Contrast with --${on}${min ? `, needs ${min}:1` : ''}` : ''}">${c ? c.toFixed(2) : ''}</span></div>`;
+      }).join('')}</div>`).join('');
+      const n = Object.keys(roleEdits.light).length + Object.keys(roleEdits.dark).length;
+      document.getElementById('roles-count').textContent = n ? `${n} change${n > 1 ? 's' : ''}` : '';
+      document.querySelectorAll('#role-theme button').forEach(b => b.setAttribute('aria-pressed', b.dataset.themePick === roleTheme));
+    }
+    document.getElementById('role-theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { roleTheme = b.dataset.themePick; renderRoles(); } });
+    document.getElementById('role-list').addEventListener('change', (e) => {
+      const row = e.target.closest('.role-row'); if (!row) return;
+      const r = row.dataset.r, t = e.target.value;
+      if (t === DEFAULTS[roleTheme][r]) delete roleEdits[roleTheme][r]; else roleEdits[roleTheme][r] = t;
+      saveEdits(); renderRoles();
+      document.querySelector(`.role-row[data-r="${r}"] select`)?.focus();
+    });
+    // hovering a row outlines where that role is used
+    const highlight = (r) => spec.querySelectorAll('[data-hl]').forEach(el => el.removeAttribute('data-hl')) || (r && spec.querySelectorAll(`[data-role~="${r}"]`).forEach(el => el.setAttribute('data-hl', '')));
+    document.getElementById('role-list').addEventListener('pointerover', (e) => highlight(e.target.closest('.role-row')?.dataset.r));
+    document.getElementById('role-list').addEventListener('pointerleave', () => highlight());
+    document.getElementById('role-list').addEventListener('focusin', (e) => highlight(e.target.closest('.role-row')?.dataset.r));
+    document.getElementById('roles-reset').addEventListener('click', () => { roleEdits = { light: {}, dark: {} }; saveEdits(); renderRoles(); });
+    document.getElementById('roles-copy').addEventListener('click', async () => {
+      const block = (sel, edits) => Object.keys(edits).length ? `${sel} {\n${Object.entries(edits).map(([r, t]) => `  --${r}: var(${t}); /* was ${stepLabel(DEFAULTS[sel.includes('dark') ? 'dark' : 'light'][r])} */`).join('\n')}\n}\n` : '';
+      const css = block(':root, [data-theme="light"]', roleEdits.light) + block('[data-theme="dark"]', roleEdits.dark);
+      if (!css) { toast.textContent = 'No changes to copy'; }
+      else { try { await navigator.clipboard.writeText(css); toast.textContent = 'Copied the changed roles as CSS'; } catch { toast.textContent = 'Copy blocked'; } }
+      toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+    renderRoles();
 
     const toast = document.getElementById('toast');
     let toastTimer;

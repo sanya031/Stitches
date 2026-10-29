@@ -1,16 +1,21 @@
-/* Selvedge colour tokens: tonal palettes.
- * Every palette shares one lightness per step (OKLCH; step 500 = terracotta 500), so a step pair
- * has about the same contrast in any palette. Components use roles, not these raw steps (roles to come).
- * Primary: terracotta 500 is the brand colour. Neutral: surfaces, text, borders, icons.
- * Status: crimson for errors and destructive confirmation only. Brand: marketing, empty states and
- * illustrations; components never use them. */
+/* Selvedge colour tokens.
+ *
+ * 1. Palettes: tonal, one OKLCH lightness per step shared by every palette (step 500 = terracotta 500),
+ *    so a step pair has about the same contrast in any hue. Primary: terracotta 500 is the brand colour.
+ *    Neutral: a hint of warmth, plus 0 (white). Status: crimson, errors only. Brand: website and
+ *    illustrations; components never use them.
+ * 2. Roles: what components use. Each points at a palette step, with a light and a dark value.
+ *    Light is the default; dark comes from [data-theme="dark"] or the system setting.
+ *    Selected states are neutral (a lighter fill, the icon or label at full strength); terracotta is
+ *    the primary button and the few selected states named as exceptions. */
 :root {
   /* Primary */
   --terracotta-50: #FAF6F4; --terracotta-100: #F8E5DF; --terracotta-200: #F9CABB; --terracotta-300: #FBA083; --terracotta-400: #EB7049; --terracotta-500: #B84216;
   --terracotta-600: #90320F; --terracotta-700: #702509; --terracotta-800: #531905; --terracotta-900: #381408; --terracotta-950: #1F0904;
   /* Neutral */
-  --neutral-50: #FAF6EF; --neutral-100: #EDE9E2; --neutral-200: #D9D5CF; --neutral-300: #BDBAB5; --neutral-400: #9C9995; --neutral-500: #706E6A;
-  --neutral-600: #575552; --neutral-700: #42413E; --neutral-800: #302F2C; --neutral-900: #21201E; --neutral-950: #11100F;
+  --neutral-0: #FFFFFF;
+  --neutral-50: #F7F7F5; --neutral-100: #EAE9E8; --neutral-200: #D7D6D4; --neutral-300: #BBBAB8; --neutral-400: #9B9A98; --neutral-500: #6F6E6C;
+  --neutral-600: #565553; --neutral-700: #42413F; --neutral-800: #302F2D; --neutral-900: #21201F; --neutral-950: #11100F;
   /* Status */
   --crimson-50: #FAF6F6; --crimson-100: #F5E5E7; --crimson-200: #F2CAD0; --crimson-300: #F0A1AE; --crimson-400: #E96A86; --crimson-500: #B73A5B;
   --crimson-600: #902C46; --crimson-700: #6F2035; --crimson-800: #531526; --crimson-900: #38111A; --crimson-950: #1F080D;
@@ -24,4 +29,118 @@
   --lilac-50: #F7F6F9; --lilac-100: #EBE7F2; --lilac-200: #DAD0EC; --lilac-300: #C3B0E3; --lilac-400: #A48CC9; --lilac-500: #78619A;
   --lilac-600: #5F487F; --lilac-700: #4A3369; --lilac-800: #382154; --lilac-900: #261839; --lilac-950: #140C1F;
   --primary: var(--terracotta-500);
+}
+
+/* Roles, light (default) */
+:root, [data-theme="light"] {
+  color-scheme: light;
+  /* Surfaces */
+  --surface-bench: var(--neutral-200);
+  --surface-panel: var(--neutral-50);
+  --surface-field: var(--neutral-100);
+  --surface-raised: var(--neutral-0);
+  --surface-selected: var(--neutral-0);
+  /* Text and icons */
+  --text-strong: var(--neutral-950);
+  --text: var(--neutral-900);
+  --text-muted: var(--neutral-600);
+  --text-disabled: var(--neutral-400);
+  --icon: var(--neutral-500);
+  --icon-active: var(--neutral-950);
+  --icon-faint: var(--neutral-300);
+  /* Lines */
+  --border-subtle: var(--neutral-200);
+  --border: var(--neutral-300);
+  --border-strong: var(--neutral-500);
+  /* Controls */
+  --control-track: var(--neutral-300);
+  --control-fill: var(--neutral-600);
+  --focus: var(--neutral-950);
+  /* Accent: primary button and named exceptions */
+  --accent: var(--terracotta-500);
+  --accent-hover: var(--terracotta-600);
+  --accent-pressed: var(--terracotta-700);
+  --on-accent: var(--neutral-50);
+  --accent-text: var(--terracotta-600);
+  /* Danger: errors and the last step of a delete */
+  --danger: var(--crimson-600);
+  --danger-fill: var(--crimson-500);
+  --on-danger: var(--neutral-50);
+  --danger-subtle: var(--crimson-100);
+}
+
+/* Roles, dark */
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* Surfaces */
+  --surface-bench: var(--neutral-950);
+  --surface-panel: var(--neutral-900);
+  --surface-field: var(--neutral-800);
+  --surface-raised: var(--neutral-800);
+  --surface-selected: var(--neutral-700);
+  /* Text and icons */
+  --text-strong: var(--neutral-50);
+  --text: var(--neutral-100);
+  --text-muted: var(--neutral-400);
+  --text-disabled: var(--neutral-500);
+  --icon: var(--neutral-400);
+  --icon-active: var(--neutral-50);
+  --icon-faint: var(--neutral-700);
+  /* Lines */
+  --border-subtle: var(--neutral-800);
+  --border: var(--neutral-700);
+  --border-strong: var(--neutral-400);
+  /* Controls */
+  --control-track: var(--neutral-700);
+  --control-fill: var(--neutral-300);
+  --focus: var(--neutral-50);
+  /* Accent: primary button and named exceptions */
+  --accent: var(--terracotta-400);
+  --accent-hover: var(--terracotta-300);
+  --accent-pressed: var(--terracotta-200);
+  --on-accent: var(--neutral-950);
+  --accent-text: var(--terracotta-300);
+  /* Danger: errors and the last step of a delete */
+  --danger: var(--crimson-400);
+  --danger-fill: var(--crimson-400);
+  --on-danger: var(--neutral-950);
+  --danger-subtle: var(--crimson-900);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    /* Surfaces */
+    --surface-bench: var(--neutral-950);
+    --surface-panel: var(--neutral-900);
+    --surface-field: var(--neutral-800);
+    --surface-raised: var(--neutral-800);
+    --surface-selected: var(--neutral-700);
+    /* Text and icons */
+    --text-strong: var(--neutral-50);
+    --text: var(--neutral-100);
+    --text-muted: var(--neutral-400);
+    --text-disabled: var(--neutral-500);
+    --icon: var(--neutral-400);
+    --icon-active: var(--neutral-50);
+    --icon-faint: var(--neutral-700);
+    /* Lines */
+    --border-subtle: var(--neutral-800);
+    --border: var(--neutral-700);
+    --border-strong: var(--neutral-400);
+    /* Controls */
+    --control-track: var(--neutral-700);
+    --control-fill: var(--neutral-300);
+    --focus: var(--neutral-50);
+    /* Accent: primary button and named exceptions */
+    --accent: var(--terracotta-400);
+    --accent-hover: var(--terracotta-300);
+    --accent-pressed: var(--terracotta-200);
+    --on-accent: var(--neutral-950);
+    --accent-text: var(--terracotta-300);
+    /* Danger: errors and the last step of a delete */
+    --danger: var(--crimson-400);
+    --danger-fill: var(--crimson-400);
+    --on-danger: var(--neutral-950);
+    --danger-subtle: var(--crimson-900);
+  }
 }

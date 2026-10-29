@@ -27,9 +27,9 @@ Light and dark themes from the start: every colour is a token with a light and a
 Colour
 - [x] Tonal ramps: primary (terracotta), neutral, status (crimson), brand (ochre, periwinkle, leaf, lilac) in `tokens.css`
 - [x] Status: crimson only, for errors; saved, unsaved and tips use neutral text and icons
-- [ ] Semantic roles that point at ramp steps, in both themes: background, surface levels (bench, panel, raised, well, overlay), text (strong, default, muted, disabled), border (subtle, default, strong), accent (fill, ink on it, hover, pressed), focus ring, selection, status colours
+- [x] Semantic roles that point at ramp steps, in both themes: background, surface levels (bench, panel, raised, well, overlay), text (strong, default, muted, disabled), border (subtle, default, strong), accent (fill, ink on it, hover, pressed), focus ring, selection, status colours
 - [ ] Cloth and thread stay out of the UI ramps: they're content, not chrome
-- [ ] Light mode keeps the cloth the brightest thing (the bench sits a step darker than the cloth, or the cloth gets a frame)
+- [x] Light mode keeps the cloth the brightest thing (the bench sits a step darker than the cloth, or the cloth gets a frame)
 - [x] Light mode stays warm, not light grey (must not resemble Epoch): neutrals are warmed
 - [ ] Contrast check: 4.5:1 for text, 3:1 for control edges and icons, in both themes
 
