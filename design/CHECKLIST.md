@@ -28,10 +28,10 @@ Colour
 - [x] Tonal ramps: primary (terracotta), neutral, status (crimson), brand (ochre, periwinkle, leaf, lilac) in `tokens.css`
 - [x] Status: crimson only, for errors; saved, unsaved and tips use neutral text and icons
 - [x] Semantic roles that point at ramp steps, in both themes: background, surface levels (bench, panel, raised, well, overlay), text (strong, default, muted, disabled), border (subtle, default, strong), accent (fill, ink on it, hover, pressed), focus ring, selection, status colours
-- [ ] Cloth and thread stay out of the UI ramps: they're content, not chrome
+- [x] Cloth and thread stay out of the UI ramps: they're content, not chrome
 - [x] Light mode keeps the cloth the brightest thing (the bench sits a step darker than the cloth, or the cloth gets a frame)
 - [x] Light mode stays warm, not light grey (must not resemble Epoch): neutrals are warmed
-- [ ] Contrast check: 4.5:1 for text, 3:1 for control edges and icons, in both themes
+- [x] Contrast check: 4.5:1 for text, 3:1 for control edges and icons, in both themes
 
 Type
 - [ ] Scale: display, title, section heading, body, label, caption, mono for numbers
@@ -47,7 +47,7 @@ Space and shape
 - [ ] Layering order (z-index): canvas, floaters, panel, popovers, sheets, toasts
 
 Delivery
-- [ ] One `tokens.css`: ramps as raw values, roles as variables, switched by `[data-theme]` and the system setting
+- [x] One `tokens.css`: ramps as raw values, roles as variables, switched by `[data-theme]` and the system setting
 - [ ] Token pages on the design page: swatches with contrast numbers, type specimens, spacing and radius rulers
 - [ ] Light/dark switch on the design page itself
 
