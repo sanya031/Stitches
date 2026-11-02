@@ -66,7 +66,7 @@
 .c-seg__opt:hover, .c-seg__opt.is-hover { color: var(--text-strong); }
 .c-seg__opt:active, .c-seg__opt.is-pressed { color: var(--text-strong); }
 .c-seg__opt[aria-pressed="true"], .c-seg__opt.is-selected { background: var(--surface-selected); color: var(--text-strong); font: var(--type-label-strong); }
-.c-seg--lg .c-seg__opt[aria-pressed="true"], .c-seg--lg .c-seg__opt.is-selected { font-weight: var(--weight-medium); }
+.c-seg--lg .c-seg__opt[aria-pressed="true"], .c-seg--lg .c-seg__opt.is-selected { font: var(--type-body); font-weight: var(--weight-medium); }
 .c-seg__opt:disabled, .c-seg__opt.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
 .c-seg__opt.is-selected.is-disabled { color: var(--text-disabled); }
 
