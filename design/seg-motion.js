@@ -18,11 +18,10 @@ const dials = (duration, bounce, squash, stretch, lean = 0, react = 'speed', fad
 });
 
 export const SEG_MOTIONS = {
-  squash: { title: 'Squash', about: 'Saved now. Flattens and lengthens with its speed, then settles round.', dials: dials(token('duration', 0.38), token('bounce', 0.2), token('squash', 0.35), token('stretch', 0.12), 0, 'speed', token('label-fade', 120)) },
+  squash: { title: 'Squash', about: 'Saved now, the Flat version. Flattens a lot with its speed and hardly lengthens, like a thread pulled tight.', dials: dials(token('duration', 0.38), token('bounce', 0.18), token('squash', 0.6), token('stretch', 0.02), 0, 'speed', token('label-fade', 120)) },
   soft: { title: 'Soft', about: 'Slower with less bounce and a gentle squash. The calmest.', dials: dials(0.46, 0.08, 0.2, 0.08) },
   snappy: { title: 'Snappy', about: 'Quicker with less bounce and a stronger squash. Feels crisp.', dials: dials(0.26, 0.12, 0.45, 0.18) },
   bouncy: { title: 'Bouncy', about: 'More bounce, so it overshoots and wobbles as it settles. The most playful.', dials: dials(0.46, 0.4, 0.3, 0.12) },
-  flat: { title: 'Flat', about: 'Flattens a lot and hardly lengthens, like a thread pulled tight.', dials: dials(0.38, 0.18, 0.6, 0.02) },
   long: { title: 'Long', about: 'Lengthens a lot and hardly flattens, so it reads as a stretch.', dials: dials(0.38, 0.18, 0.1, 0.4) },
   lean: { title: 'Lean', about: 'Lengthens only towards where it is going, so it reaches ahead.', dials: dials(0.38, 0.16, 0.3, 0.3, 1) },
   landing: { title: 'Landing', about: 'Stays round while moving and squashes as it stops, like a soft landing.', dials: dials(0.42, 0.22, 0.4, 0.14, 0, 'landing') }

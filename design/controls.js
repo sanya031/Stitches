@@ -220,7 +220,7 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
   const dialRoot = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: false });
   new MutationObserver(() => { dialRoot.element.querySelectorAll('[data-theme]').forEach((n) => n.setAttribute('data-theme', document.documentElement.dataset.theme)); dialRoot.element.setAttribute('data-theme', document.documentElement.dataset.theme); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   for (const [k, m] of Object.entries(SEG_MOTIONS)) {
-    const kit = createDialKit(`Squash: ${m.title}`, m.dials, { id: `selvedge-seg-${k}-1`, persist: true, onAction: () => motions[k].forEach((x) => x.next()) });
+    const kit = createDialKit(`Squash: ${m.title}`, m.dials, { id: `selvedge-seg-${k}-2`, persist: true, onAction: () => motions[k].forEach((x) => x.next()) });
     kit.subscribe((vals) => { dialValues[k] = vals; });
   }
 }).catch(() => {});
