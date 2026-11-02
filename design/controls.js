@@ -47,7 +47,7 @@ const section = (cls, open = true, action = '') => `<button class="c-reset c-sec
 const drop = (cls, body) => `<div class="c-drop ${cls}">${body}</div>`;
 const play = (cls, name, v, val) => `<div class="c-play ${cls}">${iconbtn('secondary', '', name)}<span class="c-slider ${cls}" style="--v:${v}%;display:block;min-height:0"><span class="c-slider__track" style="display:block"><span class="c-slider__fill"></span><span class="c-slider__thumb"></span></span></span><span class="c-slider__value">${val}</span></div>`;
 
-const motionCell = (k, extra = '') => { const m = SEG_MOTIONS[k]; return [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}${extra}</div>`]; };
+const motionCell = (k) => { const m = SEG_MOTIONS[k]; return [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}<button class="c-reset c-btn c-btn--secondary c-btn--sm c-focus" data-copy-motion="${k}">Copy values</button></div>`]; };
 
 // ─── the specs ───────────────────────────────────────────────────────────────
 // Each: id, css block(s) in controls.css, title, note, rows of [state, html]. cell = minimum cell width.
@@ -70,9 +70,9 @@ const SPECS = [
     ['States', [['Rest', seg(['Cross', 'Half', 'Back'], 0)], ['Option hover', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-hover' } })], ['Option focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-focus' } })], ['Selected focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-focus' } })], ['Option disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 2: 'is-disabled' } })], ['All disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-disabled', 1: 'is-disabled', 2: 'is-disabled' } })], ['Mixed, none selected', seg(['Cross', 'Half', 'Back'], -1)]]],
     ['Forms', [['Large, mode switch', seg(['Stitch', 'Animate', 'Export'], 0, { cls: 'c-seg--lg' })], ['Icons', seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { icons: true })], ['Two options', seg(['Sampler', 'Script'], 1)]]]
   ] },
-  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion', note: 'Squash is the pill\'s animation. Click the options, use the arrow keys, or press Play in the panel. Open the DialKit panel from the button at the bottom right to tune it by hand; it remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
-    ['The pill\'s animation', [motionCell('squash', `<button class="c-reset c-btn c-btn--secondary c-btn--sm c-focus" data-copy-motion="squash">Copy values</button>`)]],
-    ['Other variations, for reference', Object.keys(SEG_MOTIONS).filter((k) => k !== 'squash').map((k) => motionCell(k))],
+  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion: Squash', note: 'Squash is the pill\'s animation, and these are versions of it to choose from. Click the options, use the arrow keys, or press Play in the panel. Every one has the same dials in the DialKit panel, from the button at the bottom right, and remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
+    ['Saved now', [motionCell('squash')]],
+    ['Variations of Squash', Object.keys(SEG_MOTIONS).filter((k) => k !== 'squash').map((k) => motionCell(k))],
   ] },
   { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],
@@ -214,13 +214,13 @@ document.getElementById('theme').addEventListener('click', (e) => { const b = e.
 // ─── segmented pill motion, tuned with DialKit ───────────────────────────────
 const dialValues = Object.fromEntries(Object.entries(SEG_MOTIONS).map(([k, m]) => [k, dialDefaults(m.dials)]));
 const motions = {};
-main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion; (motions[k] ||= []).push(createSegMotion(el, k, () => dialValues[k])); });
+main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion; (motions[k] ||= []).push(createSegMotion(el, () => dialValues[k])); });
 // the page still works if the panel can't load
 import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
   const dialRoot = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: false });
   new MutationObserver(() => { dialRoot.element.querySelectorAll('[data-theme]').forEach((n) => n.setAttribute('data-theme', document.documentElement.dataset.theme)); dialRoot.element.setAttribute('data-theme', document.documentElement.dataset.theme); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   for (const [k, m] of Object.entries(SEG_MOTIONS)) {
-    const kit = createDialKit(`Pill: ${m.title}`, m.dials, { id: `selvedge-seg-${k}-1`, persist: true, onAction: () => motions[k].forEach((x) => x.next()) });
+    const kit = createDialKit(`Squash: ${m.title}`, m.dials, { id: `selvedge-seg-${k}-1`, persist: true, onAction: () => motions[k].forEach((x) => x.next()) });
     kit.subscribe((vals) => { dialValues[k] = vals; });
   }
 }).catch(() => {});
