@@ -70,9 +70,8 @@ const SPECS = [
     ['States', [['Rest', seg(['Cross', 'Half', 'Back'], 0)], ['Option hover', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-hover' } })], ['Option focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-focus' } })], ['Selected focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-focus' } })], ['Option disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 2: 'is-disabled' } })], ['All disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-disabled', 1: 'is-disabled', 2: 'is-disabled' } })], ['Mixed, none selected', seg(['Cross', 'Half', 'Back'], -1)]]],
     ['Forms', [['Large, mode switch', seg(['Stitch', 'Animate', 'Export'], 0, { cls: 'c-seg--lg' })], ['Icons', seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { icons: true })], ['Two options', seg(['Sampler', 'Script'], 1)]]]
   ] },
-  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion: Squash', note: 'Squash is the pill\'s animation, and these are versions of it to choose from. Click the options, use the arrow keys, or press Play in the panel. Every one has the same dials in the DialKit panel, from the button at the bottom right, and remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
+  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion: Squash', note: 'The pill\'s animation. Click the options, use the arrow keys, or press Play in the panel. Its dials are in the DialKit panel, from the button at the bottom right, and it remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
     ['Saved now', [motionCell('squash')]],
-    ['Variations of Squash', Object.keys(SEG_MOTIONS).filter((k) => k !== 'squash').map((k) => motionCell(k))],
   ] },
   { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],

@@ -1,6 +1,6 @@
 // Segmented pill motion: Squash. The selected fill is one element (.c-seg__thumb) that springs between
 // options, flattening and lengthening as it goes, driven from JS so it can be tuned live with DialKit.
-// Interrupting keeps its speed. SEG_MOTIONS holds Squash (from the tokens) and variations of it to choose from.
+// Interrupting keeps its speed. SEG_MOTIONS holds the saved motion, from the tokens.
 import { stepper } from './zoom-motion.js';
 
 // Squash starts from the pill motion saved in tokens.css
@@ -18,13 +18,7 @@ const dials = (duration, bounce, squash, stretch, lean = 0, react = 'speed', fad
 });
 
 export const SEG_MOTIONS = {
-  squash: { title: 'Squash', about: 'Saved now, the Flat version. Flattens a lot with its speed and hardly lengthens, like a thread pulled tight.', dials: dials(token('duration', 0.38), token('bounce', 0.18), token('squash', 0.6), token('stretch', 0.02), 0, 'speed', token('label-fade', 120)) },
-  soft: { title: 'Soft', about: 'Slower with less bounce and a gentle squash. The calmest.', dials: dials(0.46, 0.08, 0.2, 0.08) },
-  snappy: { title: 'Snappy', about: 'Quicker with less bounce and a stronger squash. Feels crisp.', dials: dials(0.26, 0.12, 0.45, 0.18) },
-  bouncy: { title: 'Bouncy', about: 'More bounce, so it overshoots and wobbles as it settles. The most playful.', dials: dials(0.46, 0.4, 0.3, 0.12) },
-  long: { title: 'Long', about: 'Lengthens a lot and hardly flattens, so it reads as a stretch.', dials: dials(0.38, 0.18, 0.1, 0.4) },
-  lean: { title: 'Lean', about: 'Lengthens only towards where it is going, so it reaches ahead.', dials: dials(0.38, 0.16, 0.3, 0.3, 1) },
-  landing: { title: 'Landing', about: 'Stays round while moving and squashes as it stops, like a soft landing.', dials: dials(0.42, 0.22, 0.4, 0.14, 0, 'landing') }
+  squash: { title: 'Squash', about: 'Flattens a lot with its speed and hardly lengthens, like a thread pulled tight, then settles round.', dials: dials(token('duration', 0.38), token('bounce', 0.18), token('squash', 0.6), token('stretch', 0.02), 0, 'speed', token('label-fade', 120)) },
 };
 
 /** Starting values of a dial config, for when DialKit isn't loaded. */
