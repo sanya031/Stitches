@@ -76,7 +76,7 @@
 .c-seg--motion { position: relative; }
 .c-seg__layer { position: absolute; inset: 0; pointer-events: none; }
 .c-seg__thumb { position: absolute; left: 0; top: 0; border-radius: var(--radius-pill); background: var(--surface-selected); }
-.c-seg--motion .c-seg__opt { display: inline-grid; place-items: center; transition: color var(--seg-label-fade, 120ms) linear; }
+.c-seg--motion .c-seg__opt { display: inline-grid; grid-template-rows: 1fr 0; row-gap: 0; place-items: center; transition: color var(--seg-label-fade, 120ms) linear; }
 .c-seg--motion .c-seg__opt[data-label]::before { content: attr(data-label); grid-row: 2; height: 0; overflow: hidden; visibility: hidden; font: var(--type-label-strong); }
 .c-seg--motion.c-seg--lg .c-seg__opt[data-label]::before { font: var(--type-body); font-weight: var(--weight-medium); }
 .c-seg--motion .c-seg__opt[aria-pressed="true"] { background: none; }
