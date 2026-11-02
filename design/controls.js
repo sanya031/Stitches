@@ -29,7 +29,7 @@ const btn = (kind, cls, label, inner = '') => `<button class="c-reset c-btn c-bt
 const BTN_STATES = ['Rest', 'Hover', 'Pressed', 'Focus', 'Disabled', 'Loading'];
 const btnRow = (kind, label) => states(BTN_STATES, (c, s) => btn(kind, c, s === 'Loading' ? 'Saving' : label, s === 'Loading' ? spin : ''));
 const iconbtn = (kind, cls, name = 'undo') => `<button class="c-reset c-iconbtn ${kind ? `c-iconbtn--${kind}` : ''} c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
-const tool = (cls, name = 'tool-stitch', more = false) => `<button class="c-reset c-tool c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}${more ? '<span class="c-tool__more"></span>' : ''}</button>`;
+const tool = (cls, name = 'tool-stitch') => `<button class="c-reset c-tool c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
 const seg = (opts, sel, { cls = '', optCls = {}, live = false, icons = false } = {}) => `<div class="c-seg ${cls} ${icons ? 'c-seg--icons' : ''}" role="group"${live ? ' data-live' : ''}>${opts.map((o, i) => `<button class="c-reset c-seg__opt c-focus ${i === sel && !live ? 'is-selected' : ''} ${optCls[i] || ''}"${live ? ` aria-pressed="${i === sel}"` : ''}${dis(optCls[i] || '')}>${icons ? ic(o) : o}</button>`).join('')}</div>`;
 const sw = (cls, label = 'Stitched', live = false) => `<button class="c-reset c-switch c-focus ${cls}" role="switch"${live ? ' data-live aria-checked="false"' : ''}${dis(cls)}><span class="c-switch__track"><span class="c-switch__thumb"></span></span>${label}</button>`;
 const check = (cls) => `<button class="c-reset c-check c-focus ${cls}" role="checkbox"${dis(cls)}><span class="c-check__box">${cls.includes('is-on') ? ic('check') : cls.includes('is-mixed') ? ic('minus') : ''}</span>Outline</button>`;
@@ -39,7 +39,7 @@ const text = (cls, value, ph = 'Name this piece') => `<label class="c-field ${cl
 const area = (cls, value) => `<label class="c-field c-textarea ${cls}"><textarea aria-label="Text" placeholder="Type something to stitch"${dis(cls)}>${value}</textarea></label>`;
 const search = (cls, value) => `<label class="c-field c-search ${cls}">${ic('search')}<input value="${value}" placeholder="Search floss" aria-label="Search"${dis(cls)}>${value ? ic('close') : ''}</label>`;
 const select = (cls, label = 'Stranded cotton') => `<button class="c-reset c-select c-focus ${cls}"${dis(cls)}>${label}${ic('chevron-down')}</button>`;
-const tile = (cls, name = 'stitch-full', more = false) => `<button class="c-reset c-tile c-focus ${cls}" aria-label="${name}"${dis(cls)}>${prim(name)}${more ? '<span class="c-tile__more"></span>' : ''}</button>`;
+const tile = (cls, name = 'stitch-full') => `<button class="c-reset c-tile c-focus ${cls}" aria-label="${name}"${dis(cls)}>${prim(name)}</button>`;
 const row = (cls, name = 'Full cross', art = 'stitch-full') => `<button class="c-reset c-row c-focus ${cls}"${dis(cls)}><span class="c-row__art">${prim(art)}</span>${name}<span class="c-ic c-row__end">${svg('chevron-right')}</span></button>`;
 const layer = (cls, name = 'Calla lilies', eye = 'eye') => `<div class="c-layer ${cls}">${cls.includes('is-renaming') ? `<input value="${name}" aria-label="Layer name">` : `<span class="c-layer__name">${name}</span>`}${iconbtn('', 'c-iconbtn--sm', eye)}${iconbtn('', 'c-iconbtn--sm', 'lock')}</div>`;
 const section = (cls, open = true, action = '') => `<button class="c-reset c-section c-focus ${cls}" aria-expanded="${open}">${ic(open ? 'chevron-down' : 'chevron-right')}Appearance${action}</button>`;
@@ -59,9 +59,8 @@ const SPECS = [
     ['Primary', states(['Rest', 'Hover', 'Pressed', 'Focus'], (c) => iconbtn('primary', c, 'play'))],
     ['Toggle', [['Off', iconbtn('', '', 'eye-off')], ['On', iconbtn('', 'is-selected', 'eye')], ['On, hover', iconbtn('', 'is-selected is-hover', 'eye')], ['On, focus', iconbtn('', 'is-selected is-focus', 'eye')], ['Disabled', iconbtn('', 'is-disabled', 'eye')], ['Lock off', iconbtn('', '', 'lock')], ['Lock on', iconbtn('', 'is-selected', 'lock')]]]
   ] },
-  { group: 'Actions', id: 'tool-button', title: 'Tool button', note: 'For the tool bar. The small dot marks a tool with more options, on hold or right-click.', rows: [
-    ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => tool(c))],
-    ['With options', [['Rest', tool('', 'tool-select', true)], ['Selected', tool('is-selected', 'tool-select', true)], ['Hover', tool('is-hover', 'tool-select', true)]]]
+  { group: 'Actions', id: 'tool-button', title: 'Tool button', note: 'For the tool bar.', rows: [
+    ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => tool(c))]
   ] },
   { group: 'Choices', id: 'segmented', title: 'Segmented pill', note: 'One choice from a few. The large size is the mode switch. The selected option uses the neutral lighter fill.', cell: 220, rows: [
     ['Live', [['Click me', seg(['Cross', 'Half', 'Back'], 0, { live: true })]]],
@@ -104,9 +103,9 @@ const SPECS = [
     ['States', states(['Rest', 'Hover', 'Selected', 'Focus'], (c) => skein('--terracotta-500', c))],
     ['Forms', [['Close to the surface', skein('--neutral-50', 'is-edge')], ['With count', skein('--leaf-500', '', '<span class="c-badge c-skein__n">3</span>')]]]
   ] },
-  { group: 'Thread and stitches', id: 'preview-tile', title: 'Preview tile', note: 'Stitch grid, fill variants, fabrics. Sits on the field; only the selected tile has a fill. The dot marks a stitch with variants.', rows: [
+  { group: 'Thread and stitches', id: 'preview-tile', title: 'Preview tile', note: 'Stitch grid, fill variants, fabrics. Sits on the field; only the selected tile has a fill.', rows: [
     ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => `<div class="c-tilewell">${tile(c)}</div>`)],
-    ['Forms', [['Has variants', `<div class="c-tilewell">${tile('', 'stitch-half', true)}</div>`], ['Fill', `<div class="c-tilewell">${tile('', 'fill-weave-3')}</div>`]]],
+    ['Forms', [['Stitch', `<div class="c-tilewell">${tile('', 'stitch-half')}</div>`], ['Fill', `<div class="c-tilewell">${tile('', 'fill-weave-3')}</div>`]]],
     ['Grid', [['Live', `<div class="c-tilegrid" data-live>${['stitch-full', 'stitch-half', 'stitch-back', 'stitch-knot', 'fill-columns', 'fill-rows', 'fill-weave-3', 'fill-seed'].map((n, i) => `<button class="c-reset c-tile c-focus" aria-label="${n}" aria-pressed="${i === 0}">${prim(n)}</button>`).join('')}</div>`]], 240]
   ] },
   { group: 'Thread and stitches', id: 'stitch-row', title: 'Stitch row and library', note: 'The current stitch in the panel, and the rows in the library, grouped, with a submenu for variants.', cell: 220, rows: [
@@ -133,7 +132,7 @@ const SPECS = [
     ['States', [['Rest', `<div class="c-code"><code>&lt;stitch-piece src="abc123" interactive&gt;</code>${iconbtn('', 'c-iconbtn--sm', 'copy')}</div>`], ['Hover', `<div class="c-code"><code>&lt;stitch-piece src="abc123" interactive&gt;</code>${iconbtn('', 'c-iconbtn--sm is-hover', 'copy')}</div>`], ['Copied', `<div class="c-code"><code>&lt;stitch-piece src="abc123" interactive&gt;</code>${iconbtn('', 'c-iconbtn--sm is-selected', 'check')}</div>`]]]
   ] },
   { group: 'Floating and feedback', id: 'floating-bars', title: 'Floating bars', note: 'They float over the canvas, so they get the raised surface and a shadow. In Figma, add the shadow as an effect: it is not part of the pasted SVG.', blocks: ['floating-bars', 'tool-button', 'icon-button', 'shared'], cell: 260, rows: [
-    ['Bars', [['Tool bar', `<div class="c-bar c-bar--tools">${tool('', 'tool-select', true)}${tool('is-selected', 'tool-stitch')}${tool('', 'tool-fill')}${tool('', 'tool-pattern')}${tool('', 'tool-erase')}${tool('', 'tool-pan')}</div>`], ['Zoom', `<div class="c-bar c-bar--pill">${iconbtn('', 'c-iconbtn--sm', 'minus')}<span class="c-bar__zoom">100%</span>${iconbtn('', 'c-iconbtn--sm', 'plus')}<span class="c-bar__sep"></span>${iconbtn('', 'c-iconbtn--sm', 'fit')}</div>`], ['Selection bar', `<div class="c-bar">${iconbtn('', '', 'tool-pan')}${iconbtn('', '', 'recolour')}${iconbtn('', '', 'tool-stitch')}<span class="c-bar__sep"></span>${iconbtn('', '', 'clear')}</div>`]]]
+    ['Bars', [['Tool bar', `<div class="c-bar c-bar--tools">${tool('', 'tool-select')}${tool('is-selected', 'tool-stitch')}${tool('', 'tool-fill')}${tool('', 'tool-pattern')}${tool('', 'tool-erase')}${tool('', 'tool-pan')}</div>`], ['Zoom', `<div class="c-bar c-bar--pill">${iconbtn('', 'c-iconbtn--sm', 'minus')}<span class="c-bar__zoom">100%</span>${iconbtn('', 'c-iconbtn--sm', 'plus')}<span class="c-bar__sep"></span>${iconbtn('', 'c-iconbtn--sm', 'fit')}</div>`], ['Selection bar', `<div class="c-bar">${iconbtn('', '', 'tool-pan')}${iconbtn('', '', 'recolour')}${iconbtn('', '', 'tool-stitch')}<span class="c-bar__sep"></span>${iconbtn('', '', 'clear')}</div>`]]]
   ] },
   { group: 'Floating and feedback', id: 'feedback', title: 'Tooltip, key, badge, toast, save state, messages', note: 'Small things that tell you something. Errors always carry an icon and words.', cell: 170, rows: [
     ['Small parts', [['Tooltip', '<span class="c-tooltip">Undo</span>'], ['Key', '<span class="c-kbd">⌘Z</span>'], ['Badge', '<span class="c-badge">12</span>'], ['Helper text', '<span class="c-hint">22.5 cm at count 14</span>'], ['Error text', '<span class="c-hint c-hint--error">Up to 400 squares</span>']]],
