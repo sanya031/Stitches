@@ -21,7 +21,7 @@
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
 /** A DialKit TransitionConfig as a stepper: spring (time or physics) or a cubic Bézier tween. */
-function stepper(t) {
+export function stepper(t) {
   if (t.type === 'easing') return { tween: true, duration: Math.max(0.01, t.duration), ease: bezier(...t.ease) };
   let k = t.stiffness ?? 100, c = t.damping ?? 10, m = t.mass ?? 1;
   if (t.visualDuration != null) {

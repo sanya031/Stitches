@@ -3,6 +3,7 @@
 import { svg } from './icons/icons.js';
 import { primitiveSvg } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
+import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 
 // ─── small drawing helpers ───────────────────────────────────────────────────
 const line = (d, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${d}</svg>`;
@@ -30,7 +31,7 @@ const BTN_STATES = ['Rest', 'Hover', 'Pressed', 'Focus', 'Disabled', 'Loading'];
 const btnRow = (kind, label) => states(BTN_STATES, (c, s) => btn(kind, c, s === 'Loading' ? 'Saving' : label, s === 'Loading' ? spin : ''));
 const iconbtn = (kind, cls, name = 'undo') => `<button class="c-reset c-iconbtn ${kind ? `c-iconbtn--${kind}` : ''} c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
 const tool = (cls, name = 'tool-stitch') => `<button class="c-reset c-tool c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
-const seg = (opts, sel, { cls = '', optCls = {}, live = false, icons = false } = {}) => `<div class="c-seg ${cls} ${icons ? 'c-seg--icons' : ''}" role="group"${live ? ' data-live' : ''}>${opts.map((o, i) => `<button class="c-reset c-seg__opt c-focus ${i === sel && !live ? 'is-selected' : ''} ${optCls[i] || ''}"${live ? ` aria-pressed="${i === sel}"` : ''}${dis(optCls[i] || '')}>${icons ? ic(o) : o}</button>`).join('')}</div>`;
+const seg = (opts, sel, { cls = '', optCls = {}, live = false, icons = false, motion = '' } = {}) => `<div class="c-seg ${cls} ${icons ? 'c-seg--icons' : ''}" role="group"${motion ? ` data-motion="${motion}"` : live ? ' data-live' : ''}>${opts.map((o, i) => `<button class="c-reset c-seg__opt c-focus ${i === sel && !live ? 'is-selected' : ''} ${optCls[i] || ''}"${live ? ` aria-pressed="${i === sel}"` : ''}${dis(optCls[i] || '')}${motion && !icons ? ` data-label="${o}"` : ''}>${icons ? ic(o) : o}</button>`).join('')}</div>`;
 const sw = (cls, label = 'Stitched', live = false) => `<button class="c-reset c-switch c-focus ${cls}" role="switch"${live ? ' data-live aria-checked="false"' : ''}${dis(cls)}><span class="c-switch__track"><span class="c-switch__thumb"></span></span>${label}</button>`;
 const check = (cls) => `<button class="c-reset c-check c-focus ${cls}" role="checkbox"${dis(cls)}><span class="c-check__box">${cls.includes('is-on') ? ic('check') : cls.includes('is-mixed') ? ic('minus') : ''}</span>Outline</button>`;
 const slider = (cls, { v = 60, label = 'Density', val = `${v}%`, live = false } = {}) => `<div class="c-slider ${cls}" style="--v:${v}%"${live ? ' data-live' : ''}><span>${label}</span><span class="c-slider__track"><span class="c-slider__fill"></span><span class="c-slider__thumb"${live ? ' tabindex="0" role="slider" aria-label="Density" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"' : ''}></span></span><span class="c-slider__value">${val}</span></div>`;
@@ -63,9 +64,12 @@ const SPECS = [
     ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => tool(c))]
   ] },
   { group: 'Choices', id: 'segmented', title: 'Segmented pill', note: 'One choice from a few. The large size is the mode switch. The selected option uses the neutral lighter fill.', cell: 220, rows: [
-    ['Live', [['Click me', seg(['Cross', 'Half', 'Back'], 0, { live: true })]]],
+    ['Live', [['Click me', seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: 'slide' })]]],
     ['States', [['Rest', seg(['Cross', 'Half', 'Back'], 0)], ['Option hover', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-hover' } })], ['Option focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-focus' } })], ['Selected focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-focus' } })], ['Option disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 2: 'is-disabled' } })], ['All disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-disabled', 1: 'is-disabled', 2: 'is-disabled' } })], ['Mixed, none selected', seg(['Cross', 'Half', 'Back'], -1)]]],
     ['Forms', [['Large, mode switch', seg(['Stitch', 'Animate', 'Export'], 0, { cls: 'c-seg--lg' })], ['Icons', seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { icons: true })], ['Two options', seg(['Sampler', 'Script'], 1)]]]
+  ] },
+  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion', note: 'Six ways for the selected fill to move. Click the options, use the arrow keys, or press Play in the panel. Open the DialKit panel from the button at the bottom right to tune each one by hand; it remembers your values.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
+    ['Variations', Object.entries(SEG_MOTIONS).map(([k, m]) => [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}</div>`])],
   ] },
   { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],
@@ -197,6 +201,20 @@ let savedTheme = null;
 try { savedTheme = localStorage.getItem('selvedge-controls-theme'); } catch {}
 setTheme(savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 document.getElementById('theme').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.themePick); });
+
+// ─── segmented pill motion, tuned with DialKit ───────────────────────────────
+const dialValues = Object.fromEntries(Object.entries(SEG_MOTIONS).map(([k, m]) => [k, dialDefaults(m.dials)]));
+const motions = {};
+main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion; (motions[k] ||= []).push(createSegMotion(el, k, () => dialValues[k])); });
+// the page still works if the panel can't load
+import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
+  const dialRoot = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: false });
+  new MutationObserver(() => { dialRoot.element.querySelectorAll('[data-theme]').forEach((n) => n.setAttribute('data-theme', document.documentElement.dataset.theme)); dialRoot.element.setAttribute('data-theme', document.documentElement.dataset.theme); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  for (const [k, m] of Object.entries(SEG_MOTIONS)) {
+    const kit = createDialKit(`Pill: ${m.title}`, m.dials, { id: `selvedge-seg-${k}-1`, persist: true, onAction: () => motions[k].forEach((x) => x.next()) });
+    kit.subscribe((vals) => { dialValues[k] = vals; });
+  }
+}).catch(() => {});
 
 // ─── live specimens ──────────────────────────────────────────────────────────
 main.addEventListener('click', (e) => {
