@@ -38,6 +38,8 @@
 /* @control icon-button */
 .c-iconbtn { position: relative; display: inline-grid; place-items: center; width: var(--control-md); height: var(--control-md); border: var(--border-width) solid transparent; border-radius: var(--radius-md); color: var(--icon); cursor: pointer; }
 .c-iconbtn::after { content: ''; position: absolute; inset: 50% auto auto 50%; width: var(--target-min); height: var(--target-min); transform: translate(-50%, -50%); }
+.c-iconbtn .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+.c-iconbtn svg { stroke-width: 2.25; }
 .c-iconbtn--sm { width: var(--control-sm); height: var(--control-sm); }
 .c-iconbtn--secondary { border-color: var(--border-strong); }
 .c-iconbtn--primary { background: var(--accent); color: var(--on-accent); }
@@ -102,7 +104,8 @@
 /* @control checkbox */
 .c-check { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); color: var(--text); font: var(--type-label); cursor: pointer; }
 .c-check__box { display: inline-grid; place-items: center; width: var(--space-20); height: var(--space-20); border: var(--border-width) solid var(--border-strong); border-radius: var(--radius-xs); color: var(--surface-panel); }
-.c-check__box svg { width: var(--icon-sm); height: var(--icon-sm); stroke-width: 2.5; }
+.c-check__box .c-ic { width: var(--space-12); height: var(--space-12); }
+.c-check__box svg { stroke-width: 3; }
 .c-check:hover .c-check__box, .c-check.is-hover .c-check__box { border-color: var(--text-strong); }
 .c-check.is-on .c-check__box, .c-check.is-mixed .c-check__box { border-color: var(--control-fill); background: var(--control-fill); }
 .c-check.is-disabled { color: var(--text-disabled); cursor: not-allowed; }

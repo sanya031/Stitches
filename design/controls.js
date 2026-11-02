@@ -167,6 +167,12 @@ main.insertAdjacentHTML('beforeend', SPECS.map((s) => {
 }).join(''));
 main.querySelectorAll('.ct-sec').forEach((sec) => { sec.querySelector('.ct-css').textContent = sec.dataset.blocks.split(' ').map((b) => BLOCKS[b]).filter(Boolean).join('\n\n'); });
 
+// centre each line icon on its drawing, not its 24 px frame, so it sits true in small boxes
+main.querySelectorAll('.c-ic svg').forEach((el) => {
+  const b = el.getBBox(); if (!b.width && !b.height) return;
+  el.setAttribute('viewBox', `${b.x + b.width / 2 - 12} ${b.y + b.height / 2 - 12} 24 24`);
+});
+
 // the slider's preview uses a real palette colour as its thread
 const rootStyle = () => getComputedStyle(document.documentElement);
 const threadColour = rootStyle().getPropertyValue('--terracotta-500').trim();
@@ -297,7 +303,8 @@ function inlineSvg(el, ox, oy) {
     if (cs.fillOpacity !== '1') d.setAttribute('fill-opacity', cs.fillOpacity);
   });
   clone.querySelectorAll('style').forEach((s) => s.remove());
-  return `<g transform="translate(${round(r.left - ox)} ${round(r.top - oy)}) scale(${round(sx)} ${round(sy)})">${clone.innerHTML}</g>`;
+  const vx = vb && vb.width ? vb.x * sx : 0, vy = vb && vb.height ? vb.y * sy : 0;
+  return `<g transform="translate(${round(r.left - ox - vx)} ${round(r.top - oy - vy)}) scale(${round(sx * 1000) / 1000} ${round(sy * 1000) / 1000})">${clone.innerHTML}</g>`;
 }
 function box(el, cs, ox, oy) {
   const r = el.getBoundingClientRect(); if (!r.width && !r.height) return '';
