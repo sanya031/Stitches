@@ -20,8 +20,8 @@ Light and dark themes from the start: every colour is a token with a light and a
 - [ ] Check at narrow widths: where the panel goes on a tablet or phone
 
 ## 2. Controls list
-- [ ] Agree on the list below: every control, what kind it is, where it's used
-- [ ] Note every state each one needs: rest, hover, pressed, focus, disabled, mixed (a selection with different values), loading, error
+- [ ] Agree on the list below: every control, what kind it is, where it's used (five decisions still open: terracotta exceptions, scrubbing, angle dial, typed slider values, what the first version can skip)
+- [x] Note every state each one needs: rest, hover, pressed, focus, disabled, mixed (a selection with different values), loading, error
 
 ## 3. Foundations (tokens)
 Colour
@@ -52,49 +52,49 @@ Delivery
 - [ ] Light/dark switch on the design page itself
 
 ## 4. Atoms
-- [ ] Button: primary, secondary, ghost, danger; sizes; with icon
-- [ ] Icon button (44 px target)
-- [ ] Segmented pill (mode switcher, small option switches)
-- [ ] Toggle switch
-- [ ] Checkbox
-- [ ] Slider (plain) and stage slider (with the preview bubble)
-- [ ] Number field with steppers and a unit
-- [ ] Text input, text area, search field
-- [ ] Select / dropdown
-- [ ] Label and helper text, error text
-- [ ] Tooltip (with shortcut)
-- [ ] Shortcut key (kbd)
-- [ ] Badge / count
-- [ ] Divider
-- [ ] Skein (a thread colour as a skein, not a flat swatch)
-- [ ] Spinner and progress bar
-- [ ] Focus ring
+- [x] Button: primary, secondary, ghost, danger; sizes; with icon
+- [x] Icon button (44 px target)
+- [x] Segmented pill (mode switcher, small option switches)
+- [x] Toggle switch
+- [x] Checkbox
+- [x] Slider (plain) and stage slider (with the preview bubble)
+- [x] Number field with steppers and a unit
+- [x] Text input, text area, search field
+- [x] Select / dropdown
+- [x] Label and helper text, error text
+- [x] Tooltip (with shortcut)
+- [x] Shortcut key (kbd)
+- [x] Badge / count
+- [x] Divider
+- [x] Skein (a thread colour as a skein, not a flat swatch)
+- [x] Spinner and progress bar
+- [x] Focus ring
 
 ## 5. Components
 Panel pieces
-- [ ] Section: heading, collapse, optional action
-- [ ] Field row: label, control, value, "Mixed" state
-- [ ] Stitch row: preview, name, submenu arrow
-- [ ] Stitch library: grouped list (Counted, Fill, Freeform), submenu for variants
-- [ ] Colour picker: sources as tabs (In this piece, Floss library, My palettes, From image), search, recent
-- [ ] Skein list (In this piece): count, skeins needed, click to select by colour
-- [ ] Layer row: show/hide, lock, drag to reorder
-- [ ] Image object controls: drop zone, Pattern and Stitched toggles, conversion settings
-- [ ] Text object controls: text, style, font, size, spacing, baseline
-- [ ] Context header: what the panel is acting on (tool, selection, object)
+- [x] Section: heading, collapse, optional action
+- [x] Field row: label, control, value, "Mixed" state
+- [x] Stitch row: preview, name, submenu arrow
+- [x] Stitch library: grouped list (Counted, Fill, Freeform), submenu for variants
+- [x] Colour picker: sources as tabs (In this piece, Floss library, My palettes, From image), search, recent
+- [x] Skein list (In this piece): count, skeins needed, click to select by colour
+- [x] Layer row: show/hide, lock, drag to reorder
+- [x] Image object controls: drop zone, Pattern and Stitched toggles, conversion settings
+- [x] Text object controls: text, style, font, size, spacing, baseline
+- [x] Context header: what the panel is acting on (tool, selection, object)
 
 Floating
-- [ ] Tool bar with tool options on hold or right-click
-- [ ] Zoom cluster
-- [ ] Selection bar
-- [ ] Popover and menu
+- [x] Tool bar with tool options on hold or right-click
+- [x] Zoom cluster
+- [x] Selection bar
+- [x] Popover and menu
 
 Page level
-- [ ] Header and summary line
-- [ ] Sheet / modal (piece settings, shortcuts)
-- [ ] Toast
-- [ ] Save state indicator
-- [ ] Empty state, loading state, error banner
+- [x] Header and summary line
+- [x] Sheet / modal (piece settings, shortcuts)
+- [x] Toast
+- [x] Save state indicator
+- [x] Empty state, loading state, error banner
 
 ## 6. Panel
 - [ ] Stitch tab with nothing selected (tool settings)

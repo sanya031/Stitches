@@ -67,6 +67,8 @@
   /* Danger: errors and the last step of a delete */
   --danger: var(--crimson-600);
   --danger-fill: var(--crimson-500);
+  --danger-hover: var(--crimson-600);
+  --danger-pressed: var(--crimson-700);
   --on-danger: var(--neutral-50);
   --danger-subtle: var(--crimson-100);
   /* Shadows: only for things that float over the canvas (bars, popovers, sheets); the panel stays flat */
@@ -109,6 +111,8 @@
   /* Danger: errors and the last step of a delete */
   --danger: var(--crimson-400);
   --danger-fill: var(--crimson-400);
+  --danger-hover: var(--crimson-300);
+  --danger-pressed: var(--crimson-200);
   --on-danger: var(--neutral-950);
   --danger-subtle: var(--crimson-900);
   /* Shadows: deeper in dark; the raised surface and its border do most of the separating */
@@ -150,6 +154,8 @@
     /* Danger: errors and the last step of a delete */
     --danger: var(--crimson-400);
     --danger-fill: var(--crimson-400);
+    --danger-hover: var(--crimson-300);
+    --danger-pressed: var(--crimson-200);
     --on-danger: var(--neutral-950);
     --danger-subtle: var(--crimson-900);
     /* Shadows: deeper in dark; the raised surface and its border do most of the separating */

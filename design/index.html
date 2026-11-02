@@ -84,6 +84,8 @@
     @media (max-width: 720px) { .controls-demo { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { .ss-bubble, .ss-on .ss-bubble { transition: opacity .12s; transform: translateX(-50%); } }
     @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+    .tab-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; color: var(--ink); text-decoration: none; }
+    .tab-link.is-current { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
     /* colour: tonal palettes from tokens.css, grouped by job */
     .palette-group { margin: 0 0 28px; }
     .palette-group h3 { margin: 0 0 4px; font-size: 15px; }
@@ -184,6 +186,9 @@
 </head>
 <body>
   <div class="wrap">
+    <nav class="pill" aria-label="Design system" style="width:max-content;max-width:100%;margin-bottom:16px">
+      <a class="tab-link is-current" href="./" aria-current="page">Foundations and icons</a><a class="tab-link" href="controls.html">Controls</a>
+    </nav>
     <header>
       <h1>Selvedge icons</h1>
       <p>The icons for the stitch playground: line icons for the interface, and stitch and fill icons as thread and as clean primitives. Line icons share one 24 px grid, one 1.75 stroke and one size, and move on hover. Click an icon to copy its SVG.</p>
@@ -521,7 +526,7 @@
       ['Lines', [['border-subtle', 'Dividers, panel edge', 'surface-panel', 0], ['border', 'Field and popover edges', 'surface-panel', 0], ['border-strong', 'Outline buttons', 'surface-panel', 3]]],
       ['Controls', [['control-track', 'Slider track'], ['control-fill', 'Slider fill and thumb', 'control-track', 3], ['focus', 'Keyboard focus ring', 'surface-panel', 3]]],
       ['Accent · primary button and named exceptions', [['accent', 'Primary button', 'surface-panel', 3], ['accent-hover', 'Primary, hover'], ['accent-pressed', 'Primary, pressed'], ['on-accent', 'Text on the accent', 'accent', 4.5], ['accent-text', 'Links', 'surface-panel', 4.5]]],
-      ['Danger · errors', [['danger', 'Error icon and text', 'surface-panel', 4.5], ['danger-fill', 'Delete confirmation'], ['on-danger', 'Text on danger', 'danger-fill', 4.5], ['danger-subtle', 'Error background']]]
+      ['Danger · errors', [['danger', 'Error icon and text', 'surface-panel', 4.5], ['danger-fill', 'Delete confirmation'], ['danger-hover', 'Delete, hover'], ['danger-pressed', 'Delete, pressed'], ['on-danger', 'Text on danger', 'danger-fill', 4.5], ['danger-subtle', 'Error background']]]
     ];
     const ROLES = ROLE_GROUPS.flatMap(([, rows]) => rows);
     const NUM = Object.fromEntries(ROLES.map(([r], i) => [r, i + 1]));

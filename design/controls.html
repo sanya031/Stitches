@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selvedge controls</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="controls.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; background: var(--surface-bench); color: var(--text); font: var(--type-body); }
+    a { color: inherit; }
+    .ct-top { position: sticky; top: 0; z-index: var(--z-popover); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-16); padding: var(--space-8) var(--space-24); background: var(--surface-panel); border-bottom: var(--border-width) solid var(--border-subtle); }
+    .ct-top strong { color: var(--text-strong); font: var(--type-heading); }
+    .ct-tabs a { text-decoration: none; }
+    .ct-theme { margin-left: auto; }
+    .ct-page { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--space-24); max-width: 1320px; margin: 0 auto; padding: var(--space-24); }
+    .ct-index { position: sticky; top: 76px; align-self: start; display: grid; gap: var(--space-2); max-height: calc(100vh - 92px); overflow: auto; }
+    .ct-index a { display: flex; align-items: center; min-height: var(--control-sm); padding: 0 var(--space-8); border-radius: var(--radius-sm); color: var(--text-muted); font: var(--type-label); text-decoration: none; }
+    .ct-index a:hover { color: var(--text-strong); }
+    .ct-index span { padding: var(--space-12) var(--space-8) var(--space-4); color: var(--text-muted); font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+    .ct-main { display: grid; gap: var(--space-16); min-width: 0; }
+    .ct-intro { max-width: 72ch; }
+    .ct-intro h1 { margin: 0 0 var(--space-8); color: var(--text-strong); font: var(--type-title); }
+    .ct-intro p { margin: 0 0 var(--space-8); }
+    .ct-sec { min-width: 0; padding: var(--space-20); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-panel); }
+    .ct-sec > h2 { margin: 0; color: var(--text-strong); font: var(--type-heading); }
+    .ct-sec > p { max-width: 72ch; margin: var(--space-4) 0 var(--space-16); color: var(--text-muted); font: var(--type-label); }
+    .ct-row-label { margin: var(--space-16) 0 var(--space-8); color: var(--text-muted); font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+    .ct-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--cell, 124px), 100%), 1fr)); gap: var(--space-16) var(--space-12); align-items: start; }
+    .ct-cell { display: grid; gap: var(--space-6); min-width: 0; }
+    .ct-spec { display: flex; align-items: center; min-height: var(--target-min); min-width: 0; padding: var(--space-6); }
+    .ct-spec > * { max-width: 100%; }
+    .ct-copy { display: inline-flex; align-items: center; justify-content: flex-start; gap: var(--space-4); min-height: var(--control-sm); padding: 0 var(--space-6); border-radius: var(--radius-sm); color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); text-align: left; cursor: copy; }
+    .ct-copy:hover { color: var(--text-strong); }
+    .ct-copy em { font-style: normal; opacity: 0; }
+    .ct-copy:hover em, .ct-copy:focus-visible em { opacity: 1; }
+    .ct-more { margin-top: var(--space-16); border-top: var(--border-width) solid var(--border-subtle); }
+    .ct-more summary { display: flex; align-items: center; min-height: var(--target-min); color: var(--text-strong); font: var(--type-label-strong); cursor: pointer; }
+    .ct-more-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-24); padding-bottom: var(--space-8); }
+    .ct-more h3 { margin: 0 0 var(--space-8); color: var(--text-muted); font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+    .ct-token { display: grid; grid-template-columns: var(--space-16) minmax(0, 1fr) auto; align-items: center; gap: var(--space-8); min-height: var(--space-24); font: var(--type-caption); }
+    .ct-token i { width: var(--space-16); height: var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-xs); }
+    .ct-token code { color: var(--text); font: inherit; overflow-wrap: anywhere; }
+    .ct-token span { color: var(--text-muted); text-align: right; font-variant-numeric: var(--numeric); }
+    .ct-others { margin: var(--space-12) 0 0; color: var(--text-muted); font: var(--type-caption); overflow-wrap: anywhere; }
+    .ct-css { max-height: 320px; margin: 0; padding: var(--space-12); overflow: auto; border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); font: var(--type-caption); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .ct-actions { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-top: var(--space-8); }
+    .ct-toast { position: fixed; left: 50%; bottom: var(--space-24); z-index: var(--z-toast); transform: translateX(-50%); opacity: 0; pointer-events: none; }
+    .ct-toast.show { opacity: 1; }
+    @media (max-width: 960px) { .ct-page { grid-template-columns: minmax(0, 1fr); padding: var(--space-16); } .ct-index { display: none; } .ct-more-body { grid-template-columns: minmax(0, 1fr); } .ct-top { padding: var(--space-8) var(--space-16); } }
+  </style>
+</head>
+<body>
+  <header class="ct-top">
+    <strong>Selvedge</strong>
+    <nav class="c-seg ct-tabs" aria-label="Design system">
+      <a class="c-seg__opt c-focus" href="./">Foundations and icons</a>
+      <a class="c-seg__opt c-focus is-selected" href="controls.html" aria-current="page">Controls</a>
+    </nav>
+    <div class="c-seg ct-theme" role="group" aria-label="Theme" id="theme">
+      <button class="c-reset c-seg__opt c-focus" data-theme-pick="light">Light</button>
+      <button class="c-reset c-seg__opt c-focus" data-theme-pick="dark">Dark</button>
+    </div>
+  </header>
+  <div class="ct-page">
+    <nav class="ct-index" id="index" aria-label="Controls"></nav>
+    <main class="ct-main" id="main">
+      <div class="ct-intro">
+        <h1>Controls</h1>
+        <p>Every control in every state, drawn only with the colour tokens. States are shown held still so you can compare them; hover, press and Tab also work for real.</p>
+        <p>Click a state's name to copy it as SVG, then paste into Figma: it comes in as editable shapes and text, in the theme shown. Under each control, More info lists its tokens and its CSS.</p>
+      </div>
+    </main>
+  </div>
+  <div class="c-toast ct-toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="controls.js"></script>
+</body>
+</html>
