@@ -47,6 +47,8 @@ const section = (cls, open = true, action = '') => `<button class="c-reset c-sec
 const drop = (cls, body) => `<div class="c-drop ${cls}">${body}</div>`;
 const play = (cls, name, v, val) => `<div class="c-play ${cls}">${iconbtn('secondary', '', name)}<span class="c-slider ${cls}" style="--v:${v}%;display:block;min-height:0"><span class="c-slider__track" style="display:block"><span class="c-slider__fill"></span><span class="c-slider__thumb"></span></span></span><span class="c-slider__value">${val}</span></div>`;
 
+const motionCell = (k, extra = '') => { const m = SEG_MOTIONS[k]; return [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}${extra}</div>`]; };
+
 // ─── the specs ───────────────────────────────────────────────────────────────
 // Each: id, css block(s) in controls.css, title, note, rows of [state, html]. cell = minimum cell width.
 const SPECS = [
@@ -64,12 +66,13 @@ const SPECS = [
     ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => tool(c))]
   ] },
   { group: 'Choices', id: 'segmented', title: 'Segmented pill', note: 'One choice from a few. The large size is the mode switch. The selected option uses the neutral lighter fill.', cell: 220, rows: [
-    ['Live', [['Click me', seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: 'slide' })]]],
+    ['Live', [['Click me', seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: 'squash' })]]],
     ['States', [['Rest', seg(['Cross', 'Half', 'Back'], 0)], ['Option hover', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-hover' } })], ['Option focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 1: 'is-focus' } })], ['Selected focus', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-focus' } })], ['Option disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 2: 'is-disabled' } })], ['All disabled', seg(['Cross', 'Half', 'Back'], 0, { optCls: { 0: 'is-disabled', 1: 'is-disabled', 2: 'is-disabled' } })], ['Mixed, none selected', seg(['Cross', 'Half', 'Back'], -1)]]],
     ['Forms', [['Large, mode switch', seg(['Stitch', 'Animate', 'Export'], 0, { cls: 'c-seg--lg' })], ['Icons', seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { icons: true })], ['Two options', seg(['Sampler', 'Script'], 1)]]]
   ] },
-  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion', note: 'Six ways for the selected fill to move. Click the options, use the arrow keys, or press Play in the panel. Open the DialKit panel from the button at the bottom right to tune each one by hand; it remembers your values.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
-    ['Variations', Object.entries(SEG_MOTIONS).map(([k, m]) => [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}</div>`])],
+  { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion', note: 'Squash is the pill\'s animation. Click the options, use the arrow keys, or press Play in the panel. Open the DialKit panel from the button at the bottom right to tune it by hand; it remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
+    ['The pill\'s animation', [motionCell('squash', `<button class="c-reset c-btn c-btn--secondary c-btn--sm c-focus" data-copy-motion="squash">Copy values</button>`)]],
+    ['Other variations, for reference', Object.keys(SEG_MOTIONS).filter((k) => k !== 'squash').map((k) => motionCell(k))],
   ] },
   { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],
@@ -372,6 +375,8 @@ main.addEventListener('click', (e) => {
   const state = e.target.closest('[data-copy-state]'), css = e.target.closest('[data-copy-css]'), all = e.target.closest('[data-copy-all]');
   if (state) { const cell = state.closest('.ct-cell'), spec = cell.querySelector('.ct-spec'); copy(toSvg(spec, cell.dataset.name), `Copied SVG: ${state.firstChild.nodeValue.trim()}, paste into Figma`); }
   if (css) copy(css.closest('.ct-more').querySelector('.ct-css').textContent, 'Copied CSS');
+  const values = e.target.closest('[data-copy-motion]');
+  if (values) { const { replay, ...v } = dialValues[values.dataset.copyMotion]; copy(JSON.stringify(v, null, 2), 'Copied the values'); }
   if (all) { const rows = all.closest('.ct-sec').querySelector('.ct-rows'); copy(toSvg(rows, slug(all.closest('.ct-sec').querySelector('h2').textContent)), 'Copied all states as SVG, paste into Figma'); }
 });
 window.selvedgeControls = { toSvg };

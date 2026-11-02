@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap');
 
-/* Selvedge tokens: colour, type, then space and shape (motion comes with the components).
+/* Selvedge tokens: colour, type, space and shape, then motion.
  *
  * 1. Palettes: tonal, one OKLCH lightness per step shared by every palette (step 500 = terracotta 500),
  *    so a step pair has about the same contrast in any hue. Primary: terracotta 500 is the brand colour.
@@ -187,7 +187,7 @@
   --type-eyebrow-tracking: 0.06em;
 }
 
-/* Space and shape. Motion is decided with the components. */
+/* Space and shape. */
 :root {
   /* Spacing: 4-based, plus 2 and 6 for tight spots; named by size in px */
   --space-2: 2px; --space-4: 4px; --space-6: 6px; --space-8: 8px; --space-12: 12px; --space-16: 16px;
@@ -230,4 +230,15 @@
   --z-sheet: 400;
   --z-tooltip: 500;
   --z-toast: 600;
+}
+
+/* Motion. Decided control by control, as the components are built.
+ * Pill motion: Squash. Any pill whose selected fill travels uses it (design/seg-motion.js): a spring slide
+ * that flattens and lengthens with its speed, then settles round again. */
+:root {
+  --motion-pill-duration: 0.38;   /* spring, visual duration in seconds */
+  --motion-pill-bounce: 0.2;      /* spring bounce, 0 to 1 */
+  --motion-pill-squash: 0.35;     /* how much it flattens at full speed */
+  --motion-pill-stretch: 0.12;    /* how much it lengthens at full speed */
+  --motion-pill-label-fade: 120;  /* label colour fade, in ms */
 }

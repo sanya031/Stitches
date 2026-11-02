@@ -43,7 +43,7 @@ Space and shape
 - [x] Border widths
 - [x] Elevation: shadows for floating controls, popovers and sheets in both themes
 - [x] Sizes: 44 px targets, icon sizes, panel width
-- [ ] Motion: durations, easings and springs; reduced-motion rules (paused: decide with the components)
+- [ ] Motion: decided control by control with the components. Done so far: pill motion is Squash (`--motion-pill-*`)
 - [x] Layering order (z-index): canvas, floaters, panel, popovers, sheets, toasts
 
 Delivery

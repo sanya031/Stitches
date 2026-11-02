@@ -1,22 +1,24 @@
 // Segmented pill motion: the selected fill is one element (.c-seg__thumb) that travels between options,
 // driven from JS so every variation can be tuned live with DialKit. Interrupting keeps going from where it is.
 //
+//   squash   the pill's animation: slides while flattening and lengthening with its speed
 //   slide    both edges follow one spring
 //   stretch  the leading edge goes first and the trailing edge catches up, so the pill stretches and contracts
-//   squash   slides while flattening and lengthening with its speed
 //   liquid   the old pill flows into the new one: two blobs pulled together by a goo filter
 //   grow     no travel: the old pill shrinks and fades as the new one grows in place
 //   bead     shrinks to a bead, travels, opens out again
 import { stepper } from './zoom-motion.js';
 
+// Squash starts from the pill motion saved in tokens.css
+const token = (name, fallback) => { const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(`--motion-pill-${name}`)); return Number.isNaN(v) ? fallback : v; };
 const spring = (visualDuration, bounce) => ({ type: 'spring', visualDuration, bounce });
 const label = [120, 0, 400, 10];
 const replay = { type: 'action', label: 'Play' };
 
 export const SEG_MOTIONS = {
+  squash: { title: 'Squash', about: 'The pill\'s animation: it flattens and lengthens with its speed, then settles round again.', dials: { curve: spring(token('duration', 0.38), token('bounce', 0.2)), squash: [token('squash', 0.35), 0, 0.8, 0.01], stretch: [token('stretch', 0.12), 0, 0.5, 0.01], labelFade: [token('label-fade', 120), 0, 400, 10], replay } },
   slide: { title: 'Slide', about: 'The eased spring: the whole pill travels to the next option as one piece.', dials: { curve: spring(0.32, 0.12), labelFade: label, replay } },
   stretch: { title: 'Stretch', about: 'Morphs through a long pill: the front edge leaves first, the back edge catches up.', dials: { front: spring(0.22, 0.08), back: spring(0.42, 0.04), backDelay: [0, 0, 200, 5], labelFade: label, replay } },
-  squash: { title: 'Squash', about: 'Flattens and lengthens with its speed, then settles round again.', dials: { curve: spring(0.38, 0.2), squash: [0.35, 0, 0.8, 0.01], stretch: [0.12, 0, 0.5, 0.01], labelFade: label, replay } },
   liquid: { title: 'Liquid', about: 'Morphs into the next pill: the old one flows over and merges with the new one, like two drops.', dials: { curve: spring(0.55, 0.06), reach: [0.75, 0, 1, 0.01], blur: [4, 0, 10, 0.5], sharpness: [14, 4, 30, 1], labelFade: label, replay } },
   grow: { title: 'Grow', about: 'No travel: the old pill shrinks away as the new one grows in place.', dials: { curve: spring(0.3, 0.1), startSize: [0.6, 0.1, 1, 0.01], fade: [1, 0, 1, 0.01], labelFade: label, replay } },
   bead: { title: 'Bead', about: 'Morphs through a small bead: it shrinks, travels across and opens out again.', dials: { curve: spring(0.5, 0.06), beadSize: [10, 4, 28, 1], labelFade: label, replay } }
