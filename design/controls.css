@@ -324,11 +324,11 @@
 /* floating: placed by tooltip.js, animated in and out */
 .c-tooltip--float[hidden] { display: none; }
 .c-tooltip--float { position: fixed; left: 0; top: 0; z-index: var(--z-tooltip); pointer-events: none; }
-.c-tooltip--float[data-state] { animation: var(--motion-tooltip-duration) ease-out both c-tooltip-in; transform-origin: var(--origin, 50% 100%); }
-.c-tooltip--float[data-state="closed"] { animation-name: c-tooltip-out; animation-timing-function: ease-in; }
-@keyframes c-tooltip-in { from { opacity: 0; scale: var(--motion-tooltip-scale); translate: 0 var(--motion-tooltip-rise); } }
-@keyframes c-tooltip-out { to { opacity: 0; scale: var(--motion-tooltip-scale); } }
-@media (prefers-reduced-motion: reduce) { .c-tooltip--float[data-state] { animation-name: c-tooltip-fade; } .c-tooltip--float[data-state="closed"] { animation-direction: reverse; } @keyframes c-tooltip-fade { from { opacity: 0; } } }
+.c-tooltip--float[data-state] { animation: var(--motion-tooltip-duration) ease-out both c-tooltip-fade; }
+.c-tooltip--float[data-state="closed"] { animation-name: c-tooltip-fade-out; }
+.c-tooltip--float[data-instant] { animation: none; }
+@keyframes c-tooltip-fade { from { opacity: 0; } }
+@keyframes c-tooltip-fade-out { to { opacity: 0; } }
 
 /* @control feedback */
 .c-kbd { display: inline-grid; place-items: center; min-width: var(--space-20); height: var(--space-20); padding: 0 var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-xs); background: var(--surface-field); color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }

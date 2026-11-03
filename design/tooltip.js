@@ -2,8 +2,8 @@
 // for a shortcut) shows it in the design system's tooltip (.c-tooltip) when hovered or keyboard-focused.
 // It opens at once, on top of its trigger by default (data-tip-side="bottom" to put it below), 4px away,
 // with an arrow pointing at the trigger. No room above: it flips below. Near the window's edge it shifts
-// along and the arrow stays on the trigger. Opening fades in, grows from 95% and rises 2px;
-// closing fades and shrinks back. Timing and distances come from the --motion-tooltip-* and --tooltip-offset tokens.
+// along and the arrow stays on the trigger. It only fades in and out (--motion-tooltip-duration), never moves;
+// moving straight from one control to the next switches it at once, with no fade.
 
 const EDGE = 8; // px kept clear of the window's edge
 
@@ -38,17 +38,19 @@ export function createTooltips(root = document) {
     tip.dataset.side = side;
     tip.style.transform = `translate(${x}px, ${y}px)`;
     tip.style.setProperty('--arrow-x', `${arrowX}px`);
-    tip.style.setProperty('--origin', `${arrowX}px ${side === 'top' ? '100%' : '0'}`);
   }
 
   function show(el) {
+    // already showing (or still fading out): switch in place, no animation
+    const instant = !tip.hidden;
     target = el;
     el.setAttribute('aria-describedby', tip.id);
     fill(el);
     tip.hidden = false;
     tip.removeAttribute('data-state');
+    tip.toggleAttribute('data-instant', instant);
     place(el);
-    void tip.offsetWidth; // restart the opening animation
+    void tip.offsetWidth; // restart the opening fade
     tip.dataset.state = 'open';
   }
 
@@ -56,6 +58,7 @@ export function createTooltips(root = document) {
     if (!target) return;
     target.removeAttribute('aria-describedby');
     target = null;
+    tip.removeAttribute('data-instant');
     tip.dataset.state = 'closed';
     // gone once the closing animation ends (or its time is up, if the page isn't drawing)
     clearTimeout(gone); gone = setTimeout(done, px('--motion-tooltip-duration') + 50);
