@@ -201,6 +201,9 @@ function body(name, n, stroke, holes, { strands = 2, density, scale = 1 } = {}) 
   return `<g transform="translate(${at} ${at}) scale(${f3(k)})">${out}</g>`;
 }
 
+/** Squares a side in the hover zoom's patch for an icon this size: about 10 px a square, 2–6 a side (2 at 24 px). */
+export const patchSquares = (size) => Math.max(2, Math.min(6, Math.round((size * 14) / 24 / 10.5)));
+
 /**
  * Full <svg> markup for one primitive. Fills draw at 0.7× the stroke.
  * frame: 'square' (the single square, default), 'patch' (the zoomed-out n × n patch, same square on the grid),

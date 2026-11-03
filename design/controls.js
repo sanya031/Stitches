@@ -1,7 +1,7 @@
 // The Controls tab: draws every control in every state, lists each one's tokens and CSS
 // (both read from controls.css, so they can't drift), and copies any state as SVG for Figma.
 import { svg } from './icons/icons.js';
-import { primitiveSvg } from './icons/primitives.js';
+import { primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
@@ -13,7 +13,7 @@ const spin = `<span class="c-ic c-spin">${svg('loading')}</span>`;
 let uid = 0;
 const prim = (name, size = 24) => primitiveSvg(name, { size, id: `ct-${uid++}`, frame: 'square', animate: false });
 // stitch tiles use the primitives' hover zoom from the design page
-const ZOOM_N = 3, zoomPrim = (name) => primitiveSvg(name, { size: 24, id: `cz-${uid++}`, frame: 'zoom', n: ZOOM_N, animate: false });
+const ZOOM_N = patchSquares(24), zoomPrim = (name) => primitiveSvg(name, { size: 24, id: `cz-${uid++}`, frame: 'zoom', n: ZOOM_N, animate: false });
 const STATE = { Rest: '', Hover: 'is-hover', Pressed: 'is-pressed', Focus: 'is-focus', Selected: 'is-selected', 'Selected, hover': 'is-selected is-hover', 'Selected, focus': 'is-selected is-focus', Disabled: 'is-disabled', Mixed: 'is-mixed', Loading: 'is-loading', Error: 'is-error', Editing: 'is-focus', Dragging: 'is-dragging', Open: 'is-open' };
 const states = (names, fn) => names.map((s) => [s, fn(STATE[s] ?? '', s)]);
 const dis = (cls) => (cls.includes('is-disabled') ? ' disabled aria-disabled="true"' : '');

@@ -2,14 +2,14 @@
 // classes as the Controls tab and the same tokens. The mode switch changes the tab (Stitch, Animate, Export);
 // "Showing" changes what the Stitch tab acts on. Every pill moves with the saved pill motion.
 import { svg } from './icons/icons.js';
-import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
+import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
 import { TUNING, motionFrom } from './icons/zoom-css.js';
 
 // stitch tiles use the primitives' hover zoom: hover one and it shrinks to its corner as a patch of cloth sweeps in
-const ZOOM_N = 3, zoom = createZoomMotion(() => motionFrom(TUNING));
+const ZOOM_N = patchSquares(24), zoom = createZoomMotion(() => motionFrom(TUNING));
 
 // ─── builders, the same markup as the Controls tab ───────────────────────────
 const ic = (n) => `<span class="c-ic">${svg(n)}</span>`;

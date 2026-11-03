@@ -340,7 +340,7 @@
   <script type="module">
     import { ICONS, GROUPS, svg, iconCss } from './icons/icons.js';
     import { THREAD_ICONS, threadSvg } from './icons/thread.js';
-    import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
+    import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
     import { createZoomMotion } from './zoom-motion.js';
     import { TUNING, motionFrom } from './icons/zoom-css.js';
     import { createDialKit, createDialRoot } from 'https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js';
@@ -375,7 +375,7 @@
     // the patch gets fewer squares as the icon gets smaller, so each square stays big enough to read
     // (primitives: about 10 px a square; thread: about 18 px, where the thread still shows)
     const clampN = (v) => Math.max(2, Math.min(6, Math.round(v)));
-    const nPrim = () => clampN((view.primSize * 14) / 24 / 10.5), nThread = () => clampN((view.threadSize * 36) / 48 / 18);
+    const nPrim = () => patchSquares(view.primSize), nThread = () => clampN((view.threadSize * 36) / 48 / 18);
 
     const pills = (id, values, current, attr) => {
       document.getElementById(id).innerHTML = values.map((v) => `<button ${attr}="${v}" aria-pressed="${v === current}">${v}</button>`).join('');
