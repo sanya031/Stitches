@@ -37,8 +37,10 @@ const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
-const STITCHES = Object.keys(PRIMITIVES).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
-const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${n}" title="${n}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
+// one tile per stitch type: quarter and three-quarter show one corner, the panel doesn't pick a direction
+const STITCHES = Object.keys(PRIMITIVES).filter((n) => !/-(tr|bl|br)$/.test(n)).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
+const stitchName = (n) => PRIMITIVES[n].label.replace(/, top left$/, '');
+const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${stitchName(n)}" title="${stitchName(n)}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
 const inPiece = section('In this piece', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
@@ -131,7 +133,7 @@ document.addEventListener('click', (e) => {
   const sec = t.closest('[data-section]');
   if (sec) { const s = sec.parentElement, open = s.dataset.open !== 'true'; s.dataset.open = open; sec.setAttribute('aria-expanded', open); sec.querySelector('.c-ic').outerHTML = ic(open ? 'chevron-down' : 'chevron-right'); return; }
   const tile = t.closest('[data-tiles] .c-tile');
-  if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); const hint = panel.querySelector('[data-family-hint]'); if (hint) hint.textContent = tile.getAttribute('aria-label').replace(/^(stitch|fill)-/, '').replace(/-/g, ' '); }
+  if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); const hint = panel.querySelector('[data-family-hint]'); if (hint) hint.textContent = tile.getAttribute('aria-label'); }
   const tool = t.closest('[data-tools] .c-tool');
   if (tool) tool.parentElement.querySelectorAll('.c-tool').forEach((x) => x.setAttribute('aria-pressed', x === tool));
   const swi = t.closest('[data-switch]');
