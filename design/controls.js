@@ -4,21 +4,16 @@ import { svg } from './icons/icons.js';
 import { primitiveSvg } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
+import { createZoomMotion } from './zoom-motion.js';
+import { TUNING, motionFrom } from './icons/zoom-css.js';
 
 // ─── small drawing helpers ───────────────────────────────────────────────────
-const line = (d, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${d}</svg>`;
-const LOCAL = {
-  lock: '<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>',
-  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
-  alert: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.5v0"/>',
-  grip: '<path d="M9 7v0M15 7v0M9 12v0M15 12v0M9 17v0M15 17v0"/>',
-  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
-  spinner: '<path d="M12 4a8 8 0 1 0 8 8"/>'
-};
-const ic = (name) => `<span class="c-ic">${LOCAL[name] ? line(LOCAL[name]) : svg(name)}</span>`;
-const spin = `<span class="c-ic c-spin">${line(LOCAL.spinner)}</span>`;
+const ic = (name) => `<span class="c-ic">${svg(name)}</span>`;
+const spin = `<span class="c-ic c-spin">${svg('loading')}</span>`;
 let uid = 0;
 const prim = (name, size = 24) => primitiveSvg(name, { size, id: `ct-${uid++}`, frame: 'square', animate: false });
+// stitch tiles use the primitives' hover zoom from the design page
+const ZOOM_N = 3, zoomPrim = (name) => primitiveSvg(name, { size: 24, id: `cz-${uid++}`, frame: 'zoom', n: ZOOM_N, animate: false });
 const STATE = { Rest: '', Hover: 'is-hover', Pressed: 'is-pressed', Focus: 'is-focus', Selected: 'is-selected', 'Selected, hover': 'is-selected is-hover', 'Selected, focus': 'is-selected is-focus', Disabled: 'is-disabled', Mixed: 'is-mixed', Loading: 'is-loading', Error: 'is-error', Editing: 'is-focus', Dragging: 'is-dragging', Open: 'is-open' };
 const states = (names, fn) => names.map((s) => [s, fn(STATE[s] ?? '', s)]);
 const dis = (cls) => (cls.includes('is-disabled') ? ' disabled aria-disabled="true"' : '');
@@ -40,7 +35,7 @@ const text = (cls, value, ph = 'Name this piece') => `<label class="c-field ${cl
 const area = (cls, value) => `<label class="c-field c-textarea ${cls}"><textarea aria-label="Text" placeholder="Type something to stitch"${dis(cls)}>${value}</textarea></label>`;
 const search = (cls, value) => `<label class="c-field c-search ${cls}">${ic('search')}<input value="${value}" placeholder="Search floss" aria-label="Search"${dis(cls)}>${value ? ic('close') : ''}</label>`;
 const select = (cls, label = 'Stranded cotton') => `<button class="c-reset c-select c-focus ${cls}"${dis(cls)}><span class="c-select__label">Type</span><span class="c-select__value">${label}</span>${ic('chevron-down')}</button>`;
-const tile = (cls, name = 'stitch-full') => `<button class="c-reset c-tile c-focus ${cls}" aria-label="${name}"${dis(cls)}>${prim(name)}</button>`;
+const tile = (cls, name = 'stitch-full') => `<button class="c-reset c-tile c-focus tz-host ${cls}" aria-label="${name}"${dis(cls)}>${zoomPrim(name)}</button>`;
 const row = (cls, name = 'Full cross', art = 'stitch-full') => `<button class="c-reset c-row c-focus ${cls}"${dis(cls)}><span class="c-row__art">${prim(art)}</span>${name}<span class="c-ic c-row__end">${svg('chevron-right')}</span></button>`;
 const layer = (cls, name = 'Calla lilies', eye = 'eye') => `<div class="c-layer ${cls}">${cls.includes('is-renaming') ? `<input value="${name}" aria-label="Layer name">` : `<span class="c-layer__name">${name}</span>`}${iconbtn('', 'c-iconbtn--sm', eye)}${iconbtn('', 'c-iconbtn--sm', 'lock')}</div>`;
 const section = (cls, open = true, action = '') => `<button class="c-reset c-section c-focus ${cls}" aria-expanded="${open}">${ic(open ? 'chevron-down' : 'chevron-right')}Appearance${action}</button>`;
@@ -129,7 +124,7 @@ const SPECS = [
   { group: 'Thread and stitches', id: 'preview-tile', title: 'Preview tile', note: 'Stitch grid, fill variants, fabrics. Sits on the field; only the selected tile has a fill.', rows: [
     ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => `<div class="c-tilewell">${tile(c)}</div>`)],
     ['Forms', [['Stitch', `<div class="c-tilewell">${tile('', 'stitch-half')}</div>`], ['Fill', `<div class="c-tilewell">${tile('', 'fill-weave-3')}</div>`]]],
-    ['Grid', [['Live', `<div class="c-tilegrid" data-live>${['stitch-full', 'stitch-half', 'stitch-back', 'stitch-knot', 'fill-columns', 'fill-rows', 'fill-weave-3', 'fill-seed'].map((n, i) => `<button class="c-reset c-tile c-focus" aria-label="${n}" aria-pressed="${i === 0}">${prim(n)}</button>`).join('')}</div>`]], 240]
+    ['Grid', [['Live', `<div class="c-tilegrid" data-live>${['stitch-full', 'stitch-half', 'stitch-back', 'stitch-knot', 'fill-columns', 'fill-rows', 'fill-weave-3', 'fill-seed'].map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${n}" aria-pressed="${i === 0}">${zoomPrim(n)}</button>`).join('')}</div>`]], 240]
   ] },
   { group: 'Thread and stitches', id: 'stitch-row', title: 'Stitch row and library', note: 'The current stitch in the panel, and the rows in the library, grouped, with a submenu for variants.', cell: 220, rows: [
     ['Row', states(['Rest', 'Hover', 'Pressed', 'Open', 'Selected', 'Focus', 'Disabled'], (c) => row(c))],
@@ -191,6 +186,9 @@ main.querySelectorAll('.c-ic svg').forEach((el) => {
   const b = el.getBBox(); if (!b.width && !b.height) return;
   el.setAttribute('viewBox', `${b.x + b.width / 2 - 12} ${b.y + b.height / 2 - 12} 24 24`);
 });
+
+const zoom = createZoomMotion(() => motionFrom(TUNING));
+main.querySelectorAll('.tz-host').forEach((h) => { Object.assign(h.querySelector('svg').dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
 
 // the slider's preview uses a real palette colour as its thread
 const rootStyle = () => getComputedStyle(document.documentElement);
@@ -309,7 +307,9 @@ function inlineSvg(el, ox, oy) {
   const vb = el.viewBox.baseVal, sx = vb && vb.width ? r.width / vb.width : 1, sy = vb && vb.height ? r.height / vb.height : 1;
   const clone = el.cloneNode(true), src = el.querySelectorAll('*'), dst = clone.querySelectorAll('*');
   src.forEach((node, i) => {
-    const d = dst[i], tag = node.tagName.toLowerCase(); d.removeAttribute('class'); d.removeAttribute('style');
+    const d = dst[i], tag = node.tagName.toLowerCase();
+    if (node.classList.contains('tz-many')) d.setAttribute('data-drop', '');
+    d.removeAttribute('class'); d.removeAttribute('style');
     if (!['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon'].includes(tag)) {
       // groups can carry currentColor too: write the resolved colour
       for (const attr of ['fill', 'stroke']) if (d.getAttribute(attr) === 'currentColor') { const c = paint(getComputedStyle(node)[attr]); d.setAttribute(attr, c ? c.hex : 'none'); }
@@ -321,7 +321,8 @@ function inlineSvg(el, ox, oy) {
     if (stroke) { d.setAttribute('stroke-width', parseFloat(cs.strokeWidth)); d.setAttribute('stroke-linecap', cs.strokeLinecap); d.setAttribute('stroke-linejoin', cs.strokeLinejoin); }
     if (cs.fillOpacity !== '1') d.setAttribute('fill-opacity', cs.fillOpacity);
   });
-  clone.querySelectorAll('style').forEach((s) => s.remove());
+  clone.querySelectorAll('style, [data-drop], mask').forEach((s) => s.remove());
+  clone.querySelectorAll('[mask]').forEach((s) => s.removeAttribute('mask'));
   const vx = vb && vb.width ? vb.x * sx : 0, vy = vb && vb.height ? vb.y * sy : 0;
   return `<g transform="translate(${round(r.left - ox - vx)} ${round(r.top - oy - vy)}) scale(${round(sx * 1000) / 1000} ${round(sy * 1000) / 1000})">${clone.innerHTML}</g>`;
 }

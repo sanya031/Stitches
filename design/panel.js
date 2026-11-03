@@ -5,13 +5,17 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
+import { createZoomMotion } from './zoom-motion.js';
+import { TUNING, motionFrom } from './icons/zoom-css.js';
+
+// stitch tiles use the primitives' hover zoom: hover one and it shrinks to its corner as a patch of cloth sweeps in
+const ZOOM_N = 3, zoom = createZoomMotion(() => motionFrom(TUNING));
 
 // ─── builders, the same markup as the Controls tab ───────────────────────────
-const line = (d) => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const LOCAL = { lock: '<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>', search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', more: '<path d="M6 12v0M12 12v0M18 12v0"/>' };
-const ic = (n) => `<span class="c-ic">${LOCAL[n] ? line(LOCAL[n]) : svg(n)}</span>`;
+const ic = (n) => `<span class="c-ic">${svg(n)}</span>`;
 let uid = 0;
 const prim = (n) => primitiveSvg(n, { size: 24, id: `pp-${uid++}`, frame: 'square', animate: false });
+const zoomPrim = (n) => primitiveSvg(n, { size: 24, id: `pz-${uid++}`, frame: 'zoom', n: ZOOM_N, animate: false });
 const iconbtn = (n, label, cls = '') => `<button class="c-reset c-iconbtn c-focus ${cls}" aria-label="${label}" title="${label}">${ic(n)}</button>`;
 const btn = (kind, label, icon = '', cls = '') => `<button class="c-reset c-btn c-btn--${kind} c-focus ${cls}">${icon ? ic(icon) : ''}${label}</button>`;
 const seg = (opts, sel = 0, { lg = false, icons = false, id = '' } = {}) => `<div class="c-seg ${lg ? 'c-seg--lg' : ''} ${icons ? 'c-seg--icons' : ''}" role="group" data-pill${id ? ` id="${id}"` : ''}>${opts.map((o, i) => {
@@ -33,7 +37,7 @@ const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
 const STITCHES = Object.keys(PRIMITIVES).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
-const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus" aria-label="${n}" title="${n}" aria-pressed="${i === sel}">${prim(n)}</button>`).join('')}</div>`;
+const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${n}" title="${n}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
 const inPiece = section('In this piece', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
@@ -75,6 +79,7 @@ function wire(root) {
   root.querySelectorAll('[data-pill]').forEach(motion);
   root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, style: 'thread', colour: threadColour() }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
+  root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
   // icons centred on their drawing, as on the Controls tab
   root.querySelectorAll('.c-ic svg').forEach((el) => { const b = el.getBBox(); if (b.width || b.height) el.setAttribute('viewBox', `${b.x + b.width / 2 - 12} ${b.y + b.height / 2 - 12} 24 24`); });
 }

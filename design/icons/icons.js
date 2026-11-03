@@ -87,6 +87,12 @@ export const ICONS = {
   'eye-off': { group: 'View', label: 'Hide', body: '<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c5.5 0 9 6.5 9 6.5a16 16 0 0 1-2.6 3.4M6.4 7.3A16 16 0 0 0 3 12s3.5 6.5 9 6.5a9 9 0 0 0 4.6-1.3"/><path d="M10 10.1a2.75 2.75 0 0 0 3.9 3.9"/><path d="M4 4l16 16"/>' },
   'chevron-down': { group: 'View', label: 'Expand', body: '<path d="M4 8l8 8 8-8"/>' },
   'chevron-right': { group: 'View', label: 'Open', body: '<path d="M8 4l8 8-8 8"/>' },
+  'lock': { group: 'View', label: 'Lock', body: '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>' },
+  'search': { group: 'Actions', label: 'Search', body: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.9-4.9"/>' },
+  'copy': { group: 'Actions', label: 'Copy', body: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h.5"/>' },
+  'alert': { group: 'View', label: 'Alert', body: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.5v0"/>' },
+  'more': { group: 'Actions', label: 'More', body: '<path d="M5.5 12v0M12 12v0M18.5 12v0"/>' },
+  'loading': { group: 'View', label: 'Loading', body: '<path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5"/>' },
   'sliders': { group: 'View', label: 'Settings', body: '<path d="M4 7h8.5M17.5 7H20M4 17h2.5M11.5 17H20"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/>' },
   'info': { group: 'View', label: 'Info', body: `<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="${DOT(12, 7.75)}"/>` },
 
