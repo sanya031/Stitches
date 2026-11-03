@@ -2,7 +2,7 @@
 // classes as the Controls tab and the same tokens. The mode switch changes the tab (Stitch, Animate, Export);
 // "Showing" changes what the Stitch tab acts on. Every pill moves with the saved pill motion.
 import { svg } from './icons/icons.js';
-import { primitiveSvg } from './icons/primitives.js';
+import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 
@@ -31,8 +31,9 @@ const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head">
 const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${mixed ? skein('--neutral-500') : skein(colour)}<span>${mixed ? 'Mixed' : name}</span>${mixed ? '' : `<span class="c-swatchrow__code">${code}</span>`}</span>${ic('chevron-down')}</button>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
-const STITCHES = { counted: ['stitch-full', 'stitch-half', 'stitch-quarter-tl', 'stitch-three-quarter-tl', 'stitch-back', 'stitch-knot'], fill: ['fill-rows', 'fill-columns', 'fill-weave-3', 'fill-weave-5', 'fill-blocks', 'fill-seed', 'fill-knots', 'fill-burst'] };
-const tiles = (family, sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES[family].map((n, i) => `<button class="c-reset c-tile c-focus" aria-label="${n}" title="${n}" aria-pressed="${i === sel}">${prim(n)}</button>`).join('')}</div>`;
+// every stitch and fill in one grid: stitches first, then fills
+const STITCHES = Object.keys(PRIMITIVES).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
+const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus" aria-label="${n}" title="${n}" aria-pressed="${i === sel}">${prim(n)}</button>`).join('')}</div>`;
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
 const inPiece = section('In this piece', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
@@ -42,9 +43,9 @@ const thread = (mixed = false) => section('Thread', `${stack(colourRow('--terrac
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
   tool: () => head('Tool', 'Stitch', 'Full cross · 2 strands · on 14 count Aida')
-    + `<div class="c-panel__body">${section('Stitch', `${seg([['counted', 'Counted'], ['fill', 'Fill'], ['freeform', 'Freeform']], 0, { id: 'family' })}<div data-family-tiles>${tiles('counted')}</div><span class="c-hint" data-family-hint>Full cross</span>`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${layers}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}<span class="c-hint" data-family-hint>Full cross</span>`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${layers}</div>`,
   selection: () => head('Selection', '142 stitches', '3 colours · 2 stitch types', `${iconbtn('tool-pan', 'Move')}${iconbtn('recolour', 'Recolour')}${iconbtn('rotate', 'Rotate')}${iconbtn('clear', 'Delete')}`)
-    + `<div class="c-panel__body">${section('Stitch', `${seg([['counted', 'Counted'], ['fill', 'Fill'], ['freeform', 'Freeform']], -1)}${tiles('counted', -1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece}</div>`,
   image: () => head('Image', 'Calla lilies photo', '2400 × 1800 px → 120 × 90 squares', `${iconbtn('picture', 'Replace image')}${iconbtn('clear', 'Remove image')}`)
     + `<div class="c-panel__body">${section('Turn into', `${stack(sw('Pattern', true))}${stack(sw('Stitched', true))}`)}${section('Colours', `${prop('Colours', num('Colours', 11, 'threads'))}${slider('Detail', 70)}${stack(sw('Dither'))}${stack(sw('Remove background', true))}${stack(sw('Outline', true))}`)}${section('Size on fabric', `<div class="c-prop__pair">${num('W', 120, 'sq')}${num('H', 90, 'sq')}</div>${seg(['Squares', 'cm', 'in'])}<span class="c-hint">21.8 × 16.3 cm at 14 count</span>`)}${layers}</div>`,
   text: () => head('Text', '“Hello”', 'Script · stem stitch · 2 strands')
@@ -123,8 +124,6 @@ document.addEventListener('click', (e) => {
   if (modeOpt) { mode = modeOpt.dataset.value; setTimeout(render, 0); return; }
   const sec = t.closest('[data-section]');
   if (sec) { const s = sec.parentElement, open = s.dataset.open !== 'true'; s.dataset.open = open; sec.setAttribute('aria-expanded', open); sec.querySelector('.c-ic').outerHTML = ic(open ? 'chevron-down' : 'chevron-right'); return; }
-  const fam = t.closest('#family .c-seg__opt');
-  if (fam) { const f = fam.dataset.value, host = panel.querySelector('[data-family-tiles]'); host.innerHTML = f === 'freeform' ? '<span class="c-hint">Freeform stitches follow a drawn path: they come later</span>' : tiles(f); panel.querySelector('[data-family-hint]').textContent = f === 'fill' ? 'Rows' : f === 'counted' ? 'Full cross' : ''; wire(host); }
   const tile = t.closest('[data-tiles] .c-tile');
   if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); const hint = panel.querySelector('[data-family-hint]'); if (hint) hint.textContent = tile.getAttribute('aria-label').replace(/^(stitch|fill)-/, '').replace(/-/g, ' '); }
   const tool = t.closest('[data-tools] .c-tool');
