@@ -4,6 +4,7 @@
 import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
+import { skein } from './skein.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
 import { TUNING, motionFrom } from './icons/zoom-css.js';
@@ -26,13 +27,13 @@ const sw = (label, on = false, mixed = false) => `<button class="c-reset c-switc
 const slider = (label, v, { unit = '%', mixed = false } = {}) => `<div class="c-slider ${mixed ? 'is-mixed' : ''}" style="--v:${v}%" data-slider data-unit="${unit}"><span>${label}</span><span class="c-slider__track"><span class="c-slider__fill"></span><span class="c-slider__thumb" tabindex="0" role="slider" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}"></span></span><span class="c-slider__value">${mixed ? 'Mixed' : `${v}${unit}`}</span></div>`;
 const num = (label, value, unit = '', { mixed = false, steps = true } = {}) => `<label class="c-field c-field--num ${mixed ? 'is-mixed' : ''}"><span class="c-field__label">${label}</span><input inputmode="numeric" value="${mixed ? '' : value}" placeholder="${mixed ? 'Mixed' : ''}" aria-label="${label}"><span class="c-field__unit">${unit}</span>${steps ? `<span class="c-field__steps">${ic('minus')}${ic('plus')}</span>` : ''}</label>`;
 const select = (label, value, options, { mixed = false } = {}) => `<button class="c-reset c-select c-focus ${mixed ? 'is-mixed' : ''}" data-select="${options.join('|')}"><span class="c-select__label">${label}</span><span class="c-select__value">${mixed ? 'Mixed' : value}</span>${ic('chevron-down')}</button>`;
-const skein = (colour, cls = '', extra = '') => `<span class="c-reset c-skein ${cls}" role="img" aria-label="Thread"><svg viewBox="0 0 32 20" aria-hidden="true" style="color:var(${colour})"><rect x="1" y="3" width="30" height="14" rx="6" fill="currentColor"/><rect class="c-skein__twist" x="12" y="2" width="8" height="16" rx="2"/></svg><span class="c-skein__bar"></span>${extra}</span>`;
-const skeinBtn = (colour, cls = '', count = '') => `<button class="c-reset c-skein c-focus ${cls}" aria-label="Thread" data-skein><svg viewBox="0 0 32 20" aria-hidden="true" style="color:var(${colour})"><rect x="1" y="3" width="30" height="14" rx="6" fill="currentColor"/><rect class="c-skein__twist" x="12" y="2" width="8" height="16" rx="2"/></svg><span class="c-skein__bar"></span>${count ? `<span class="c-badge c-skein__n">${count}</span>` : ''}</button>`;
+const skeinShow = (colour, cls = '') => skein(colour, { tag: 'span', cls });
+const skeinBtn = (colour, cls = '', count = '') => skein(colour, { cls, attrs: 'data-skein', extra: count ? `<span class="c-badge c-skein__n">${count}</span>` : '' });
 const prop = (label, control) => control; // the label lives inside the control now
 const stack = (control) => `<div class="c-prop c-prop--stack">${control}</div>`;
 const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${ic(open ? 'chevron-down' : 'chevron-right')}${title}</button>${action}</div>${body}</div>`;
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span><span class="c-panel__sub">${sub}</span>${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
-const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${mixed ? skein('--neutral-500') : skein(colour)}<span>${mixed ? 'Mixed' : name}</span>${mixed ? '' : `<span class="c-swatchrow__code">${code}</span>`}</span>${ic('chevron-down')}</button>`;
+const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${skeinShow(mixed ? '--neutral-500' : colour)}<span>${mixed ? 'Mixed' : name}</span>${mixed ? '' : `<span class="c-swatchrow__code">${code}</span>`}</span>${ic('chevron-down')}</button>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
