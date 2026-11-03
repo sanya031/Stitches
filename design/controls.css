@@ -84,6 +84,22 @@
 .c-motion-demo p { margin: 0; color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
 .c-motion-demo strong { color: var(--text-strong); font: var(--type-subheading); }
 
+/* @control segmented-styles */
+/* Looks for the segmented pill, mixed freely: corners (soft, square), surround (clean, outline) and the
+   moving fill (ring, underline, invert). All move with the saved pill motion. */
+.c-seg__mark { display: none; }
+.c-seg--soft { border-radius: var(--radius-md); }
+.c-seg--soft .c-seg__opt, .c-seg--soft .c-seg__thumb { border-radius: var(--radius-sm); }
+.c-seg--square { border-radius: var(--radius-xs); }
+.c-seg--square .c-seg__opt, .c-seg--square .c-seg__thumb { border-radius: calc(var(--radius-xs) - var(--space-2)); }
+.c-seg--clean { padding: 0; background: none; }
+.c-seg--outline { background: none; border: var(--border-width) solid var(--border); }
+.c-seg--ring .c-seg__thumb { background: none; border: var(--border-width) solid var(--text-strong); }
+.c-seg--underline .c-seg__thumb { background: none; border-radius: 0; }
+.c-seg--underline .c-seg__mark { display: block; position: absolute; left: var(--space-8); right: var(--space-8); bottom: 0; height: var(--space-2); border-radius: var(--radius-pill); background: var(--text-strong); }
+.c-seg--invert .c-seg__thumb { background: var(--text-strong); }
+.c-seg--invert .c-seg__opt[aria-pressed="true"], .c-seg--invert.c-seg--icons .c-seg__opt[aria-pressed="true"] { color: var(--surface-panel); }
+
 /* @control switch */
 .c-switch { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); color: var(--text); font: var(--type-label); cursor: pointer; }
 .c-switch__track { display: inline-flex; align-items: center; width: var(--space-40); height: var(--space-24); padding: var(--space-2); border-radius: var(--radius-pill); background: var(--control-track); }

@@ -65,6 +65,7 @@ export function createSegMotion(root, getValues) {
   root.classList.add('c-seg--motion');
   const layer = document.createElement('span'); layer.className = 'c-seg__layer'; layer.setAttribute('aria-hidden', 'true');
   const thumb = document.createElement('span'); thumb.className = 'c-seg__thumb';
+  const mark = document.createElement('span'); mark.className = 'c-seg__mark'; thumb.append(mark); // the bar, for the underline style
   layer.append(thumb); root.prepend(layer);
 
   let index = Math.max(0, opts.findIndex((o) => o.getAttribute('aria-pressed') === 'true')), raf = 0, last = 0, amount = 0;

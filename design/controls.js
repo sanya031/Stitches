@@ -49,6 +49,20 @@ const play = (cls, name, v, val) => `<div class="c-play ${cls}">${iconbtn('secon
 
 const motionCell = (k) => { const m = SEG_MOTIONS[k]; return [m.title, `<div class="c-motion-demo"><strong>${m.title}</strong><p>${m.about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: k })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: k, cls: 'c-seg--lg' })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: k, icons: true })}<button class="c-reset c-btn c-btn--secondary c-btn--sm c-focus" data-copy-motion="${k}">Copy values</button></div>`]; };
 
+const SEG_STYLES = [
+  ['Soft', 'Less rounded: square-ish corners on the container and the pill.', 'c-seg--soft'],
+  ['Square', 'Nearly square corners. The most structured.', 'c-seg--square'],
+  ['Clean', 'No container fill: only the pill moves between the names.', 'c-seg--clean'],
+  ['Clean, soft', 'No container fill, with less rounded corners.', 'c-seg--clean c-seg--soft'],
+  ['Outline', 'A thin outline instead of a container fill; the pill moves inside it.', 'c-seg--outline'],
+  ['Ring', 'No fills at all: a thin ring moves to the chosen name.', 'c-seg--clean c-seg--ring'],
+  ['Ring, soft', 'A less rounded ring, no fills.', 'c-seg--clean c-seg--ring c-seg--soft'],
+  ['Underline', 'No fills: a short bar slides under the chosen name.', 'c-seg--clean c-seg--underline'],
+  ['Invert', 'The pill takes the text colour and the chosen name flips light. The strongest.', 'c-seg--invert'],
+  ['Invert, clean, soft', 'No container fill, a less rounded pill in the text colour.', 'c-seg--clean c-seg--invert c-seg--soft']
+];
+const styleCell = ([title, about, cls]) => [title, `<div class="c-motion-demo"><strong>${title}</strong><p>${about}</p>${seg(['Cross', 'Half', 'Back'], 0, { live: true, motion: 'squash', cls })}${seg(['Stitch', 'Animate', 'Export'], 0, { live: true, motion: 'squash', cls: `${cls} c-seg--lg` })}${seg(['tool-stitch', 'tool-fill', 'tool-pattern'], 0, { live: true, motion: 'squash', icons: true, cls })}<code class="c-hint">${cls}</code></div>`];
+
 // ─── the specs ───────────────────────────────────────────────────────────────
 // Each: id, css block(s) in controls.css, title, note, rows of [state, html]. cell = minimum cell width.
 const SPECS = [
@@ -72,6 +86,9 @@ const SPECS = [
   ] },
   { group: 'Choices', id: 'segmented-motion', title: 'Segmented pill motion: Squash', note: 'The pill\'s animation. Click the options, use the arrow keys, or press Play in the panel. Its dials are in the DialKit panel, from the button at the bottom right, and it remembers your values in this browser.', blocks: ['segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
     ['Saved now', [motionCell('squash')]],
+  ] },
+  { group: 'Choices', id: 'segmented-styles', title: 'Segmented pill styles', note: 'Ten looks for the same control, mixing rounded and less rounded, with and without a container. All move with the saved pill motion. The classes under each one combine, so any mix is possible.', blocks: ['segmented-styles', 'segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
+    ['Styles', SEG_STYLES.map(styleCell)]
   ] },
   { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],
