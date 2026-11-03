@@ -215,11 +215,12 @@
   --target-min: 44px;
   --control-sm: 32px;  /* dense grids, pills in a row */
   --control-md: 36px;  /* fields, buttons in the panel */
+  --row-height: var(--control-md);  /* every panel row: fields, sliders, pills, selects */
   --control-lg: 44px;  /* primary actions, floating bars */
   --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
   --panel-width: 300px;
   --toolbar-width: 52px;
-  --stitch-tile: 44px;
+  --stitch-tile: var(--control-sm);  /* 32 px tile + 4 px gap = one row height, so the grid keeps the panel's rhythm */
 
   /* Layering, from the canvas up */
   --z-canvas: 0;
