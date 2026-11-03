@@ -281,9 +281,10 @@
 
 /* @control section */
 .c-section { display: flex; align-items: center; gap: var(--inline-gap); width: 100%; min-height: var(--target-min); border-radius: var(--radius-sm); color: var(--text-strong); font: var(--type-subheading); text-align: left; cursor: pointer; }
-.c-section .c-ic { width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
+.c-section .c-ic { width: var(--icon-sm); height: var(--icon-sm); margin-left: auto; color: var(--icon); } /* the chevron sits at the far right */
 .c-section:hover .c-ic, .c-section.is-hover .c-ic { color: var(--icon-active); }
 .c-section__action { margin-left: auto; }
+.c-section__action ~ .c-ic { margin-left: 0; } /* with an action, it pushes both right; the chevron stays last */
 .c-rule { height: var(--border-width); background: var(--border-subtle); }
 
 /* @control drop-zone */
@@ -361,7 +362,7 @@
 .c-panel .c-seg { display: flex; }
 .c-panel .c-seg__opt { flex: 1; min-height: calc(var(--row-height) - var(--space-2) * 2); }
 .c-panel .c-seg--clean .c-seg__opt { min-height: var(--row-height); }
-.c-panel__section { display: grid; gap: var(--row-gap); padding-bottom: var(--space-16); border-bottom: var(--border-width) solid var(--border); }
+.c-panel__section { display: grid; gap: var(--row-gap); margin: 0 calc(var(--panel-padding) * -1); padding: 0 var(--panel-padding) var(--space-16); border-bottom: var(--border-width) solid var(--border); } /* dividers run the panel's full width */
 .c-panel__section:last-child { border-bottom: 0; }
 .c-panel__section[data-open="false"] > :not(.c-panel__sechead) { display: none; }
 .c-panel__sechead { display: flex; align-items: center; gap: var(--space-4); }

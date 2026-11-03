@@ -40,7 +40,7 @@ const select = (cls, label = 'Stranded cotton') => `<button class="c-reset c-sel
 const tile = (cls, name = 'stitch-full') => `<button class="c-reset c-tile c-focus tz-host ${cls}" aria-label="${name}"${dis(cls)}>${zoomPrim(name)}</button>`;
 const row = (cls, name = 'Full cross', art = 'stitch-full') => `<button class="c-reset c-row c-focus ${cls}"${dis(cls)}><span class="c-row__art">${prim(art)}</span>${name}<span class="c-ic c-row__end">${svg('chevron-right')}</span></button>`;
 const layer = (cls, name = 'Calla lilies', eye = 'eye') => `<div class="c-layer ${cls}">${cls.includes('is-renaming') ? `<input value="${name}" aria-label="Layer name">` : `<span class="c-layer__name">${name}</span>`}${iconbtn('', 'c-iconbtn--sm', eye)}${iconbtn('', 'c-iconbtn--sm', 'lock')}</div>`;
-const section = (cls, open = true, action = '') => `<button class="c-reset c-section c-focus ${cls}" aria-expanded="${open}">${ic(open ? 'chevron-down' : 'chevron-right')}Appearance${action}</button>`;
+const section = (cls, open = true, action = '') => `<button class="c-reset c-section c-focus ${cls}" aria-expanded="${open}">Appearance${action}${ic(open ? 'chevron-down' : 'chevron-right')}</button>`;
 const drop = (cls, body) => `<div class="c-drop ${cls}">${body}</div>`;
 const play = (cls, name, v, val) => `<div class="c-play ${cls}">${iconbtn('secondary', '', name)}<span class="c-slider ${cls}" style="--v:${v}%;display:block;min-height:0"><span class="c-slider__track" style="display:block"><span class="c-slider__fill"></span><span class="c-slider__thumb"></span></span></span><span class="c-slider__value">${val}</span></div>`;
 

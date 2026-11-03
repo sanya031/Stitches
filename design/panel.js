@@ -32,8 +32,8 @@ const skeinShow = (colour, cls = '') => skein(colour, { tag: 'span', cls });
 const skeinBtn = (colour, cls = '', count = '') => skein(colour, { cls, attrs: 'data-skein', extra: count ? `<span class="c-badge c-skein__n">${count}</span>` : '' });
 const prop = (label, control) => control; // the label lives inside the control now
 const stack = (control) => `<div class="c-prop c-prop--stack">${control}</div>`;
-const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${ic(open ? 'chevron-down' : 'chevron-right')}${title}</button>${action}</div>${body}</div>`;
-const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span><span class="c-panel__sub">${sub}</span>${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
+const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${title}${ic(open ? 'chevron-down' : 'chevron-right')}</button>${action}</div>${body}</div>`;
+const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
 const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${skeinShow(mixed ? '--neutral-500' : colour)}<span>${mixed ? 'Mixed' : name}</span>${mixed ? '' : `<span class="c-swatchrow__code">${code}</span>`}</span>${ic('chevron-down')}</button>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
@@ -46,11 +46,11 @@ const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 1
 const inPiece = section('In this piece', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
 const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitches', 'is-selected')}${layerRow('Calla lilies photo', 'is-hidden', 'eye-off')}</div>`, { action: iconbtn('plus', 'Add layer', 'c-iconbtn--sm') });
-const thread = (mixed = false) => section('Thread', `${stack(colourRow('--terracotta-500', 'Brick', 'DMC 3830', mixed))}${prop('Type', select('Type', 'Stranded cotton', ['Stranded cotton', 'Perle cotton', 'Silk', 'Metallic', 'Wool'], { mixed }))}${stage('strands')}`);
+const thread = (mixed = false) => section('Thread', `${stack(colourRow('--terracotta-500', 'Brick', 'DMC 3830', mixed))}${stage('strands')}`);
 
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
-  tool: () => head('Tool', 'Stitch', 'Full cross · 2 strands · on 14 count Aida')
+  tool: () => head('Tool', 'Stitch', '')
     + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${layers}</div>`,
   selection: () => head('Selection', '142 stitches', '3 colours · 2 stitch types', `${iconbtn('tool-pan', 'Move')}${iconbtn('recolour', 'Recolour')}${iconbtn('rotate', 'Rotate')}${iconbtn('clear', 'Delete')}`)
     + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece}</div>`,
