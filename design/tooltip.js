@@ -2,7 +2,7 @@
 // for a shortcut) shows it in the design system's tooltip (.c-tooltip) when hovered or keyboard-focused.
 // It opens at once, on top of its trigger by default (data-tip-side="bottom" to put it below), 4px away,
 // with an arrow pointing at the trigger. No room above: it flips below. Near the window's edge it shifts
-// along and the arrow stays on the trigger. Opening fades in, grows from 95% and slides 8px from the trigger;
+// along and the arrow stays on the trigger. Opening fades in, grows from 95% and rises 2px;
 // closing fades and shrinks back. Timing and distances come from the --motion-tooltip-* and --tooltip-offset tokens.
 
 const EDGE = 8; // px kept clear of the window's edge
@@ -39,7 +39,6 @@ export function createTooltips(root = document) {
     tip.style.transform = `translate(${x}px, ${y}px)`;
     tip.style.setProperty('--arrow-x', `${arrowX}px`);
     tip.style.setProperty('--origin', `${arrowX}px ${side === 'top' ? '100%' : '0'}`);
-    tip.style.setProperty('--slide', `${side === 'top' ? '' : '-'}${px('--motion-tooltip-slide')}px`);
   }
 
   function show(el) {

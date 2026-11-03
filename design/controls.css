@@ -326,7 +326,7 @@
 .c-tooltip--float { position: fixed; left: 0; top: 0; z-index: var(--z-tooltip); pointer-events: none; }
 .c-tooltip--float[data-state] { animation: var(--motion-tooltip-duration) ease-out both c-tooltip-in; transform-origin: var(--origin, 50% 100%); }
 .c-tooltip--float[data-state="closed"] { animation-name: c-tooltip-out; animation-timing-function: ease-in; }
-@keyframes c-tooltip-in { from { opacity: 0; scale: var(--motion-tooltip-scale); translate: 0 var(--slide, var(--motion-tooltip-slide)); } }
+@keyframes c-tooltip-in { from { opacity: 0; scale: var(--motion-tooltip-scale); translate: 0 var(--motion-tooltip-rise); } }
 @keyframes c-tooltip-out { to { opacity: 0; scale: var(--motion-tooltip-scale); } }
 @media (prefers-reduced-motion: reduce) { .c-tooltip--float[data-state] { animation-name: c-tooltip-fade; } .c-tooltip--float[data-state="closed"] { animation-direction: reverse; } @keyframes c-tooltip-fade { from { opacity: 0; } } }
 
