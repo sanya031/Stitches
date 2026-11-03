@@ -4,6 +4,7 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { skein } from './skein.js';
+import { colourFieldHtml, createColourField } from './colour-field.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
@@ -21,6 +22,7 @@ const states = (names, fn) => names.map((s) => [s, fn(STATE[s] ?? '', s)]);
 const dis = (cls) => (cls.includes('is-disabled') ? ' disabled aria-disabled="true"' : '');
 // thread colours are content, drawn from the palettes
 const skeinOf = (colour, cls = '', extra = '') => skein(colour, { cls, extra });
+const TABS = ['Canvas', 'Custom', 'Saved', 'From image'];
 const SKEINS = ['--terracotta-500', '--ochre-300', '--leaf-500', '--periwinkle-400', '--lilac-400', '--crimson-500', '--neutral-950', '--neutral-50', '--terracotta-300', '--periwinkle-700'];
 
 const btn = (kind, cls, label, inner = '') => `<button class="c-reset c-btn c-btn--${kind} c-focus ${cls}"${dis(cls)}>${inner}${label}</button>`;
@@ -35,7 +37,7 @@ const slider = (cls, { v = 60, label = 'Density', val = `${v}%`, live = false } 
 const num = (cls, { label = 'W', value = '120', unit = 'sq', ph = '', steps = true } = {}) => `<label class="c-field c-field--num ${cls}"><span class="c-field__label">${label}</span><input inputmode="numeric" value="${value}" placeholder="${ph}" aria-label="${label}"${dis(cls)}><span class="c-field__unit">${unit}</span>${steps ? `<span class="c-field__steps">${ic('minus')}${ic('plus')}</span>` : ''}</label>`;
 const text = (cls, value, ph = 'Name this piece') => `<label class="c-field ${cls}"><input value="${value}" placeholder="${ph}" aria-label="Text"${dis(cls)}></label>`;
 const area = (cls, value) => `<label class="c-field c-textarea ${cls}"><textarea aria-label="Text" placeholder="Type something to stitch"${dis(cls)}>${value}</textarea></label>`;
-const search = (cls, value) => `<label class="c-field c-search ${cls}">${ic('search')}<input value="${value}" placeholder="Search floss" aria-label="Search"${dis(cls)}>${value ? ic('close') : ''}</label>`;
+const search = (cls, value) => `<label class="c-field c-search ${cls}">${ic('search')}<input value="${value}" placeholder="Hex or thread number" aria-label="Search"${dis(cls)}>${value ? ic('close') : ''}</label>`;
 const select = (cls, label = 'Stranded cotton') => `<button class="c-reset c-select c-focus ${cls}"${dis(cls)}><span class="c-select__label">Type</span><span class="c-select__value">${label}</span>${ic('chevron-down')}</button>`;
 const tile = (cls, name = 'stitch-full') => `<button class="c-reset c-tile c-focus tz-host ${cls}" aria-label="${name}"${dis(cls)}>${zoomPrim(name)}</button>`;
 const row = (cls, name = 'Full cross', art = 'stitch-full') => `<button class="c-reset c-row c-focus ${cls}"${dis(cls)}><span class="c-row__art">${prim(art)}</span>${name}<span class="c-ic c-row__end">${svg('chevron-right')}</span></button>`;
@@ -133,8 +135,8 @@ const SPECS = [
     ['With detail', [['Canvas stitches', `<div style="width:260px">${row('', 'Full cross', 'stitch-full').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Thickness 2 · 6,120</span>')}${row('is-selected', 'Weave 3×3', 'fill-weave-3').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Density 60% · 540</span>')}</div>`]]],
     ['Library', [['Grouped list', `<div class="c-menu" style="width:260px"><div class="c-group-label">Counted</div>${row('is-selected')}${row('', 'Half cross', 'stitch-half')}${row('is-hover', 'Backstitch', 'stitch-back')}<div class="c-group-label">Fill</div>${row('', 'Columns', 'fill-columns')}${row('', 'Weave', 'fill-weave-3')}</div>`]]]
   ] },
-  { group: 'Thread and stitches', id: 'colour-picker', title: 'Colour picker', note: 'A popover: sources as a pill, search, a grid of skeins. The empty and from-image forms are below.', blocks: ['colour-picker', 'skein', 'shared'], cell: 320, rows: [
-    ['Forms', [['In this piece', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(['This piece', 'Floss', 'Mine', 'Image'], 1)}${search('', '')}<div class="c-skeingrid">${SKEINS.map((s, i) => skeinOf(s, i === 2 ? 'is-selected' : '')).join('')}</div></div>`], ['No results', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(['This piece', 'Floss', 'Mine', 'Image'], 1)}${search('is-focus', 'zzz')}<div class="c-empty"><strong>No floss found</strong>Try a number or a colour name</div></div>`], ['From image', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(['This piece', 'Floss', 'Mine', 'Image'], 3)}${drop('is-hover', `${ic('picture')}Drop an image to pull its colours`)}</div>`]]]
+  { group: 'Thread and stitches', id: 'colour-picker', title: 'Colour picker', note: 'A popover with four sources as a pill: Canvas (colours already used), Custom (any colour: field, hue, hex, or search a hex or a thread number), Saved (palettes) and From image. Colours are hex.', blocks: ['colour-picker', 'colour-field', 'skein', 'shared'], cell: 320, rows: [
+    ['Forms', [['Canvas', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 0)}<div class="c-skeingrid">${SKEINS.slice(0, 5).map((s, i) => skeinOf(s, i === 0 ? 'is-selected' : '')).join('')}</div></div>`], ['Custom', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}<div class="c-picker__body" data-colour-field>${colourFieldHtml()}<label class="c-field"><span class="c-field__label">Hex</span><input value="#B84216" aria-label="Hex code"></label>${search('', '')}</div></div>`], ['Thread number found', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}${search('is-focus', '3830')}<button class="c-reset c-row c-focus"><span class="c-row__art">${skein('#B95544', { tag: 'span' })}</span>Thread 3830<span class="c-row__detail">#B95544</span></button></div>`], ['Nothing found', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}${search('is-focus', 'zzz')}<div class="c-empty"><strong>Nothing found</strong>Try a hex code or a thread number</div></div>`], ['From image', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 3)}${drop('is-hover', `${ic('picture')}Drop an image to pull its colours`)}</div>`]]]
   ] },
   { group: 'Panel pieces', id: 'layer-row', title: 'Layer row', note: 'Name, show or hide, lock. Drag to reorder.', blocks: ['layer-row', 'icon-button', 'shared'], cell: 240, rows: [
     ['States', [['Rest', layer('')], ['Hover', layer('is-hover')], ['Selected', layer('is-selected')], ['Hidden', layer('is-hidden', 'Calla lilies', 'eye-off')], ['Dragging', layer('is-dragging')], ['Renaming', layer('is-renaming')]]]
@@ -197,6 +199,8 @@ main.querySelectorAll('.c-ic svg').forEach((el) => {
 
 const zoom = createZoomMotion(() => motionFrom(TUNING));
 main.querySelectorAll('.tz-host').forEach((h) => { Object.assign(h.querySelector('svg').dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
+// the colour field in the picker's Custom form is live
+main.querySelectorAll('[data-colour-field]').forEach((el) => createColourField(el, { hex: '#B84216', onChange: (hex) => { el.querySelector('input').value = hex; } }));
 
 // the slider's preview uses a real palette colour as its thread
 const rootStyle = () => getComputedStyle(document.documentElement);

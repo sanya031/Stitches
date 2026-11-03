@@ -5,6 +5,7 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { skein } from './skein.js';
+import { colourFieldHtml, createColourField, hexOf, parseHex } from './colour-field.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
@@ -34,7 +35,9 @@ const prop = (label, control) => control; // the label lives inside the control 
 const stack = (control) => `<div class="c-prop c-prop--stack">${control}</div>`;
 const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${title}${ic(open ? 'chevron-down' : 'chevron-right')}</button>${action}</div>${body}</div>`;
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
-const colourRow = (colour, name, code, mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${skeinShow(mixed ? '--neutral-500' : colour)}<span>${mixed ? 'Mixed' : name}</span>${mixed ? '' : `<span class="c-swatchrow__code">${code}</span>`}</span>${ic('chevron-down')}</button>`;
+// the colour row: the thread as a skein and its hex code; any colour can be used
+const swatchHtml = (hex, mixed = false) => `${skeinShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
+const colourRow = (mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${swatchHtml(threadHex, mixed)}</span>${ic('chevron-down')}</button>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
@@ -49,7 +52,7 @@ const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 1
 const inPiece = section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
 const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitches', 'is-selected')}${layerRow('Calla lilies photo', 'is-hidden', 'eye-off')}</div>`, { action: iconbtn('plus', 'Add layer', 'c-iconbtn--sm') });
-const thread = (mixed = false) => section('Thread', `${stack(colourRow('--terracotta-500', 'Brick', 'DMC 3830', mixed))}${stage('strands')}`);
+const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}`);
 
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
@@ -71,6 +74,7 @@ const EXPORT = () => head('Export', 'Calla lilies', '120 × 90 squares · 11,840
 const $ = (id) => document.getElementById(id);
 const panel = $('panel'), toastEl = $('toast');
 let mode = 'stitch', context = 'tool', pillStyle = '';
+let threadHex = hexOf('--terracotta-500');
 const pillValues = dialDefaults(SEG_MOTIONS.squash.dials);
 const motion = (root) => createSegMotion(root, () => pillValues);
 const threadColour = () => getComputedStyle(document.documentElement).getPropertyValue('--terracotta-500').trim();
@@ -124,9 +128,53 @@ function openPop(trigger, html) {
   const box = panel.getBoundingClientRect(), r = trigger.getBoundingClientRect();
   el.style.left = `${r.left - box.left}px`; el.style.top = `${r.bottom - box.top + 4}px`;
   panel.append(el); trigger.classList.add('is-open'); pop = { el, trigger };
+  // keep it inside the panel: shift left if it would run past the right edge
+  el.style.left = `${Math.max(0, Math.min(r.left - box.left, box.width - el.offsetWidth))}px`;
   wire(el);
 }
-const pickerHtml = () => `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(['Canvas', 'Floss', 'Mine', 'Image'], 1)}<label class="c-field c-search">${ic('search')}<input placeholder="Search floss" aria-label="Search floss"></label><div class="c-skeingrid">${['--terracotta-500', '--ochre-300', '--leaf-500', '--periwinkle-400', '--lilac-400', '--crimson-500', '--neutral-950', '--neutral-50', '--terracotta-300', '--periwinkle-700'].map((c, i) => skeinBtn(c, i === 0 ? 'is-selected' : '')).join('')}</div></div>`;
+// The colour picker: Canvas (colours already used), Custom (any colour, or a thread number), Saved, From image.
+// A sample of thread numbers, so embroiderers can find a thread's colour; the full chart comes with the real app.
+const THREADS = [['310', '#000000'], ['B5200', '#FFFFFF'], ['321', '#C72B3B'], ['666', '#E31D42'], ['3830', '#B95544'], ['3865', '#F9F7F1'], ['444', '#FFD600'], ['700', '#07733F'], ['797', '#13477D'], ['550', '#5C184E'], ['943', '#3D9384'], ['3747', '#D3D7ED']];
+const SAVED = [['Calla lilies', ['--terracotta-500', '--leaf-500', '--ochre-300', '--neutral-50']], ['Spring', ['--periwinkle-400', '--lilac-400', '--leaf-500', '--ochre-300', '--crimson-500']]];
+const skeinPick = (colour) => { const hex = colour.startsWith('--') ? hexOf(colour) : colour; return skein(hex, { cls: hex === threadHex ? 'is-selected' : '', attrs: `data-pick="${hex}" data-tip="${hex}"` }); };
+const PICKER_TABS = {
+  canvas: () => `<div class="c-skeingrid">${PIECE.map(([c]) => skeinPick(c)).join('')}</div><span class="c-hint">Colours already on the canvas</span>`,
+  custom: () => `${colourFieldHtml()}<label class="c-field"><span class="c-field__label">Hex</span><input value="${threadHex}" aria-label="Hex code" spellcheck="false" data-hex></label>`
+    + `<label class="c-field c-search">${ic('search')}<input placeholder="Hex or thread number" aria-label="Search by hex or thread number" data-find></label><div data-found></div>`,
+  saved: () => SAVED.map(([name, cs]) => `<div class="c-group-label">${name}</div><div class="c-skeingrid">${cs.map(skeinPick).join('')}</div>`).join(''),
+  image: () => `<div class="c-drop">${ic('picture')}Drop an image to pull its colours</div>`,
+};
+const pickerHtml = () => `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg([['canvas', 'Canvas'], ['custom', 'Custom'], ['saved', 'Saved'], ['image', 'From image']], 1)}<div class="c-picker__body" data-picker-body></div></div>`;
+
+// set the thread colour everywhere it shows: the colour row, the field, the hex input, the picked skein
+function setThread(hex, from) {
+  threadHex = hex;
+  const row = panel.querySelector('[data-picker] .c-swatchrow__swatch'); if (row) row.innerHTML = swatchHtml(hex);
+  if (!pop) return;
+  if (from !== 'field') pop.field?.set(hex);
+  const input = pop.el.querySelector('[data-hex]'); if (input && from !== 'hex') input.value = hex;
+  pop.el.querySelectorAll('[data-pick]').forEach((x) => x.classList.toggle('is-selected', x.dataset.pick === hex));
+}
+function showPickerTab(name) {
+  const body = pop.el.querySelector('[data-picker-body]');
+  body.innerHTML = PICKER_TABS[name]();
+  pop.field = name === 'custom' ? createColourField(body, { hex: threadHex, onChange: (hex) => setThread(hex, 'field') }) : null;
+  wire(body);
+}
+function wirePicker() {
+  showPickerTab('custom');
+  pop.el.querySelector('[data-pill]').addEventListener('click', (e) => { const o = e.target.closest('.c-seg__opt'); if (o) showPickerTab(o.dataset.value); });
+  pop.el.addEventListener('input', (e) => {
+    if (e.target.matches('[data-hex]')) { const hex = parseHex(e.target.value); if (hex) setThread(hex, 'hex'); }
+    if (e.target.matches('[data-find]')) {
+      const q = e.target.value.trim().replace(/^#/, '').toUpperCase(), out = pop.el.querySelector('[data-found]');
+      const hex = parseHex(q), hits = q ? THREADS.filter(([n]) => n.toUpperCase().startsWith(q)).slice(0, 4) : [];
+      out.innerHTML = (hex ? [[null, hex]] : []).concat(hits).map(([n, h]) => `<button class="c-reset c-row c-focus" data-pick="${h}"><span class="c-row__art">${skeinShow(h)}</span>${n ? `Thread ${n}` : 'Hex'}<span class="c-row__detail">${h}</span></button>`).join('')
+        || (q ? '<div class="c-empty"><strong>Nothing found</strong>Try a hex code or a thread number</div>' : '');
+    }
+  });
+  pop.el.addEventListener('click', (e) => { const p = e.target.closest('[data-pick]'); if (p) setThread(p.dataset.pick); });
+}
 createTooltips();
 let toastTimer;
 const toast = (m) => { toastEl.textContent = m; toastEl.style.opacity = 1; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.style.opacity = 0; }, 1600); };
@@ -154,7 +202,7 @@ document.addEventListener('click', (e) => {
   if (sk && !t.closest('.c-pop')) { sk.closest('.c-piece').querySelectorAll('.c-skein').forEach((x) => x.classList.toggle('is-selected', x === sk)); toast(`Selected the ${sk.parentElement.querySelector('.c-piece__n')?.textContent || ''} stitches in this colour`); }
   if (sk && t.closest('.c-pop')) { sk.parentElement.querySelectorAll('.c-skein').forEach((x) => x.classList.toggle('is-selected', x === sk)); }
   const picker = t.closest('[data-picker]');
-  if (picker) { if (pop?.trigger === picker) closePop(); else openPop(picker, pickerHtml()); }
+  if (picker) { if (pop?.trigger === picker) closePop(); else { openPop(picker, pickerHtml()); wirePicker(); } }
   const sel = t.closest('[data-select]');
   if (sel) {
     if (pop?.trigger === sel) closePop();
