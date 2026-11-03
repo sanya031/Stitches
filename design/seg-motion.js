@@ -59,9 +59,13 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const FULL_SPEED = 1400, FULL_BRAKING = 9000; // px/s and px/s² that count as "full" squash
 
-/** Make a .c-seg travel. getValues() returns the current dial values. */
-export function createSegMotion(root, getValues) {
-  const opts = [...root.querySelectorAll('.c-seg__opt')];
+/**
+ * Make a .c-seg travel. getValues() returns the current dial values. option: what counts as an option
+ * (default .c-seg__opt; .c-tile for a stitch grid). In a grid the fill travels in both directions:
+ * it flattens across the way it is going and lengthens along it, so a pill moving sideways looks as before.
+ */
+export function createSegMotion(root, getValues, { option = '.c-seg__opt' } = {}) {
+  const opts = [...root.querySelectorAll(option)];
   root.classList.add('c-seg--motion');
   const layer = document.createElement('span'); layer.className = 'c-seg__layer'; layer.setAttribute('aria-hidden', 'true');
   const thumb = document.createElement('span'); thumb.className = 'c-seg__thumb';
@@ -71,28 +75,40 @@ export function createSegMotion(root, getValues) {
   let index = opts.findIndex((o) => o.getAttribute('aria-pressed') === 'true'), raf = 0, last = 0, amount = 0;
   // nothing chosen (a mixed selection): no fill until one is picked, then it appears in place
   thumb.hidden = index < 0;
-  const left = new Value(0), right = new Value(0);
-  const rect = (i) => { const o = opts[i]; return { x: o.offsetLeft, w: o.offsetWidth, y: o.offsetTop, h: o.offsetHeight }; };
+  const left = new Value(0), right = new Value(0), top = new Value(0), bottom = new Value(0);
+  const edges = [left, right, top, bottom];
+  // exact (sub-pixel) box of an option inside the root's padding box, so the fill lands right on it
+  const rect = (i) => {
+    const o = opts[i].getBoundingClientRect(), r = root.getBoundingClientRect();
+    return { x: o.left - r.left - root.clientLeft, w: o.width, y: o.top - r.top - root.clientTop, h: o.height };
+  };
+  let ux = 1, uy = 0; // the way it is going (unit), for which side flattens
 
-  function place() { if (index < 0) return; const r = rect(index); left.jump(r.x); right.jump(r.x + r.w); amount = 0; draw(); }
+  function place() { if (index < 0) return; const r = rect(index); left.jump(r.x); right.jump(r.x + r.w); top.jump(r.y); bottom.jump(r.y + r.h); amount = 0; draw(); }
 
   function draw() {
-    const v = getValues(), to = rect(index), w = right.x - left.x, h = to.h * (1 - v.squash * amount), extra = w * v.stretch * amount;
+    const v = getValues(), w = right.x - left.x, h = bottom.x - top.x;
+    // along the way it goes it lengthens by stretch, across it flattens by squash
+    const ex = w * (v.stretch * ux - v.squash * uy) * amount, ey = h * (v.stretch * uy - v.squash * ux) * amount;
     // lean 0 grows both ways; lean 1 grows only towards where it is going
-    const ahead = v.lean, behind = left.v < 0 ? 0.5 * (1 - ahead) + ahead : 0.5 * (1 - ahead);
-    thumb.style.cssText = `transform:translate(${left.x - extra * behind}px,${to.y + (to.h - h) / 2}px);width:${Math.max(0, w + extra)}px;height:${Math.max(0, h)}px`;
+    const ahead = v.lean, bx = left.v < 0 ? 0.5 * (1 - ahead) + ahead : 0.5 * (1 - ahead), by = top.v < 0 ? 0.5 * (1 - ahead) + ahead : 0.5 * (1 - ahead);
+    const ox = ex > 0 ? ex * bx : ex / 2, oy = ey > 0 ? ey * by : ey / 2;
+    thumb.style.cssText = `transform:translate(${left.x - ox}px,${top.x - oy}px);width:${Math.max(0, w + ex)}px;height:${Math.max(0, h + ey)}px`;
   }
 
   function frame(now) {
     const dt = Math.min(0.032, (now - last) / 1000) || 0.016; last = now;
-    const before = left.v;
-    left.step(dt); right.step(dt);
+    const bx = left.v, by = top.v;
+    edges.forEach((e) => e.step(dt));
+    const speed = Math.hypot(left.v, top.v);
+    if (speed > 1) { ux = Math.abs(left.v) / speed; uy = Math.abs(top.v) / speed; }
     if (getValues().react === 'landing') {
-      const accel = (left.v - before) / dt, braking = accel * left.v < 0 ? clamp01(Math.abs(accel) / FULL_BRAKING) : 0;
+      const ax = (left.v - bx) / dt, ay = (top.v - by) / dt, along = ax * left.v + ay * top.v;
+      const braking = along < 0 ? clamp01(Math.hypot(ax, ay) / FULL_BRAKING) : 0;
       amount += (braking - amount) * Math.min(1, dt * 18);
-    } else amount = clamp01(Math.abs(left.v) / FULL_SPEED);
+    } else amount = clamp01(speed / FULL_SPEED);
     draw();
-    if (left.moving || right.moving || amount > 0.005) raf = requestAnimationFrame(frame);
+    if (edges.some((e) => e.moving) || amount > 0.005) raf = requestAnimationFrame(frame);
     else { raf = 0; amount = 0; draw(); }
   }
 
@@ -104,12 +120,12 @@ export function createSegMotion(root, getValues) {
     root.style.setProperty('--seg-label-fade', `${v.labelFade}ms`);
     if (reduced.matches || first) { thumb.hidden = false; return place(); }
     const to = rect(i);
-    left.go(to.x, v.curve); right.go(to.x + to.w, v.curve);
+    left.go(to.x, v.curve); right.go(to.x + to.w, v.curve); top.go(to.y, v.curve); bottom.go(to.y + to.h, v.curve);
     last = performance.now();
     if (!raf) raf = requestAnimationFrame(frame);
   }
 
-  root.addEventListener('click', (e) => { const o = e.target.closest('.c-seg__opt'); if (o) select(opts.indexOf(o)); });
+  root.addEventListener('click', (e) => { const o = e.target.closest(option); if (o && opts.includes(o)) select(opts.indexOf(o)); });
   root.addEventListener('keydown', (e) => {
     const d = { ArrowLeft: -1, ArrowRight: 1 }[e.key]; if (!d) return;
     e.preventDefault(); const n = (index + d + opts.length) % opts.length; opts[n].focus(); select(n);

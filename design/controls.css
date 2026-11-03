@@ -80,6 +80,9 @@
 .c-seg--motion .c-seg__opt[data-label]::before { content: attr(data-label); grid-row: 2; height: 0; overflow: hidden; visibility: hidden; font: var(--type-label-strong); }
 .c-seg--motion.c-seg--lg .c-seg__opt[data-label]::before { font: var(--type-body); font-weight: var(--weight-medium); }
 .c-seg--motion .c-seg__opt[aria-pressed="true"] { background: none; }
+/* the stitch grid moves its selected fill the same way, in both directions */
+.c-seg--motion .c-tile[aria-pressed="true"] { background: none; }
+.c-tilegrid .c-seg__thumb { border-radius: var(--radius-sm); }
 .c-motion-demo { display: grid; gap: var(--space-12); justify-items: start; }
 .c-motion-demo p { margin: 0; color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
 .c-motion-demo strong { color: var(--text-strong); font: var(--type-subheading); }

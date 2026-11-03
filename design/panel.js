@@ -80,6 +80,7 @@ function stylePills(root = document) {
 function wire(root) {
   stylePills(root);
   root.querySelectorAll('[data-pill]').forEach(motion);
+  root.querySelectorAll('[data-tiles]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tile' }));
   root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, style: 'thread', colour: threadColour() }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
   root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });

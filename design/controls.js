@@ -122,7 +122,7 @@ const SPECS = [
     ['States', states(['Rest', 'Hover', 'Selected', 'Focus'], (c) => skeinOf('--terracotta-500', c))],
     ['Forms', [['Close to the surface', skeinOf('--neutral-50', 'is-edge')], ['With count', skeinOf('--leaf-500', '', '<span class="c-badge c-skein__n">3</span>')]]]
   ] },
-  { group: 'Thread and stitches', id: 'preview-tile', title: 'Preview tile', note: 'Stitch grid, fill variants, fabrics. Sits on the field; only the selected tile has a fill.', rows: [
+  { group: 'Thread and stitches', id: 'preview-tile', title: 'Preview tile', note: 'Stitch grid, fill variants, fabrics. Sits on the field; only the selected tile has a fill. In the grid that fill travels to the picked tile with the pill motion, Squash.', blocks: ['preview-tile', 'segmented-motion', 'shared'], rows: [
     ['States', states(['Rest', 'Hover', 'Pressed', 'Selected', 'Selected, hover', 'Focus', 'Selected, focus', 'Disabled'], (c) => `<div class="c-tilewell">${tile(c)}</div>`)],
     ['Forms', [['Stitch', `<div class="c-tilewell">${tile('', 'stitch-half')}</div>`], ['Fill', `<div class="c-tilewell">${tile('', 'fill-weave-3')}</div>`]]],
     ['Grid', [['Live', `<div class="c-tilegrid" data-live>${['stitch-full', 'stitch-half', 'stitch-back', 'stitch-knot', 'fill-columns', 'fill-rows', 'fill-weave-3', 'fill-seed'].map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${n}" aria-pressed="${i === 0}">${zoomPrim(n)}</button>`).join('')}</div>`]], 240]
@@ -230,6 +230,8 @@ document.getElementById('theme').addEventListener('click', (e) => { const b = e.
 const dialValues = Object.fromEntries(Object.entries(SEG_MOTIONS).map(([k, m]) => [k, dialDefaults(m.dials)]));
 const motions = {};
 main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion; (motions[k] ||= []).push(createSegMotion(el, () => dialValues[k])); });
+// the live stitch grid travels with the same motion
+main.querySelectorAll('.c-tilegrid[data-live]').forEach((el) => motions.squash.push(createSegMotion(el, () => dialValues.squash, { option: '.c-tile' })));
 // the page still works if the panel can't load
 import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
   const dialRoot = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: false });
