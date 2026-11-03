@@ -255,6 +255,9 @@
 .c-row__art { display: grid; place-items: center; flex: none; width: var(--icon-lg); height: var(--icon-lg); }
 .c-row__end { margin-left: auto; color: var(--icon); }
 .c-row__end.c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+/* detail: a setting and a count on the right ("Thickness 2 · 6,120") */
+.c-row__detail { margin-left: auto; color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); font-variant-numeric: var(--numeric); white-space: nowrap; }
+.c-row.is-selected .c-row__detail { color: var(--text); }
 .c-row:hover, .c-row.is-hover { color: var(--text-strong); }
 .c-row:hover .c-row__art, .c-row.is-hover .c-row__art, .c-row:hover .c-row__end, .c-row.is-hover .c-row__end { color: var(--icon-active); }
 .c-row:active, .c-row.is-pressed { color: var(--text-strong); }
@@ -367,6 +370,7 @@
 .c-panel__section[data-open="false"] > :not(.c-panel__sechead) { display: none; }
 .c-panel__sechead { display: flex; align-items: center; gap: var(--space-4); }
 .c-panel__sechead .c-section { flex: 1; }
+.c-panel .c-row { min-height: var(--row-height); }
 .c-panel .c-tilegrid { display: grid; width: 100%; grid-template-columns: repeat(auto-fill, minmax(var(--stitch-tile), 1fr)); justify-items: center; }
 .c-piece { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
 .c-piece__item { display: grid; justify-items: center; gap: var(--space-2); }

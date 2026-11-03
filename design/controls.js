@@ -128,8 +128,9 @@ const SPECS = [
     ['Forms', [['Stitch', `<div class="c-tilewell">${tile('', 'stitch-half')}</div>`], ['Fill', `<div class="c-tilewell">${tile('', 'fill-weave-3')}</div>`]]],
     ['Grid', [['Live', `<div class="c-tilegrid" data-live>${['stitch-full', 'stitch-half', 'stitch-back', 'stitch-knot', 'fill-columns', 'fill-rows', 'fill-weave-3', 'fill-seed'].map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${n}" aria-pressed="${i === 0}">${zoomPrim(n)}</button>`).join('')}</div>`]], 240]
   ] },
-  { group: 'Thread and stitches', id: 'stitch-row', title: 'Stitch row and library', note: 'The current stitch in the panel, and the rows in the library, grouped, with a submenu for variants.', cell: 220, rows: [
+  { group: 'Thread and stitches', id: 'stitch-row', title: 'Stitch row and library', note: 'The current stitch in the panel, and the rows in the library, grouped, with a submenu for variants. With detail: a setting and a count on the right, for the stitches on the canvas.', cell: 220, rows: [
     ['Row', states(['Rest', 'Hover', 'Pressed', 'Open', 'Selected', 'Focus', 'Disabled'], (c) => row(c))],
+    ['With detail', [['Canvas stitches', `<div style="width:260px">${row('', 'Full cross', 'stitch-full').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Thickness 2 · 6,120</span>')}${row('is-selected', 'Weave 3×3', 'fill-weave-3').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Density 60% · 540</span>')}</div>`]]],
     ['Library', [['Grouped list', `<div class="c-menu" style="width:260px"><div class="c-group-label">Counted</div>${row('is-selected')}${row('', 'Half cross', 'stitch-half')}${row('is-hover', 'Backstitch', 'stitch-back')}<div class="c-group-label">Fill</div>${row('', 'Columns', 'fill-columns')}${row('', 'Weave', 'fill-weave-3')}</div>`]]]
   ] },
   { group: 'Thread and stitches', id: 'colour-picker', title: 'Colour picker', note: 'A popover: sources as a pill, search, a grid of skeins. The empty and from-image forms are below.', blocks: ['colour-picker', 'skein', 'shared'], cell: 320, rows: [
