@@ -313,10 +313,24 @@
 .c-bar__sep { align-self: stretch; width: var(--border-width); margin: var(--space-4); background: var(--border-subtle); }
 .c-bar__zoom { min-width: var(--space-48); color: var(--text); font: var(--type-label); text-align: center; font-variant-numeric: var(--numeric); }
 
-/* @control feedback */
-.c-tooltip { display: inline-flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-8); border-radius: var(--radius-sm); background: var(--text-strong); color: var(--surface-panel); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
+/* @control tooltip */
+/* As shadcn/ui's tooltip: dark on light (light on dark), 12px text, an arrow at the trigger. tooltip.js shows it. */
+.c-tooltip { position: relative; display: inline-flex; align-items: center; gap: var(--space-6); width: fit-content; max-width: 320px; padding: var(--space-6) var(--space-12); border-radius: var(--radius-md); background: var(--text-strong); color: var(--surface-panel); font: var(--type-label); }
+.c-tooltip:has(.c-kbd) { padding-right: var(--space-6); }
+.c-tooltip .c-kbd { border: 0; background: color-mix(in oklch, var(--surface-panel) 20%, transparent); color: var(--surface-panel); }
+/* the arrow: a 10px square turned 45°, half showing, on the side facing the trigger (data-side) */
+.c-tooltip__arrow { position: absolute; left: calc(var(--arrow-x, 50%) - 5px); bottom: -10px; width: 10px; height: 10px; border-radius: 2px; background: var(--text-strong); transform: translateY(calc(-50% - 2px)) rotate(45deg); }
+.c-tooltip[data-side="bottom"] .c-tooltip__arrow { bottom: auto; top: 4px; }
+/* floating: placed by tooltip.js, animated in and out */
 .c-tooltip--float[hidden] { display: none; }
-.c-tooltip--float { position: fixed; left: 0; top: 0; z-index: var(--z-tooltip); pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-popover); }
+.c-tooltip--float { position: fixed; left: 0; top: 0; z-index: var(--z-tooltip); pointer-events: none; }
+.c-tooltip--float[data-state] { animation: var(--motion-tooltip-duration) ease-out both c-tooltip-in; transform-origin: var(--origin, 50% 100%); }
+.c-tooltip--float[data-state="closed"] { animation-name: c-tooltip-out; animation-timing-function: ease-in; }
+@keyframes c-tooltip-in { from { opacity: 0; scale: var(--motion-tooltip-scale); translate: 0 var(--slide, var(--motion-tooltip-slide)); } }
+@keyframes c-tooltip-out { to { opacity: 0; scale: var(--motion-tooltip-scale); } }
+@media (prefers-reduced-motion: reduce) { .c-tooltip--float[data-state] { animation-name: c-tooltip-fade; } .c-tooltip--float[data-state="closed"] { animation-direction: reverse; } @keyframes c-tooltip-fade { from { opacity: 0; } } }
+
+/* @control feedback */
 .c-kbd { display: inline-grid; place-items: center; min-width: var(--space-20); height: var(--space-20); padding: 0 var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-xs); background: var(--surface-field); color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }
 .c-badge { display: inline-grid; place-items: center; min-width: var(--space-16); height: var(--space-16); padding: 0 var(--space-4); border-radius: var(--radius-pill); background: var(--surface-field); color: var(--text-strong); font: var(--type-caption); font-variant-numeric: var(--numeric); }
 .c-toast { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-md); padding: 0 var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); box-shadow: var(--shadow-popover); color: var(--text); font: var(--type-label); }

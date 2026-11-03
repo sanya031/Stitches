@@ -242,4 +242,10 @@
   --motion-pill-squash: 0.6;      /* how much it flattens at full speed */
   --motion-pill-stretch: 0.02;    /* how much it lengthens at full speed */
   --motion-pill-label-fade: 120;  /* label colour fade, in ms */
+  /* Tooltip (as shadcn/ui's): opens at once, fades in while growing from 95% and sliding 8px from its trigger;
+     closes the same way back. Sits 4px from the trigger, its arrow pointing at it. */
+  --motion-tooltip-duration: 150ms;
+  --motion-tooltip-scale: 0.95;
+  --motion-tooltip-slide: var(--space-8);
+  --tooltip-offset: var(--space-4);
 }

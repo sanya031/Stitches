@@ -1,9 +1,10 @@
 // The Controls tab: draws every control in every state, lists each one's tokens and CSS
 // (both read from controls.css, so they can't drift), and copies any state as SVG for Figma.
 import { svg } from './icons/icons.js';
-import { primitiveSvg, patchSquares } from './icons/primitives.js';
+import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { skein } from './skein.js';
+import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
 import { TUNING, motionFrom } from './icons/zoom-css.js';
@@ -153,8 +154,12 @@ const SPECS = [
   { group: 'Floating and feedback', id: 'floating-bars', title: 'Floating bars', note: 'They float over the canvas, so they get the raised surface and a shadow. In Figma, add the shadow as an effect: it is not part of the pasted SVG.', blocks: ['floating-bars', 'tool-button', 'icon-button', 'shared'], cell: 260, rows: [
     ['Bars', [['Tool bar', `<div class="c-bar c-bar--tools">${tool('', 'tool-select')}${tool('is-selected', 'tool-stitch')}${tool('', 'tool-fill')}${tool('', 'tool-pattern')}${tool('', 'tool-erase')}${tool('', 'tool-pan')}</div>`], ['Zoom', `<div class="c-bar c-bar--pill">${iconbtn('', 'c-iconbtn--sm', 'minus')}<span class="c-bar__zoom">100%</span>${iconbtn('', 'c-iconbtn--sm', 'plus')}<span class="c-bar__sep"></span>${iconbtn('', 'c-iconbtn--sm', 'fit')}</div>`], ['Selection bar', `<div class="c-bar">${iconbtn('', '', 'tool-pan')}${iconbtn('', '', 'recolour')}${iconbtn('', '', 'tool-stitch')}<span class="c-bar__sep"></span>${iconbtn('', '', 'clear')}</div>`]]]
   ] },
-  { group: 'Floating and feedback', id: 'feedback', title: 'Tooltip, key, badge, toast, save state, messages', note: 'Small things that tell you something. Errors always carry an icon and words.', cell: 170, rows: [
-    ['Small parts', [['Tooltip', '<span class="c-tooltip">Undo</span>'], ['Key', '<span class="c-kbd">⌘Z</span>'], ['Badge', '<span class="c-badge">12</span>'], ['Helper text', '<span class="c-hint">22.5 cm at count 14</span>'], ['Error text', '<span class="c-hint c-hint--error">Up to 400 squares</span>']]],
+  { group: 'Floating and feedback', id: 'tooltip', title: 'Tooltip', note: 'As shadcn/ui\'s tooltip. It opens at once on hover or keyboard focus, 4px from the control, its arrow on it; flips below when there is no room above. Opening fades in, grows from 95% and slides 8px; closing fades back. Add data-tip="Name" (and data-tip-key for a shortcut) to any control; tooltip.js does the rest.', blocks: ['tooltip', 'feedback', 'shared'], cell: 200, rows: [
+    ['Forms', [['Label', '<span class="c-tooltip" data-side="top">Undo<span class="c-tooltip__arrow"></span></span>'], ['With shortcut', '<span class="c-tooltip" data-side="top">Undo<span class="c-kbd">⌘Z</span><span class="c-tooltip__arrow"></span></span>'], ['Below', '<span class="c-tooltip" data-side="bottom">Full cross<span class="c-tooltip__arrow"></span></span>']]],
+    ['Live', [['Hover or tab', `<div class="c-tilegrid" style="grid-template-columns:repeat(3, var(--stitch-tile))">${['stitch-full', 'stitch-half', 'stitch-knot'].map((n) => `<button class="c-reset c-tile c-focus" aria-label="${n}" data-tip="${PRIMITIVES[n].label}">${prim(n)}</button>`).join('')}</div>`], ['With shortcut', iconbtn('', '', 'undo').replace('<button', '<button data-tip="Undo" data-tip-key="⌘Z"')]]]
+  ] },
+  { group: 'Floating and feedback', id: 'feedback', title: 'Key, badge, toast, save state, messages', note: 'Small things that tell you something. Errors always carry an icon and words.', cell: 170, rows: [
+    ['Small parts', [['Key', '<span class="c-kbd">⌘Z</span>'], ['Badge', '<span class="c-badge">12</span>'], ['Helper text', '<span class="c-hint">22.5 cm at count 14</span>'], ['Error text', '<span class="c-hint c-hint--error">Up to 400 squares</span>']]],
     ['Save state', [['Saved', `<span class="c-save">${ic('check')}Saved</span>`], ['Saving', `<span class="c-save">${spin}Saving</span>`], ['Unsaved', '<span class="c-save"><span class="c-save__dot"></span>Unsaved changes</span>'], ['Failed', `<span class="c-save c-save--error">${ic('alert')}Could not save</span>`]]],
     ['Messages', [['Toast', `<span class="c-toast">${ic('check')}Copied</span>`], ['Error banner', `<div class="c-banner">${ic('alert')}Image could not be read</div>`], ['Empty', '<div class="c-empty"><strong>Nothing here yet</strong>Stitch, drop in an image, or type</div>']]]
   ] },
@@ -165,6 +170,7 @@ const SPECS = [
 
 // ─── render ──────────────────────────────────────────────────────────────────
 const main = document.getElementById('main'), toastEl = document.getElementById('toast');
+createTooltips(main);
 const cssText = await fetch('controls.css').then((r) => r.text());
 const BLOCKS = {};
 for (const m of cssText.matchAll(/\/\* @control (\S+) \*\/\n([\s\S]*?)(?=\n\/\* @control |\s*$)/g)) BLOCKS[m[1]] = m[2].trim();

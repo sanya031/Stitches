@@ -1,51 +1,76 @@
-// Tooltips: any element with data-tip="…" shows that text in the design system's tooltip (.c-tooltip)
-// when hovered or focused. One tooltip for the page, placed above the element (below if there's no room),
-// kept inside the window. The first shows after a short wait; moving straight to another shows it at once.
+// Tooltips, as shadcn/ui's (Base UI) tooltip: any element with data-tip="…" (and optionally data-tip-key="⌘Z"
+// for a shortcut) shows it in the design system's tooltip (.c-tooltip) when hovered or keyboard-focused.
+// It opens at once, on top of its trigger by default (data-tip-side="bottom" to put it below), 4px away,
+// with an arrow pointing at the trigger. No room above: it flips below. Near the window's edge it shifts
+// along and the arrow stays on the trigger. Opening fades in, grows from 95% and slides 8px from the trigger;
+// closing fades and shrinks back. Timing and distances come from the --motion-tooltip-* and --tooltip-offset tokens.
 
-const DELAY = 400, WARM = 300, GAP = 6, EDGE = 8; // ms before the first, ms that the next stays instant, px
+const EDGE = 8; // px kept clear of the window's edge
+
+const px = (name) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0;
 
 export function createTooltips(root = document) {
   const tip = document.createElement('span');
   tip.className = 'c-tooltip c-tooltip--float';
   tip.setAttribute('role', 'tooltip');
+  tip.id = 'c-tooltip';
   tip.hidden = true;
   document.body.append(tip);
 
-  let target = null, timer = 0, warmUntil = 0;
+  let target = null;
 
-  function place() {
-    const r = target.getBoundingClientRect(), t = tip.getBoundingClientRect();
-    let y = r.top - GAP - t.height;
-    if (y < EDGE) y = r.bottom + GAP;
-    const x = Math.min(innerWidth - EDGE - t.width, Math.max(EDGE, r.left + r.width / 2 - t.width / 2));
-    tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  function fill(el) {
+    const key = el.dataset.tipKey;
+    tip.replaceChildren(el.dataset.tip);
+    if (key) { const k = document.createElement('span'); k.className = 'c-kbd'; k.textContent = key; tip.append(k); }
+    const arrow = document.createElement('span'); arrow.className = 'c-tooltip__arrow'; tip.append(arrow);
   }
+
+  function place(el) {
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, gap = px('--tooltip-offset');
+    let side = el.dataset.tipSide === 'bottom' ? 'bottom' : 'top';
+    const yTop = r.top - gap - h, yBottom = r.bottom + gap;
+    if (side === 'top' && yTop < EDGE) side = 'bottom';
+    else if (side === 'bottom' && yBottom + h > innerHeight - EDGE) side = 'top';
+    const y = side === 'top' ? yTop : yBottom;
+    const x = Math.min(innerWidth - EDGE - w, Math.max(EDGE, r.left + r.width / 2 - w / 2));
+    const arrowX = Math.min(w - 10, Math.max(10, r.left + r.width / 2 - x));
+    tip.dataset.side = side;
+    tip.style.transform = `translate(${x}px, ${y}px)`;
+    tip.style.setProperty('--arrow-x', `${arrowX}px`);
+    tip.style.setProperty('--origin', `${arrowX}px ${side === 'top' ? '100%' : '0'}`);
+    tip.style.setProperty('--slide', `${side === 'top' ? '' : '-'}${px('--motion-tooltip-slide')}px`);
+  }
+
   function show(el) {
     target = el;
-    tip.textContent = el.dataset.tip;
+    el.setAttribute('aria-describedby', tip.id);
+    fill(el);
     tip.hidden = false;
-    place();
-    tip.classList.add('is-shown');
-  }
-  function hide() {
-    clearTimeout(timer);
-    if (!target) return;
-    target = null;
-    tip.classList.remove('is-shown');
-    tip.hidden = true;
-    warmUntil = performance.now() + WARM;
-  }
-  function enter(el) {
-    if (el === target) return;
-    clearTimeout(timer);
-    if (target || performance.now() < warmUntil) show(el);
-    else timer = setTimeout(() => show(el), DELAY);
+    tip.removeAttribute('data-state');
+    place(el);
+    void tip.offsetWidth; // restart the opening animation
+    tip.dataset.state = 'open';
   }
 
-  root.addEventListener('pointerover', (e) => { const el = e.target.closest?.('[data-tip]'); if (el) enter(el); });
+  function hide() {
+    if (!target) return;
+    target.removeAttribute('aria-describedby');
+    target = null;
+    tip.dataset.state = 'closed';
+    // gone once the closing animation ends (or its time is up, if the page isn't drawing)
+    clearTimeout(gone); gone = setTimeout(done, px('--motion-tooltip-duration') + 50);
+  }
+  const done = () => { if (tip.dataset.state === 'closed') tip.hidden = true; };
+  let gone = 0;
+
+  tip.addEventListener('animationend', done);
+
+  root.addEventListener('pointerover', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && el !== target) show(el); });
   root.addEventListener('pointerout', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && !el.contains(e.relatedTarget)) hide(); });
-  root.addEventListener('focusin', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && el.matches(':focus-visible')) enter(el); });
+  root.addEventListener('focusin', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && el.matches(':focus-visible')) show(el); });
   root.addEventListener('focusout', hide);
+  root.addEventListener('pointerdown', hide);
   addEventListener('scroll', hide, true);
   addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
   return { hide };
