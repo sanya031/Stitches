@@ -5,6 +5,7 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { skein } from './skein.js';
+import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
 import { TUNING, motionFrom } from './icons/zoom-css.js';
@@ -40,7 +41,7 @@ const stage = (setting) => `<div data-stage="${setting}"></div>`;
 // one tile per stitch type: quarter and three-quarter show one corner, the panel doesn't pick a direction
 const STITCHES = Object.keys(PRIMITIVES).filter((n) => !/-(tr|bl|br)$/.test(n)).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
 const stitchName = (n) => PRIMITIVES[n].label.replace(/, top left$/, '');
-const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${stitchName(n)}" title="${stitchName(n)}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
+const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${stitchName(n)}" data-tip="${stitchName(n)}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
 const inPiece = section('In this piece', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
@@ -50,7 +51,7 @@ const thread = (mixed = false) => section('Thread', `${stack(colourRow('--terrac
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
   tool: () => head('Tool', 'Stitch', 'Full cross · 2 strands · on 14 count Aida')
-    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}<span class="c-hint" data-family-hint>Full cross</span>`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${layers}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${layers}</div>`,
   selection: () => head('Selection', '142 stitches', '3 colours · 2 stitch types', `${iconbtn('tool-pan', 'Move')}${iconbtn('recolour', 'Recolour')}${iconbtn('rotate', 'Rotate')}${iconbtn('clear', 'Delete')}`)
     + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece}</div>`,
   image: () => head('Image', 'Calla lilies photo', '2400 × 1800 px → 120 × 90 squares', `${iconbtn('picture', 'Replace image')}${iconbtn('clear', 'Remove image')}`)
@@ -123,6 +124,7 @@ function openPop(trigger, html) {
   wire(el);
 }
 const pickerHtml = () => `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(['This piece', 'Floss', 'Mine', 'Image'], 1)}<label class="c-field c-search">${ic('search')}<input placeholder="Search floss" aria-label="Search floss"></label><div class="c-skeingrid">${['--terracotta-500', '--ochre-300', '--leaf-500', '--periwinkle-400', '--lilac-400', '--crimson-500', '--neutral-950', '--neutral-50', '--terracotta-300', '--periwinkle-700'].map((c, i) => skeinBtn(c, i === 0 ? 'is-selected' : '')).join('')}</div></div>`;
+createTooltips();
 let toastTimer;
 const toast = (m) => { toastEl.textContent = m; toastEl.style.opacity = 1; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.style.opacity = 0; }, 1600); };
 
@@ -134,7 +136,7 @@ document.addEventListener('click', (e) => {
   const sec = t.closest('[data-section]');
   if (sec) { const s = sec.parentElement, open = s.dataset.open !== 'true'; s.dataset.open = open; sec.setAttribute('aria-expanded', open); sec.querySelector('.c-ic').outerHTML = ic(open ? 'chevron-down' : 'chevron-right'); return; }
   const tile = t.closest('[data-tiles] .c-tile');
-  if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); const hint = panel.querySelector('[data-family-hint]'); if (hint) hint.textContent = tile.getAttribute('aria-label'); }
+  if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); }
   const tool = t.closest('[data-tools] .c-tool');
   if (tool) tool.parentElement.querySelectorAll('.c-tool').forEach((x) => x.setAttribute('aria-pressed', x === tool));
   const swi = t.closest('[data-switch]');
