@@ -97,6 +97,7 @@ Page level
 - [x] Empty state, loading state, error banner
 
 ## 6. Panel
+A first assembly is on the Panel tab (`design/panel.html`), to see the components together.
 - [ ] Stitch tab with nothing selected (tool settings)
 - [ ] Stitch tab with a selection (one stitch type, mixed stitch types)
 - [ ] Stitch tab with an image selected

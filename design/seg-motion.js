@@ -68,11 +68,13 @@ export function createSegMotion(root, getValues) {
   const mark = document.createElement('span'); mark.className = 'c-seg__mark'; thumb.append(mark); // the bar, for the underline style
   layer.append(thumb); root.prepend(layer);
 
-  let index = Math.max(0, opts.findIndex((o) => o.getAttribute('aria-pressed') === 'true')), raf = 0, last = 0, amount = 0;
+  let index = opts.findIndex((o) => o.getAttribute('aria-pressed') === 'true'), raf = 0, last = 0, amount = 0;
+  // nothing chosen (a mixed selection): no fill until one is picked, then it appears in place
+  thumb.hidden = index < 0;
   const left = new Value(0), right = new Value(0);
   const rect = (i) => { const o = opts[i]; return { x: o.offsetLeft, w: o.offsetWidth, y: o.offsetTop, h: o.offsetHeight }; };
 
-  function place() { const r = rect(index); left.jump(r.x); right.jump(r.x + r.w); amount = 0; draw(); }
+  function place() { if (index < 0) return; const r = rect(index); left.jump(r.x); right.jump(r.x + r.w); amount = 0; draw(); }
 
   function draw() {
     const v = getValues(), to = rect(index), w = right.x - left.x, h = to.h * (1 - v.squash * amount), extra = w * v.stretch * amount;
@@ -96,11 +98,11 @@ export function createSegMotion(root, getValues) {
 
   function select(i) {
     if (i === index) return;
-    const v = getValues();
+    const v = getValues(), first = index < 0;
     index = i;
     opts.forEach((o, n) => o.setAttribute('aria-pressed', String(n === i)));
     root.style.setProperty('--seg-label-fade', `${v.labelFade}ms`);
-    if (reduced.matches) return place();
+    if (reduced.matches || first) { thumb.hidden = false; return place(); }
     const to = rect(i);
     left.go(to.x, v.curve); right.go(to.x + to.w, v.curve);
     last = performance.now();
