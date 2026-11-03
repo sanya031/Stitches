@@ -6,7 +6,7 @@
 
 /* @control shared */
 .c-focus:focus-visible, .c-focus.is-focus { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
-.c-reset { appearance: none; margin: 0; border: 0; background: none; color: inherit; font: inherit; }
+.c-reset { appearance: none; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; }
 .c-ic { display: inline-grid; place-items: center; flex: none; width: var(--icon-md); height: var(--icon-md); }
 .c-ic svg { display: block; width: 100%; height: 100%; }
 .c-spin svg { animation: c-spin 900ms linear infinite; }
