@@ -48,6 +48,7 @@ export const STAGE_TUNING = {
   linger: 450,         // ms the bubble stays after release
   keyLinger: 900,      // ms it stays after an arrow key
   inBetween: true,     // while dragging, the preview draws in-between values (false: only stops)
+  decimals: true,      // while dragging, the number shows the in-between value (2.4); false: only the stop it will land on, so it never suggests a value you can't pick
   release: 'jump',     // 'jump': the thumb lands on the nearest stop at once; 'glide': it slides there; 'spring': it springs there (catch it mid-way)
   glide: 160,          // ms, the glide to the stop
   springDuration: pillToken('duration', 0.38), // s, the spring's visual duration (the pill's Squash spring)
@@ -134,7 +135,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.2, colour, paper: style === 'thread' };
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
-    const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
+    const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos) && tune('decimals'); // on a stop (or pulled onto a mark) it reads as the whole number
     el.classList.toggle('ss--moving', moving);
     const tip = def.tip || def.say;
     number.set(live && moving ? tip(Number(at(pos).toFixed(1))) : tip(shown), {
