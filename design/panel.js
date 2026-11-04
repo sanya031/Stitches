@@ -231,7 +231,7 @@ render();
 
 // Trying other ways to show a colour: a DialKit panel switches every swatch on the page between the looks
 import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
-  createDialRoot({ position: 'top-right', theme: document.documentElement.dataset.theme });
+  createDialRoot({ position: 'bottom-left', theme: document.documentElement.dataset.theme });
   const kit = createDialKit('Colour swatch', {
     look: { type: 'select', options: Object.entries(SKEIN_LOOKS).map(([value, l]) => ({ value, label: l.label })), default: 'skein' },
   }, { id: 'selvedge-swatch-look-1', persist: true });
