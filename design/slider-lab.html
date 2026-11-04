@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slider lab</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="controls.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/styles.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--surface-bench); color: var(--text); font: var(--type-body); }
+    .pp-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-12); padding: var(--space-8) var(--space-16); background: var(--surface-panel); border-bottom: var(--border-width) solid var(--border-subtle); }
+    .pp-top strong { color: var(--text-strong); font: var(--type-heading); }
+    .pp-tabs a { text-decoration: none; }
+    .pp-demo { display: flex; align-items: center; gap: var(--space-12); margin-left: auto; }
+    .sl-main { display: grid; gap: var(--space-32); max-width: 960px; margin: 0 auto; padding: var(--space-32) var(--space-16) 160px; }
+    .sl-head { display: grid; gap: var(--space-8); }
+    .sl-head h1 { margin: 0; color: var(--text-strong); font: var(--type-title); }
+    .sl-head p { margin: 0; max-width: 62ch; color: var(--text-muted); font: var(--type-body); }
+    .sl-version { display: grid; gap: var(--space-8); justify-items: start; }
+    .sl-note { color: var(--text); font: var(--type-body); }
+    .sl-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-24); }
+    .sl-case { display: grid; gap: var(--space-16); align-content: start; padding: var(--space-24) var(--space-16) var(--space-16); border-radius: var(--radius-lg); background: var(--surface-panel); }
+    .sl-case h2 { margin: 0; color: var(--text-strong); font: var(--type-subheading); }
+    .sl-big { padding-top: 150px; } /* room for the bubble */
+    .sl-big .ss { height: var(--target-min); }
+    .sl-panel { width: var(--panel-width); max-width: 100%; padding-top: 150px; }
+    .sl-read { display: grid; grid-template-columns: auto 1fr; gap: var(--space-4) var(--space-16); margin: 0; color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); font-variant-numeric: var(--numeric); }
+    .sl-read dd { margin: 0; color: var(--text-strong); }
+  </style>
+</head>
+<body>
+  <header class="pp-top">
+    <strong>Selvedge</strong>
+    <nav class="c-seg pp-tabs" aria-label="Design system">
+      <a class="c-seg__opt c-focus" href="./">Foundations and icons</a>
+      <a class="c-seg__opt c-focus" href="controls.html">Controls</a>
+      <a class="c-seg__opt c-focus" href="panel.html">Panel</a>
+      <a class="c-seg__opt c-focus is-selected" href="slider-lab.html" aria-current="page">Slider lab</a>
+    </nav>
+    <div class="pp-demo">
+      <div class="c-seg" role="group" aria-label="Theme" id="theme">
+        <button class="c-reset c-seg__opt c-focus" data-theme-pick="light">Light</button>
+        <button class="c-reset c-seg__opt c-focus" data-theme-pick="dark">Dark</button>
+      </div>
+    </div>
+  </header>
+  <main class="sl-main">
+    <div class="sl-head">
+      <h1>Slider lab</h1>
+      <p>One place to work out how the stage slider should feel. Pick a version, drag, and tune it with the Slider panel (top right): any value you like there can become the default. The readout under each slider shows what it is doing. Tell me what to change, or point at it with the feedback button (bottom right).</p>
+    </div>
+    <div class="sl-version">
+      <div id="versions"></div>
+      <span class="sl-note" id="version-note"></span>
+    </div>
+    <div class="sl-cases" id="cases"></div>
+  </main>
+  <script type="module" src="slider-lab.js"></script>
+  <script type="module" src="./agentation.js"></script>
+</body>
+</html>

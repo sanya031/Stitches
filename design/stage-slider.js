@@ -33,13 +33,26 @@ export const STAGE_SETTINGS = {
   }
 };
 
+/** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's. */
+export const STAGE_TUNING = {
+  bubbleSize: 104,     // px, the preview square
+  linger: 450,         // ms the bubble stays after release
+  keyLinger: 900,      // ms it stays after an arrow key
+  inBetween: true,     // while dragging, the preview draws in-between values (false: only stops)
+  release: 'jump',     // 'jump': the thumb lands on the nearest stop at once; 'glide': it slides there
+  glide: 160,          // ms, the glide to the stop
+};
+
 /**
  * Build a stage slider in `host`. options: setting (a STAGE_SETTINGS key), style ('thread' | 'prim'),
- * colour (thread colour), onChange(value), labelOutside (the label sits above the box, the slider fills it).
+ * colour (thread colour), onChange(value), labelOutside (the label sits above the box, the slider fills it),
+ * tuning (overrides of STAGE_TUNING, read on every use so it can change live), onMove(position, state) for a readout.
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false } = {}) {
+export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
+  const tune = (k) => (k in tuning ? tuning[k] : STAGE_TUNING[k]);
+  let glideRaf = 0;
   let index = def.stops.indexOf(def.initial), hideTimer = 0;
 
   const el = document.createElement('div');
@@ -61,9 +74,10 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const i = Math.min(last - 1, Math.floor(pos)), t = pos - i;
     return last === 0 ? def.stops[0] : lerp(def.stops[i], def.stops[i + 1], t);
   };
-  const draw = (pos) => {
-    const v = at(pos), shown = def.stops[Math.round(pos)];
-    const opts = { size: 104, id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.45, colour, paper: style === 'thread' };
+  const draw = (pos, state = 'rest') => {
+    const v = tune('inBetween') ? at(pos) : def.stops[Math.round(pos)], shown = def.stops[Math.round(pos)];
+    onMove?.(pos, state);
+    const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.45, colour, paper: style === 'thread' };
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
     valueEl.textContent = def.say(shown);
@@ -73,17 +87,26 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     bubble.style.left = `${x}px`;
   };
   const show = () => { clearTimeout(hideTimer); el.classList.add('ss-on'); };
-  const hide = (after = 450) => { clearTimeout(hideTimer); hideTimer = setTimeout(() => el.classList.remove('ss-on'), after); };
+  const hide = (after = tune('linger')) => { clearTimeout(hideTimer); hideTimer = setTimeout(() => el.classList.remove('ss-on'), after); };
   const settle = () => {
-    index = Math.round(Number(input.value));
-    input.value = index;
+    const from = Number(input.value);
+    index = Math.round(from);
     input.setAttribute('aria-valuetext', def.say(def.stops[index]));
-    draw(index);
     onChange?.(def.stops[index]);
+    cancelAnimationFrame(glideRaf);
+    if (tune('release') !== 'glide' || from === index) { input.value = index; draw(index, 'settled'); return; }
+    // glide: ease the thumb from where it was let go to the stop
+    const t0 = performance.now(), d = Math.max(1, tune('glide'));
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / d), e = 1 - (1 - t) ** 3, p = from + (index - from) * e;
+      input.value = p; draw(p, t < 1 ? 'gliding' : 'settled');
+      if (t < 1) glideRaf = requestAnimationFrame(step);
+    };
+    glideRaf = requestAnimationFrame(step);
   };
 
-  input.addEventListener('pointerdown', () => { show(); draw(Number(input.value)); });
-  input.addEventListener('input', () => { show(); draw(Number(input.value)); });
+  input.addEventListener('pointerdown', () => { cancelAnimationFrame(glideRaf); show(); draw(Number(input.value), 'dragging'); });
+  input.addEventListener('input', () => { show(); draw(Number(input.value), 'dragging'); });
   input.addEventListener('change', () => { settle(); if (!input.matches(':active')) hide(); });
   addEventListener('pointerup', () => { if (el.classList.contains('ss-on') && document.activeElement === input) { settle(); hide(); } });
   // keys move a whole stop at a time, with the bubble up long enough to see it
@@ -92,7 +115,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     if (step == null) return;
     e.preventDefault();
     input.value = Math.max(0, Math.min(last, index + step));
-    show(); settle(); hide(900);
+    show(); settle(); hide(tune('keyLinger'));
   });
   input.addEventListener('blur', () => hide(0));
 
