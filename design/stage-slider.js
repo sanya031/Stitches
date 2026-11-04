@@ -3,7 +3,7 @@
 // and the thread on it, redrawn live as the value changes: the thread thickens, the square shrinks, the lines
 // pack closer. Release and the value settles on the nearest real stop; the bubble lingers, then fades.
 //
-// Stops are real values (1, 2, 3, 4, 6 strands; 11–18 count). Between stops the preview draws the in-between
+// Stops are real values (1–6 strands; 11–18 count). Between stops the preview draws the in-between
 // value, so the change reads as continuous under the finger; the readout and the result are always a stop.
 import { threadSvg } from './icons/thread.js';
 import { primitiveSvg } from './icons/primitives.js';
@@ -13,7 +13,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 /** What each setting draws, in either style. v is the (possibly in-between) value. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
 export const STAGE_SETTINGS = {
   strands: {
-    label: 'Strands', stops: [1, 2, 3, 4, 6], initial: 2, marks: 1, common: [2],
+    label: 'Strands', stops: [1, 2, 3, 4, 5, 6], initial: 2, marks: 1, common: [2],
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
