@@ -4,7 +4,7 @@
 import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
-import { skein } from './skein.js';
+import { skein, SKEIN_LOOKS, setSkeinLook } from './skein.js';
 import { colourFieldHtml, createColourField, hexOf, parseHex } from './colour-field.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
@@ -49,7 +49,7 @@ const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n
 const CANVAS_STITCHES = [['stitch-full', 'Thickness 2', 6120], ['stitch-half', 'Thickness 1', 2840], ['stitch-full', 'Thickness 3', 980], ['stitch-back', 'Thickness 1', 1210], ['fill-weave-3', 'Density 60%', 540], ['stitch-knot', 'Thickness 2', 150]];
 const canvasStitches = section('Canvas stitches', `<div data-canvas-stitches>${CANVAS_STITCHES.map(([n, detail, count]) => `<button class="c-reset c-row c-focus tz-host" data-count="${count}"><span class="c-row__art">${zoomPrim(n)}</span>${stitchName(n)}<span class="c-row__detail">${detail} · ${count.toLocaleString('en')}</span></button>`).join('')}</div><span class="c-hint">Click a stitch to select every one like it</span>`);
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
-const inPiece = section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
+const inPiece = () => section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
 const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitches', 'is-selected')}${layerRow('Calla lilies photo', 'is-hidden', 'eye-off')}</div>`, { action: iconbtn('plus', 'Add layer', 'c-iconbtn--sm') });
 const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}`);
@@ -57,9 +57,9 @@ const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}$
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
   tool: () => head('Tool', 'Stitch', '')
-    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece}${canvasStitches}${layers}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece()}${canvasStitches}${layers}</div>`,
   selection: () => head('Selection', '142 stitches', '3 colours · 2 stitch types', `${iconbtn('tool-pan', 'Move')}${iconbtn('recolour', 'Recolour')}${iconbtn('rotate', 'Rotate')}${iconbtn('clear', 'Delete')}`)
-    + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece}${canvasStitches}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece()}${canvasStitches}</div>`,
   image: () => head('Image', 'Calla lilies photo', '2400 × 1800 px → 120 × 90 squares', `${iconbtn('picture', 'Replace image')}${iconbtn('clear', 'Remove image')}`)
     + `<div class="c-panel__body">${section('Turn into', `${stack(sw('Pattern', true))}${stack(sw('Stitched', true))}`)}${section('Colours', `${prop('Colours', num('Colours', 11, 'threads'))}${slider('Detail', 70)}${stack(sw('Dither'))}${stack(sw('Remove background', true))}${stack(sw('Outline', true))}`)}${section('Size on fabric', `<div class="c-prop__pair">${num('W', 120, 'sq')}${num('H', 90, 'sq')}</div>${seg(['Squares', 'cm', 'in'])}<span class="c-hint">21.8 × 16.3 cm at 14 count</span>`)}${layers}</div>`,
   text: () => head('Text', '“Hello”', 'Script · stem stitch · 2 strands')
@@ -228,3 +228,14 @@ setTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' :
 if (savedPill !== null && PILL_STYLES.some(([v]) => v === savedPill)) { pillStyle = savedPill; $('pill-style').value = savedPill; }
 renderStage();
 render();
+
+// Trying other ways to show a colour: a DialKit panel switches every swatch on the page between the looks
+import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
+  createDialRoot({ position: 'top-right', theme: document.documentElement.dataset.theme });
+  const kit = createDialKit('Colour swatch', {
+    look: { type: 'select', options: Object.entries(SKEIN_LOOKS).map(([value, l]) => ({ value, label: l.label })), default: 'skein' },
+  }, { id: 'selvedge-swatch-look-1', persist: true });
+  const apply = ({ look }) => { setSkeinLook(look); closePop(); render(); };
+  apply(kit.getValues());
+  kit.subscribe(apply);
+}).catch(() => {});

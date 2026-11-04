@@ -237,6 +237,8 @@
 .c-skein { position: relative; display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border-radius: var(--radius-md); cursor: pointer; }
 .c-skein svg { display: block; width: var(--space-32); height: var(--space-20); }
 .c-skein__twist { fill: var(--neutral-50); stroke: var(--neutral-400); stroke-width: 0.75; }
+.c-skein__edge { fill: none; stroke: var(--border-strong); stroke-width: 0.75; stroke-opacity: 0.6; }
+.c-skein__groove { fill: none; stroke: var(--neutral-0); stroke-width: 0.75; stroke-opacity: 0.35; stroke-linecap: round; }
 .c-skein:hover, .c-skein.is-hover { background: none; }
 .c-skein:hover .c-skein__bar, .c-skein.is-hover .c-skein__bar { background: var(--text-muted); }
 .c-skein.is-selected { background: var(--surface-selected); }
