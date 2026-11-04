@@ -16,6 +16,7 @@ const VERSIONS = {
   v7: { note: 'v7: as v6, with the markers faint until one is in use: the marker the handle is on (pulled onto it while dragging, or landed on) shows at full strength.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35 } },
   v8: { note: 'v8: as v7, but untouched you see only the fill. Hover (or drag, or tab to it) and the handle and markers fade in.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
   v9: { note: 'v9: as v8, and the number is a field. Hover it and a fill hugs the number; press it and an underline shows you are typing; type a value or use the up and down arrows (shift for ten), Enter to keep it, Escape to undo. Typed values land on the nearest stop.', layout: 'bar', editable: true, tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
+  v10: { note: 'v10: as v9, with a quieter bubble: the stitch as a line primitive (the same drawing as the stitch tiles) in the text colour on a plain square, smaller, instead of the thread on red cloth. Thickness and spacing still follow the value as you drag.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -35,7 +36,7 @@ function render() {
     const put = (k, v) => { read.querySelector(`[data-k="${k}"]`).textContent = v; };
     let last = null;
     createStageSlider(host, {
-      setting: s, style: 'thread', colour: hexOf('--terracotta-500'), labelOutside: 'panel' in host.dataset, tuning, layout: VERSIONS[version].layout || 'inline', editable: !!VERSIONS[version].editable,
+      setting: s, style: VERSIONS[version].style || 'thread', colour: hexOf('--terracotta-500'), labelOutside: 'panel' in host.dataset, tuning, layout: VERSIONS[version].layout || 'inline', editable: !!VERSIONS[version].editable,
       onMove: (pos, state) => {
         const now = performance.now();
         if (last && state === 'dragging') put('speed', `${(Math.abs(pos - last.pos) / Math.max(1, now - last.t) * 1000).toFixed(1)} stops/s`);
