@@ -44,6 +44,7 @@ export const STAGE_TUNING = {
   handle: 16,          // px, the bar handle's height (bar layout)
   markers: false,      // bar layout: markers on the box at every mark
   markAlign: 'bottom', // where the markers sit: 'bottom' of the box or 'centre'
+  markOpacity: 1,      // markers' opacity when not in use; the one the handle is on is always full
   magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
 };
 
@@ -69,7 +70,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   // markers at every mark, inside the ends
   const markHtml = () => Array.from({ length: Math.floor(last / marks) - 1 }, (_, i) => {
     const at = (i + 1) * marks, common = def.common?.includes(def.stops[at]);
-    return `<span class="ss-mark${common ? ' ss-mark--common' : ''}" style="left:${(at / last) * 100}%"></span>`;
+    return `<span class="ss-mark${common ? ' ss-mark--common' : ''}" data-at="${at}" style="left:${(at / last) * 100}%"></span>`;
   }).join('');
   const el = document.createElement('div');
   const numberBelow = layout === 'number', bar = layout === 'bar', live = layout === 'live' || bar;
@@ -114,6 +115,9 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     el.style.setProperty('--ss-handle', `${tune('handle')}px`);
     el.classList.toggle('ss--marked', !!tune('markers'));
     el.classList.toggle('ss--marks-centre', tune('markAlign') === 'centre');
+    // the marker in use (the handle is on it, snapped or settled) shows at full strength; the rest are faint
+    el.style.setProperty('--ss-mark-opacity', tune('markOpacity'));
+    el.querySelectorAll('.ss-mark').forEach((m) => m.classList.toggle('is-active', Number(m.dataset.at) === pos));
     const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
   };

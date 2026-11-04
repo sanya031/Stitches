@@ -13,6 +13,7 @@ const VERSIONS = {
   v4: { note: 'v4: the whole box is the slider. It fills from the left up to the handle, a vertical bar you pull; press or drag anywhere in the box. Label above, number inside on the right.', layout: 'bar', tuning: { ...STAGE_TUNING } },
   v5: { note: 'v5: as v4 with a longer handle and markers at every whole number (every 10 for density). Near a marker, dragging pulls the handle onto it; letting go lands on the nearest whole number.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15 } },
   v6: { note: 'v6: as v5, with the markers through the middle of the box and longer; the marker for the most used value (2 strands, 50% density) is bolder.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre' } },
+  v7: { note: 'v7: as v6, with the markers faint until one is in use: the marker the handle is on (pulled onto it while dragging, or landed on) shows at full strength.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35 } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -82,6 +83,7 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     glide: [t.glide, 40, 600, 10],
     handle: [t.handle, 8, 36, 1],
     markers: t.markers,
+    markOpacity: [t.markOpacity, 0, 1, 0.05],
     markAlign: { type: 'select', options: [{ value: 'bottom', label: 'Bottom' }, { value: 'centre', label: 'Centre' }], default: t.markAlign },
     magnet: [t.magnet, 0, 0.5, 0.01],
     copy: { type: 'action', label: 'Copy values' },

@@ -183,7 +183,8 @@
 .ss--bar .ss-handle { position: absolute; top: 50%; left: clamp(var(--space-6), calc(var(--p, 0) * 100%), calc(100% - var(--space-6))); width: var(--space-4); height: var(--ss-handle, var(--space-16)); border-radius: var(--radius-pill); background: var(--control-fill); transform: translate(-50%, -50%); pointer-events: none; }
 .ss--bar:hover .ss-handle, .ss--bar.ss-on .ss-handle { background: var(--text-strong); }
 .ss-mark { display: none; position: absolute; bottom: var(--space-4); width: var(--border-width); height: var(--space-6); border-radius: var(--radius-pill); background: var(--border-strong); transform: translateX(-50%); }
-.ss--marked .ss-mark { display: block; }
+.ss--marked .ss-mark { display: block; opacity: var(--ss-mark-opacity, 1); transition: opacity var(--motion-tooltip-duration) ease-out; }
+.ss--marked .ss-mark.is-active { opacity: 1; } /* fades with the same quick fade as the tooltip */
 .ss--marks-centre .ss-mark { top: 50%; bottom: auto; height: var(--space-12); transform: translate(-50%, -50%); } /* through the middle, longer */
 .ss--marks-centre .ss-mark--common { width: var(--space-2); height: var(--space-16); background: var(--text-muted); } /* the values most people use */
 .ss--bar input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; }
