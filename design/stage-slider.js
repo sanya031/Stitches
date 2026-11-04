@@ -109,7 +109,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const draw = (pos, state = 'rest') => {
     const v = tune('inBetween') ? at(pos) : def.stops[Math.round(pos)], shown = def.stops[Math.round(pos)];
     onMove?.(pos, state);
-    const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.45, colour, paper: style === 'thread' };
+    const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.2, colour, paper: style === 'thread' };
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
     const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
