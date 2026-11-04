@@ -201,7 +201,8 @@
 /* editable number: a field over the bar; pressing it fills it to show it's selected */
 .ss--bar .ss-edit { right: var(--space-4); z-index: 1; width: calc(var(--ss-chars, 4) * 1ch + var(--space-16)); height: calc(100% - var(--space-8)); padding: 0 var(--space-8); border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-variant-numeric: var(--numeric); text-align: right; outline: 0; pointer-events: auto; cursor: text; }
 .ss--bar .ss-edit:hover { background: var(--surface-selected); }
-.ss--bar .ss-edit:focus { background: var(--surface-panel); color: var(--text-strong); box-shadow: inset 0 0 0 var(--border-width) var(--border-strong); }
+.ss--bar .ss-edit:focus { background: var(--surface-selected); color: var(--text-strong); } /* selected: one quiet fill, no outline */
+.ss--bar .ss-edit::selection { background: var(--border); color: var(--text-strong); } /* the typed-over number, in a neutral, not the browser's blue */
 .ss--bare { grid-template-columns: minmax(0, 1fr); } /* the box holds only the slider */
 .ss-num { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); } /* the number under it */
 .ss--label-out { grid-template-columns: minmax(var(--space-48), 1fr) auto; } /* label above, outside the box: the slider gets the room */
