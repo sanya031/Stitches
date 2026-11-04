@@ -37,7 +37,7 @@ const section = (title, body, { action = '', open = true } = {}) => `<div class=
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
 // the colour row: the thread as a skein and its hex code; any colour can be used
 const swatchHtml = (hex, mixed = false) => `${skeinShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
-const colourRow = (mixed = false) => `<button class="c-reset c-swatchrow c-focus" data-picker><span class="c-swatchrow__label">Colour</span><span class="c-swatchrow__swatch">${swatchHtml(threadHex, mixed)}</span>${ic('chevron-down')}</button>`;
+const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><button class="c-reset c-swatchrow c-focus" data-picker aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button></div>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
@@ -89,7 +89,7 @@ function wire(root) {
   stylePills(root);
   root.querySelectorAll('[data-pill]').forEach(motion);
   root.querySelectorAll('[data-tiles]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tile' }));
-  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, style: 'thread', colour: threadColour() }));
+  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, style: 'thread', colour: threadColour(), labelOutside: host.dataset.stage === 'strands' }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
   root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
   // icons centred on their drawing, as on the Controls tab
@@ -185,7 +185,7 @@ document.addEventListener('click', (e) => {
   const modeOpt = t.closest('#mode .c-seg__opt');
   if (modeOpt) { mode = modeOpt.dataset.value; setTimeout(render, 0); return; }
   const sec = t.closest('[data-section]');
-  if (sec) { const s = sec.parentElement, open = s.dataset.open !== 'true'; s.dataset.open = open; sec.setAttribute('aria-expanded', open); sec.querySelector('.c-ic').outerHTML = ic(open ? 'chevron-down' : 'chevron-right'); return; }
+  if (sec) { const s = sec.closest('.c-panel__section'), open = s.dataset.open !== 'true'; s.dataset.open = open; sec.setAttribute('aria-expanded', open); sec.querySelector('.c-ic').outerHTML = ic(open ? 'chevron-down' : 'chevron-right'); return; }
   const tile = t.closest('[data-tiles] .c-tile');
   if (tile) { tile.parentElement.querySelectorAll('.c-tile').forEach((x) => x.setAttribute('aria-pressed', x === tile)); }
   const tool = t.closest('[data-tools] .c-tool');

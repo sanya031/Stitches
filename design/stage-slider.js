@@ -35,15 +35,18 @@ export const STAGE_SETTINGS = {
 
 /**
  * Build a stage slider in `host`. options: setting (a STAGE_SETTINGS key), style ('thread' | 'prim'),
- * colour (thread colour), onChange(value). Returns { el, value, setStyle(style), setColour(hex) }.
+ * colour (thread colour), onChange(value), labelOutside (the label sits above the box, the slider fills it).
+ * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange } = {}) {
+export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
   let index = def.stops.indexOf(def.initial), hideTimer = 0;
 
   const el = document.createElement('div');
-  el.className = 'ss';
-  el.innerHTML = `<label class="ss-label" for="${uid}">${def.label}</label>
+  el.className = labelOutside ? 'ss ss--label-out' : 'ss';
+  const label = `<label class="${labelOutside ? 'c-label' : 'ss-label'}" for="${uid}">${def.label}</label>`;
+  if (labelOutside) { host.classList.add('c-labelled'); host.insertAdjacentHTML('beforeend', label); }
+  el.innerHTML = `${labelOutside ? '' : label}
     <div class="ss-track">
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>

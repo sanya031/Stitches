@@ -163,11 +163,17 @@
 .c-slider.is-mixed .c-slider__fill, .c-slider.is-mixed .c-slider__thumb { display: none; }
 .c-slider.is-mixed .c-slider__value { color: var(--text-muted); }
 
+/* @control field-label */
+/* A label above its control, outside the box, for controls that read better with the whole box to themselves. */
+.c-labelled { display: grid; gap: var(--space-6); }
+.c-label { color: var(--text-muted); font: var(--type-label); }
+
 /* @control stage-slider */
 .ss { display: grid; grid-template-columns: auto minmax(var(--space-48), 1fr) auto; align-items: center; gap: var(--space-12); height: var(--row-height); padding: 0 var(--space-12); border: var(--border-width) solid transparent; border-radius: var(--radius-md); background: var(--surface-field); font: var(--type-label); }
 .ss:hover { border-color: var(--border); }
 .ss.ss-on { border-color: var(--focus); }
 .ss-label { color: var(--text-muted); }
+.ss--label-out { grid-template-columns: minmax(var(--space-48), 1fr) auto; } /* label above, outside the box: the slider gets the room */
 .ss-out { color: var(--text); text-align: right; white-space: nowrap; font-variant-numeric: var(--numeric); }
 .ss-track { position: relative; }
 .ss input { display: block; appearance: none; width: 100%; color: inherit; height: var(--row-height); margin: 0; background: none; cursor: pointer; }
@@ -396,7 +402,8 @@
 .c-swatchrow .c-skein { width: var(--space-24); height: var(--space-24); }
 .c-swatchrow .c-skein svg { width: var(--space-24); height: var(--space-16); }
 .c-swatchrow__label { color: var(--text-muted); }
-.c-swatchrow__swatch { display: flex; align-items: center; gap: var(--space-6); margin-left: auto; }
+.c-swatchrow__swatch { display: flex; align-items: center; gap: var(--space-6); }
+.c-swatchrow__label + .c-swatchrow__swatch { margin-left: auto; } /* with the label inside, the swatch goes right */
 .c-swatchrow__code { color: var(--text-muted); font-variant-numeric: var(--numeric); }
 .c-swatchrow > .c-ic { width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
 .c-swatchrow:hover > .c-ic, .c-swatchrow.is-open > .c-ic { color: var(--icon-active); }
