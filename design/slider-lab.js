@@ -17,7 +17,7 @@ const VERSIONS = {
   v8: { note: 'v8: as v7, but untouched you see only the fill. Hover (or drag, or tab to it) and the handle and markers fade in.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
   v9: { note: 'v9: as v8, and the number is a field. Hover it and a fill hugs the number; press it and an underline shows you are typing; type a value or use the up and down arrows (shift for ten), Enter to keep it, Escape to undo. Typed values land on the nearest stop.', layout: 'bar', editable: true, tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
   v10: { note: 'v10: as v9, with a quieter bubble: the stitch as a line primitive (the same drawing as the stitch tiles) in the text colour on a plain square, smaller, instead of the thread on red cloth. Thickness and spacing still follow the value as you drag.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
-  v11: { note: 'v11: as v10, and the number in the bubble moves as it changes. Pick how in the Slider panel (Number): Roll turns each digit like a combination lock, passing the digits between (going up, the new one comes down from above); Slide drops in only the digits that changed; Blur cross-fades them through a blur. Duration, ease, stagger (each place waits for the one to its right), slide distance, blur and edge fade tune it.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'roll' } },
+  v11: { note: 'v11: as v10, with a choice of motion for the bubble number. It starts plain, as in v10 (the default); pick another in the Slider panel (Number): Roll turns each digit like a combination lock, passing the digits between (going up, the new one comes down from above); Slide drops in only the digits that changed; Blur cross-fades them through a blur. Duration, ease, stagger (each place waits for the one to its right), slide distance, blur and edge fade tune it.', layout: 'bar', editable: true, style: 'prim', dials: 'v11-2', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none' } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -102,7 +102,7 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     },
     copy: { type: 'action', label: 'Copy values' },
   }, {
-    id: `selvedge-slider-lab-${version}`, persist: true,
+    id: `selvedge-slider-lab-${VERSIONS[version].dials || version}`, // dials: a new key when a version's starting values change persist: true,
     onAction: () => navigator.clipboard?.writeText(JSON.stringify(Object.fromEntries(Object.entries(kit.getValues()).filter(([k]) => k !== 'copy')), null, 2)),
   });
   const apply = (v) => { v = { ...v, ...v.number }; for (const k of Object.keys(STAGE_TUNING)) if (k in v) tuning[k] = v[k]; }; // the Number folder's values sit under number
