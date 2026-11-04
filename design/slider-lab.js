@@ -8,6 +8,7 @@ import { hexOf } from './colour-field.js';
 // Each version: what changed, and the tuning it starts from. Newest last.
 const VERSIONS = {
   v1: { note: 'v1, as in the system now: a native range input. Dragging previews in-between values in the bubble; letting go jumps to the nearest stop.', tuning: { ...STAGE_TUNING } },
+  v2: { note: 'v2: no label. The box holds only the slider; under it, on the left, just the number, changing as you drag.', layout: 'number', tuning: { ...STAGE_TUNING } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -27,7 +28,7 @@ function render() {
     const put = (k, v) => { read.querySelector(`[data-k="${k}"]`).textContent = v; };
     let last = null;
     createStageSlider(host, {
-      setting: s, style: 'thread', colour: hexOf('--terracotta-500'), labelOutside: 'panel' in host.dataset, tuning,
+      setting: s, style: 'thread', colour: hexOf('--terracotta-500'), labelOutside: 'panel' in host.dataset, tuning, layout: VERSIONS[version].layout || 'inline',
       onMove: (pos, state) => {
         const now = performance.now();
         if (last && state === 'dragging') put('speed', `${(Math.abs(pos - last.pos) / Math.max(1, now - last.t) * 1000).toFixed(1)} stops/s`);

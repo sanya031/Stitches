@@ -47,27 +47,36 @@ export const STAGE_TUNING = {
  * Build a stage slider in `host`. options: setting (a STAGE_SETTINGS key), style ('thread' | 'prim'),
  * colour (thread colour), onChange(value), labelOutside (the label sits above the box, the slider fills it),
  * tuning (overrides of STAGE_TUNING, read on every use so it can change live), onMove(position, state) for a readout.
+ * layout: 'inline' (label, slider, value in one box) or 'number' (the box holds only the slider; below it, on the
+ * left, just the number, following the thumb as it moves).
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove } = {}) {
+export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'inline' } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
   const tune = (k) => (k in tuning ? tuning[k] : STAGE_TUNING[k]);
   let glideRaf = 0;
   let index = def.stops.indexOf(def.initial), hideTimer = 0;
 
   const el = document.createElement('div');
-  el.className = labelOutside ? 'ss ss--label-out' : 'ss';
+  const numberBelow = layout === 'number';
+  el.className = numberBelow ? 'ss ss--bare' : labelOutside ? 'ss ss--label-out' : 'ss';
   const label = `<label class="${labelOutside ? 'c-label' : 'ss-label'}" for="${uid}">${def.label}</label>`;
-  if (labelOutside) { host.classList.add('c-labelled'); host.insertAdjacentHTML('beforeend', label); }
-  el.innerHTML = `${labelOutside ? '' : label}
+  if (labelOutside && !numberBelow) { host.classList.add('c-labelled'); host.insertAdjacentHTML('beforeend', label); }
+  el.innerHTML = `${labelOutside || numberBelow ? '' : label}
     <div class="ss-track">
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
     </div>
-    <output class="ss-out mono" for="${uid}"></output>`;
+    ${numberBelow ? '' : `<output class="ss-out mono" for="${uid}"></output>`}`;
   host.append(el);
+  // number layout: the number sits under the box and moves with the thumb
+  if (numberBelow) {
+    host.classList.add('c-labelled');
+    host.insertAdjacentHTML('beforeend', `<output class="ss-num" for="${uid}"></output>`);
+    el.querySelector('input').setAttribute('aria-label', def.label);
+  }
   const input = el.querySelector('input'), bubble = el.querySelector('.ss-bubble'), art = el.querySelector('.ss-art');
-  const valueEl = el.querySelector('.ss-value'), out = el.querySelector('output');
+  const valueEl = el.querySelector('.ss-value'), out = el.querySelector('output') || host.querySelector('.ss-num');
 
   // the value at a slider position: a stop, or in between two while dragging
   const at = (pos) => {
@@ -81,7 +90,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
     valueEl.textContent = def.say(shown);
-    out.textContent = def.say(def.stops[index]);
+    out.textContent = numberBelow ? String(shown) : def.say(def.stops[index]);
     // the bubble rides the thumb
     const r = input.getBoundingClientRect(), thumb = 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
