@@ -38,6 +38,7 @@ export const STAGE_SETTINGS = {
 /** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's. */
 export const STAGE_TUNING = {
   bubbleSize: 104,     // px, the preview square
+  bubbleGap: 4,        // px between the bubble and the box (bar layout)
   linger: 450,         // ms the bubble stays after release
   keyLinger: 900,      // ms it stays after an arrow key
   inBetween: true,     // while dragging, the preview draws in-between values (false: only stops)
@@ -129,6 +130,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
       : numberBelow ? String(shown) : def.say(def.stops[index]);
     // the bubble rides the thumb (in the bar, the handle at the fill's edge)
     el.style.setProperty('--p', last ? pos / last : 0);
+    el.style.setProperty('--ss-bubble-gap', `${tune('bubbleGap')}px`);
     el.style.setProperty('--ss-handle', `${tune('handle')}px`);
     el.classList.toggle('ss--marked', !!tune('markers'));
     el.classList.toggle('ss--marks-centre', tune('markAlign') === 'centre');

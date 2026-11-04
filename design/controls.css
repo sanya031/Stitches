@@ -216,8 +216,9 @@
 .ss input::-moz-range-track { height: var(--space-4); border-radius: var(--radius-pill); background: var(--control-track); }
 .ss input::-webkit-slider-thumb { appearance: none; width: var(--space-12); height: var(--space-12); margin-top: calc(var(--space-4) * -1); border: var(--focus-width) solid var(--control-fill); border-radius: var(--radius-pill); background: var(--surface-panel); }
 .ss input::-moz-range-thumb { box-sizing: border-box; width: var(--space-12); height: var(--space-12); border: var(--focus-width) solid var(--control-fill); border-radius: var(--radius-pill); background: var(--surface-panel); }
-.ss-bubble { position: absolute; bottom: calc(100% + var(--space-2)); left: 0; z-index: var(--z-popover); display: grid; justify-items: center; gap: var(--inline-gap); padding: var(--space-8); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); opacity: 0; pointer-events: none; transform: translateX(-50%); }
+.ss-bubble { position: absolute; bottom: calc(100% + var(--tooltip-offset)); left: 0; z-index: var(--z-popover); display: grid; justify-items: center; gap: var(--inline-gap); padding: var(--space-8); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); opacity: 0; pointer-events: none; transform: translateX(-50%); }
 .ss-on .ss-bubble { opacity: 1; }
+.ss--bar .ss-bubble { bottom: calc(100% + var(--border-width) + var(--ss-bubble-gap, var(--tooltip-offset))); } /* the track sits inside the box's border: 4px from the box itself */
 .ss-art svg { display: block; border-radius: var(--radius-md); }
 .ss-art[data-style="prim"] { border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); }
 .ss-value { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }

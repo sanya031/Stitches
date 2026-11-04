@@ -80,6 +80,7 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
   const t = VERSIONS[version].tuning;
   const kit = createDialKit(`Slider ${version}`, {
     bubbleSize: [t.bubbleSize, 64, 160, 4],
+    bubbleGap: [t.bubbleGap, 0, 12, 1],
     linger: [t.linger, 0, 2000, 10],
     keyLinger: [t.keyLinger, 0, 2000, 10],
     inBetween: t.inBetween,
