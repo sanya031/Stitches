@@ -227,7 +227,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
 
   el.addEventListener('pointerdown', (e) => {
     if (!handOn() || e.button > 0 || e.target === edit) return;
-    e.preventDefault(); input.focus({ preventScroll: true });
+    e.preventDefault(); el.classList.add('ss--pointer'); input.focus({ preventScroll: true }); // focused by a press: no focus ring (a key brings it back)
     cancelAnimationFrame(glideRaf);
     const now = springs.pos.on ? Math.max(0, Math.min(last, springs.pos.x)) : Number(input.value); // catch a settling handle where it is
     springs.pos.on = false;
@@ -299,12 +299,13 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     });
   }
   input.addEventListener('keydown', (e) => {
+    el.classList.remove('ss--pointer');
     const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, Home: -last, End: last, PageDown: -10, PageUp: 10 }[e.key];
     if (step == null) return;
     e.preventDefault();
     show(); settle(Number(input.value), Math.max(0, Math.min(last, index + step))); hide(tune('keyLinger'));
   });
-  input.addEventListener('blur', () => hide(0));
+  input.addEventListener('blur', () => { hide(0); el.classList.remove('ss--pointer'); });
 
   draw(index);
   return {

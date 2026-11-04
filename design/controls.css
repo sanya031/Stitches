@@ -207,7 +207,7 @@
 .ss--hand .ss-fill { top: var(--border-width); bottom: var(--border-width); left: var(--border-width); width: calc(var(--p, 0) * (100% - 2 * var(--border-width))); border-radius: calc(var(--radius-md) - var(--border-width)) 0 0 calc(var(--radius-md) - var(--border-width)); } /* inside the edge, as before */
 .ss--hand .ss-handle { transform: translate(calc(-50% + var(--ss-stretch-r, 0px) - var(--ss-stretch-l, 0px)), -50%); } /* rides the stretched end */
 .ss--hand input[type="range"] { pointer-events: none; }
-.ss--bar:has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+.ss--bar:not(.ss--pointer):has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted); transition: color var(--motion-tooltip-duration) ease-out; }
 .ss--bar:is(:hover, .ss-on, :focus-within) .ss-out { color: var(--text); } /* quieter at rest; its full colour when hovered or in use */
 /* editable number: a field over the bar; pressing it fills it to show it's selected */
