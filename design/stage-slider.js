@@ -59,9 +59,11 @@ export const STAGE_TUNING = {
  * moves (the in-between value under the thumb), then the stop it lands on.
  * 'bar': as 'live', but the whole box is the slider: it fills from the left up to a handle, a vertical bar you
  * pull; press or drag anywhere in the box.
+ * editable (bar layout): the number is a field. Press it and it fills to show it's selected; type a value (it lands
+ * on the nearest stop) or step with the up and down arrows (shift for ten), Enter or leaving keeps it, Escape undoes.
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'inline' } = {}) {
+export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'inline', editable = false } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
   const tune = (k) => (k in tuning ? tuning[k] : STAGE_TUNING[k]);
   let glideRaf = 0;
@@ -85,7 +87,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 && !live ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
     </div>
-    ${numberBelow ? '' : `<output class="ss-out mono" for="${uid}"></output>`}`;
+    ${numberBelow ? '' : bar && editable ? `<input class="ss-out ss-edit" inputmode="decimal" spellcheck="false" aria-label="${def.label}, type a value">` : `<output class="ss-out mono" for="${uid}"></output>`}`;
   host.append(el);
   // number layout: the number sits under the box and moves with the thumb
   if (numberBelow) {
@@ -94,7 +96,10 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     el.querySelector('input').setAttribute('aria-label', def.label);
   }
   const input = el.querySelector('input'), bubble = el.querySelector('.ss-bubble'), art = el.querySelector('.ss-art');
-  const valueEl = el.querySelector('.ss-value'), out = el.querySelector('output') || host.querySelector('.ss-num');
+  const valueEl = el.querySelector('.ss-value'), edit = el.querySelector('.ss-edit');
+  const outEl = el.querySelector('output') || host.querySelector('.ss-num');
+  // the number: shown in an output, or, when editable, in its field (left alone while someone is typing in it)
+  const out = { set textContent(t) { if (edit) { if (document.activeElement !== edit) edit.value = t; } else outEl.textContent = t; } };
 
   // the value at a slider position: a stop, or in between two while dragging
   const at = (pos) => {
@@ -152,6 +157,24 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   input.addEventListener('change', () => { settle(); if (!input.matches(':active')) hide(); });
   addEventListener('pointerup', () => { if (el.classList.contains('ss-on') && document.activeElement === input) { settle(); hide(); } });
   // keys move a whole stop at a time, with the bubble up long enough to see it
+  // editable number: commit lands on the nearest stop; arrows step stops
+  if (edit) {
+    const nearest = (v) => def.stops.reduce((b, x, i) => (Math.abs(x - v) < Math.abs(def.stops[b] - v) ? i : b), 0);
+    const goTo = (i) => { input.value = Math.max(0, Math.min(last, i)); settle(); edit.value = String(def.stops[index]); };
+    let before = '';
+    edit.addEventListener('focus', () => { before = edit.value; edit.select(); });
+    edit.addEventListener('pointerdown', (e) => e.stopPropagation());
+    edit.addEventListener('keydown', (e) => {
+      const step = { ArrowUp: 1, ArrowDown: -1 }[e.key];
+      if (step) { e.preventDefault(); goTo(index + step * (e.shiftKey ? 10 : 1)); edit.select(); return; }
+      if (e.key === 'Enter') { e.preventDefault(); edit.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); edit.value = before; edit.blur(); }
+    });
+    edit.addEventListener('blur', () => {
+      const v = parseFloat(edit.value.replace(',', '.'));
+      if (Number.isFinite(v)) goTo(nearest(v)); else edit.value = String(def.stops[index]);
+    });
+  }
   input.addEventListener('keydown', (e) => {
     const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, Home: -last, End: last, PageDown: -10, PageUp: 10 }[e.key];
     if (step == null) return;

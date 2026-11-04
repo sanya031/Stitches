@@ -193,11 +193,15 @@
 .ss--reveal.ss--marked:is(:hover, .ss-on, :has(input:focus-visible)) .ss-mark.is-active { opacity: 1; }
 .ss--marks-centre .ss-mark { top: 50%; bottom: auto; height: var(--space-12); transform: translate(-50%, -50%); } /* through the middle, longer */
 .ss--marks-centre .ss-mark--common { width: var(--space-2); height: var(--space-16); background: var(--text-muted); } /* the values most people use */
-.ss--bar input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; }
-.ss--bar input::-webkit-slider-thumb { width: 1px; height: var(--row-height); }
-.ss--bar input::-moz-range-thumb { width: 1px; height: var(--row-height); }
-.ss--bar:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+.ss--bar input[type="range"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; }
+.ss--bar input[type="range"]::-webkit-slider-thumb { width: 1px; height: var(--row-height); }
+.ss--bar input[type="range"]::-moz-range-thumb { width: 1px; height: var(--row-height); }
+.ss--bar:has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(-50%); pointer-events: none; }
+/* editable number: a field over the bar; pressing it fills it to show it's selected */
+.ss--bar .ss-edit { right: var(--space-4); z-index: 1; width: calc(var(--ss-chars, 4) * 1ch + var(--space-16)); height: calc(100% - var(--space-8)); padding: 0 var(--space-8); border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-variant-numeric: var(--numeric); text-align: right; outline: 0; pointer-events: auto; cursor: text; }
+.ss--bar .ss-edit:hover { background: var(--surface-selected); }
+.ss--bar .ss-edit:focus { background: var(--surface-panel); color: var(--text-strong); box-shadow: inset 0 0 0 var(--border-width) var(--border-strong); }
 .ss--bare { grid-template-columns: minmax(0, 1fr); } /* the box holds only the slider */
 .ss-num { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); } /* the number under it */
 .ss--label-out { grid-template-columns: minmax(var(--space-48), 1fr) auto; } /* label above, outside the box: the slider gets the room */
