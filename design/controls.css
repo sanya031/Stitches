@@ -233,19 +233,16 @@
 .c-menu__end { margin-left: auto; }
 .c-menu__rule { height: var(--border-width); margin: var(--space-2) var(--space-4); background: var(--border-subtle); }
 
-/* @control skein */
-.c-skein { position: relative; display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border-radius: var(--radius-md); cursor: pointer; }
-.c-skein svg { display: block; width: var(--space-32); height: var(--space-20); }
-.c-skein__twist { fill: var(--neutral-50); stroke: var(--neutral-400); stroke-width: 0.75; }
-.c-skein__edge { fill: none; stroke: var(--border-strong); stroke-width: 0.75; stroke-opacity: 0.6; }
-.c-skein__groove { fill: none; stroke: var(--neutral-0); stroke-width: 0.75; stroke-opacity: 0.35; stroke-linecap: round; }
-.c-skein:hover, .c-skein.is-hover { background: none; }
-.c-skein:hover .c-skein__bar, .c-skein.is-hover .c-skein__bar { background: var(--text-muted); }
-.c-skein.is-selected { background: var(--surface-selected); }
-.c-skein__bar { position: absolute; left: var(--space-8); right: var(--space-8); bottom: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); }
-.c-skein.is-selected .c-skein__bar { background: var(--text-strong); }
-.c-skein.is-edge svg { stroke: var(--border-strong); stroke-width: 1; }
-.c-skein__n { position: absolute; top: var(--space-2); right: var(--space-2); }
+/* @control swatch */
+.c-swatch { position: relative; display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border-radius: var(--radius-md); cursor: pointer; }
+.c-swatch svg { display: block; width: var(--space-20); height: var(--space-20); }
+.c-swatch__edge { fill: none; stroke: var(--border-strong); stroke-width: 0.75; stroke-opacity: 0.6; }
+.c-swatch:hover, .c-swatch.is-hover { background: none; }
+.c-swatch:hover .c-swatch__bar, .c-swatch.is-hover .c-swatch__bar { background: var(--text-muted); }
+.c-swatch.is-selected { background: var(--surface-selected); }
+.c-swatch__bar { position: absolute; left: var(--space-8); right: var(--space-8); bottom: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); }
+.c-swatch.is-selected .c-swatch__bar { background: var(--text-strong); }
+.c-swatch__n { position: absolute; top: var(--space-2); right: var(--space-2); }
 
 /* @control preview-tile */
 .c-tile { position: relative; display: grid; place-items: center; width: var(--stitch-tile); height: var(--stitch-tile); border-radius: var(--radius-sm); color: var(--icon); cursor: pointer; }
@@ -285,13 +282,13 @@
 .c-hue__thumb { left: var(--h, 0%); top: 50%; margin: calc(var(--space-8) * -1) 0 0 calc(var(--space-8) * -1); background: var(--hue); }
 .c-colourfield:focus-visible, .c-hue:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .c-picker__body { display: grid; gap: var(--space-12); }
-.c-row__art .c-skein { width: var(--space-24); height: var(--space-24); }
-.c-row__art .c-skein svg { width: var(--space-24); height: var(--space-16); }
+.c-row__art .c-swatch { width: var(--space-24); height: var(--space-24); }
+.c-row__art .c-swatch svg { width: var(--space-16); height: var(--space-16); }
 
 /* @control colour-picker */
 .c-popover { display: grid; gap: var(--space-12); width: var(--panel-width); max-width: 100%; padding: var(--panel-padding); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); color: var(--text); font: var(--type-label); }
 .c-popover__title { color: var(--text-strong); font: var(--type-subheading); }
-.c-skeingrid { display: grid; grid-template-columns: repeat(5, var(--target-min)); justify-content: space-between; row-gap: var(--space-2); }
+.c-swatchgrid { display: grid; grid-template-columns: repeat(5, var(--target-min)); justify-content: space-between; row-gap: var(--space-2); }
 
 /* @control layer-row */
 .c-layer { display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: var(--control-md); padding: 0 var(--space-4) 0 var(--space-8); border-radius: var(--radius-md); color: var(--text); font: var(--type-label); }
@@ -401,8 +398,8 @@
 .c-prop__pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); }
 .c-prop--stack { grid-template-columns: minmax(0, 1fr); }
 .c-swatchrow { display: flex; align-items: center; gap: var(--space-8); width: 100%; height: var(--row-height); padding: 0 var(--space-8) 0 var(--space-12); border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); font: var(--type-label); text-align: left; cursor: pointer; }
-.c-swatchrow .c-skein { width: var(--space-24); height: var(--space-24); }
-.c-swatchrow .c-skein svg { width: var(--space-24); height: var(--space-16); }
+.c-swatchrow .c-swatch { width: var(--space-24); height: var(--space-24); }
+.c-swatchrow .c-swatch svg { width: var(--space-16); height: var(--space-16); }
 .c-swatchrow__label { color: var(--text-muted); }
 .c-swatchrow__swatch { display: flex; align-items: center; gap: var(--space-6); }
 .c-swatchrow__label + .c-swatchrow__swatch { margin-left: auto; } /* with the label inside, the swatch goes right */

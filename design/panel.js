@@ -4,7 +4,7 @@
 import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
-import { skein, SKEIN_LOOKS, setSkeinLook } from './skein.js';
+import { swatch } from './swatch.js';
 import { colourFieldHtml, createColourField, hexOf, parseHex } from './colour-field.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
@@ -29,14 +29,14 @@ const sw = (label, on = false, mixed = false) => `<button class="c-reset c-switc
 const slider = (label, v, { unit = '%', mixed = false } = {}) => `<div class="c-slider ${mixed ? 'is-mixed' : ''}" style="--v:${v}%" data-slider data-unit="${unit}"><span>${label}</span><span class="c-slider__track"><span class="c-slider__fill"></span><span class="c-slider__thumb" tabindex="0" role="slider" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}"></span></span><span class="c-slider__value">${mixed ? 'Mixed' : `${v}${unit}`}</span></div>`;
 const num = (label, value, unit = '', { mixed = false, steps = true } = {}) => `<label class="c-field c-field--num ${mixed ? 'is-mixed' : ''}"><span class="c-field__label">${label}</span><input inputmode="numeric" value="${mixed ? '' : value}" placeholder="${mixed ? 'Mixed' : ''}" aria-label="${label}"><span class="c-field__unit">${unit}</span>${steps ? `<span class="c-field__steps">${ic('minus')}${ic('plus')}</span>` : ''}</label>`;
 const select = (label, value, options, { mixed = false } = {}) => `<button class="c-reset c-select c-focus ${mixed ? 'is-mixed' : ''}" data-select="${options.join('|')}"><span class="c-select__label">${label}</span><span class="c-select__value">${mixed ? 'Mixed' : value}</span>${ic('chevron-down')}</button>`;
-const skeinShow = (colour, cls = '') => skein(colour, { tag: 'span', cls });
-const skeinBtn = (colour, cls = '', count = '') => skein(colour, { cls, attrs: 'data-skein', extra: count ? `<span class="c-badge c-skein__n">${count}</span>` : '' });
+const swatchShow = (colour, cls = '') => swatch(colour, { tag: 'span', cls });
+const swatchBtn = (colour, cls = '', count = '') => swatch(colour, { cls, attrs: 'data-swatch', extra: count ? `<span class="c-badge c-swatch__n">${count}</span>` : '' });
 const prop = (label, control) => control; // the label lives inside the control now
 const stack = (control) => `<div class="c-prop c-prop--stack">${control}</div>`;
 const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${title}${ic(open ? 'chevron-down' : 'chevron-right')}</button>${action}</div>${body}</div>`;
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
-// the colour row: the thread as a skein and its hex code; any colour can be used
-const swatchHtml = (hex, mixed = false) => `${skeinShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
+// the colour row: the thread as a swatch and its hex code; any colour can be used
+const swatchHtml = (hex, mixed = false) => `${swatchShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
 const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><button class="c-reset c-swatchrow c-focus" data-picker aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button></div>`;
 const stage = (setting) => `<div data-stage="${setting}"></div>`;
 
@@ -49,7 +49,7 @@ const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n
 const CANVAS_STITCHES = [['stitch-full', 'Thickness 2', 6120], ['stitch-half', 'Thickness 1', 2840], ['stitch-full', 'Thickness 3', 980], ['stitch-back', 'Thickness 1', 1210], ['fill-weave-3', 'Density 60%', 540], ['stitch-knot', 'Thickness 2', 150]];
 const canvasStitches = section('Canvas stitches', `<div data-canvas-stitches>${CANVAS_STITCHES.map(([n, detail, count]) => `<button class="c-reset c-row c-focus tz-host" data-count="${count}"><span class="c-row__art">${zoomPrim(n)}</span>${stitchName(n)}<span class="c-row__detail">${detail} · ${count.toLocaleString('en')}</span></button>`).join('')}</div><span class="c-hint">Click a stitch to select every one like it</span>`);
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
-const inPiece = () => section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${skeinBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
+const inPiece = () => section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${swatchBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
 const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitches', 'is-selected')}${layerRow('Calla lilies photo', 'is-hidden', 'eye-off')}</div>`, { action: iconbtn('plus', 'Add layer', 'c-iconbtn--sm') });
 const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}`);
@@ -136,17 +136,17 @@ function openPop(trigger, html) {
 // A sample of thread numbers, so embroiderers can find a thread's colour; the full chart comes with the real app.
 const THREADS = [['310', '#000000'], ['B5200', '#FFFFFF'], ['321', '#C72B3B'], ['666', '#E31D42'], ['3830', '#B95544'], ['3865', '#F9F7F1'], ['444', '#FFD600'], ['700', '#07733F'], ['797', '#13477D'], ['550', '#5C184E'], ['943', '#3D9384'], ['3747', '#D3D7ED']];
 const SAVED = [['Calla lilies', ['--terracotta-500', '--leaf-500', '--ochre-300', '--neutral-50']], ['Spring', ['--periwinkle-400', '--lilac-400', '--leaf-500', '--ochre-300', '--crimson-500']]];
-const skeinPick = (colour) => { const hex = colour.startsWith('--') ? hexOf(colour) : colour; return skein(hex, { cls: hex === threadHex ? 'is-selected' : '', attrs: `data-pick="${hex}" data-tip="${hex}"` }); };
+const swatchPick = (colour) => { const hex = colour.startsWith('--') ? hexOf(colour) : colour; return swatch(hex, { cls: hex === threadHex ? 'is-selected' : '', attrs: `data-pick="${hex}" data-tip="${hex}"` }); };
 const PICKER_TABS = {
-  canvas: () => `<div class="c-skeingrid">${PIECE.map(([c]) => skeinPick(c)).join('')}</div><span class="c-hint">Colours already on the canvas</span>`,
+  canvas: () => `<div class="c-swatchgrid">${PIECE.map(([c]) => swatchPick(c)).join('')}</div><span class="c-hint">Colours already on the canvas</span>`,
   custom: () => `${colourFieldHtml()}<label class="c-field"><span class="c-field__label">Hex</span><input value="${threadHex}" aria-label="Hex code" spellcheck="false" data-hex></label>`
     + `<label class="c-field c-search">${ic('search')}<input placeholder="Hex or thread number" aria-label="Search by hex or thread number" data-find></label><div data-found></div>`,
-  saved: () => SAVED.map(([name, cs]) => `<div class="c-group-label">${name}</div><div class="c-skeingrid">${cs.map(skeinPick).join('')}</div>`).join(''),
+  saved: () => SAVED.map(([name, cs]) => `<div class="c-group-label">${name}</div><div class="c-swatchgrid">${cs.map(swatchPick).join('')}</div>`).join(''),
   image: () => `<div class="c-drop">${ic('picture')}Drop an image to pull its colours</div>`,
 };
 const pickerHtml = () => `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg([['canvas', 'Canvas'], ['custom', 'Custom'], ['saved', 'Saved'], ['image', 'From image']], 1)}<div class="c-picker__body" data-picker-body></div></div>`;
 
-// set the thread colour everywhere it shows: the colour row, the field, the hex input, the picked skein
+// set the thread colour everywhere it shows: the colour row, the field, the hex input, the picked swatch
 function setThread(hex, from) {
   threadHex = hex;
   const row = panel.querySelector('[data-picker] .c-swatchrow__swatch'); if (row) row.innerHTML = swatchHtml(hex);
@@ -169,7 +169,7 @@ function wirePicker() {
     if (e.target.matches('[data-find]')) {
       const q = e.target.value.trim().replace(/^#/, '').toUpperCase(), out = pop.el.querySelector('[data-found]');
       const hex = parseHex(q), hits = q ? THREADS.filter(([n]) => n.toUpperCase().startsWith(q)).slice(0, 4) : [];
-      out.innerHTML = (hex ? [[null, hex]] : []).concat(hits).map(([n, h]) => `<button class="c-reset c-row c-focus" data-pick="${h}"><span class="c-row__art">${skeinShow(h)}</span>${n ? `Thread ${n}` : 'Hex'}<span class="c-row__detail">${h}</span></button>`).join('')
+      out.innerHTML = (hex ? [[null, hex]] : []).concat(hits).map(([n, h]) => `<button class="c-reset c-row c-focus" data-pick="${h}"><span class="c-row__art">${swatchShow(h)}</span>${n ? `Thread ${n}` : 'Hex'}<span class="c-row__detail">${h}</span></button>`).join('')
         || (q ? '<div class="c-empty"><strong>Nothing found</strong>Try a hex code or a thread number</div>' : '');
     }
   });
@@ -198,9 +198,9 @@ document.addEventListener('click', (e) => {
   if (layer && !tog) layer.parentElement.querySelectorAll('.c-layer').forEach((x) => x.classList.toggle('is-selected', x === layer));
   const cs = t.closest('[data-canvas-stitches] .c-row');
   if (cs) { cs.parentElement.querySelectorAll('.c-row').forEach((x) => x.classList.toggle('is-selected', x === cs)); toast(`Selected ${Number(cs.dataset.count).toLocaleString('en')} stitches`); }
-  const sk = t.closest('[data-skein]');
-  if (sk && !t.closest('.c-pop')) { sk.closest('.c-piece').querySelectorAll('.c-skein').forEach((x) => x.classList.toggle('is-selected', x === sk)); toast(`Selected the ${sk.parentElement.querySelector('.c-piece__n')?.textContent || ''} stitches in this colour`); }
-  if (sk && t.closest('.c-pop')) { sk.parentElement.querySelectorAll('.c-skein').forEach((x) => x.classList.toggle('is-selected', x === sk)); }
+  const sk = t.closest('[data-swatch]');
+  if (sk && !t.closest('.c-pop')) { sk.closest('.c-piece').querySelectorAll('.c-swatch').forEach((x) => x.classList.toggle('is-selected', x === sk)); toast(`Selected the ${sk.parentElement.querySelector('.c-piece__n')?.textContent || ''} stitches in this colour`); }
+  if (sk && t.closest('.c-pop')) { sk.parentElement.querySelectorAll('.c-swatch').forEach((x) => x.classList.toggle('is-selected', x === sk)); }
   const picker = t.closest('[data-picker]');
   if (picker) { if (pop?.trigger === picker) closePop(); else { openPop(picker, pickerHtml()); wirePicker(); } }
   const sel = t.closest('[data-select]');
@@ -229,13 +229,3 @@ if (savedPill !== null && PILL_STYLES.some(([v]) => v === savedPill)) { pillStyl
 renderStage();
 render();
 
-// Trying other ways to show a colour: a DialKit panel switches every swatch on the page between the looks
-import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
-  createDialRoot({ position: 'bottom-left', theme: document.documentElement.dataset.theme });
-  const kit = createDialKit('Colour swatch', {
-    look: { type: 'select', options: Object.entries(SKEIN_LOOKS).map(([value, l]) => ({ value, label: l.label })), default: 'skein' },
-  }, { id: 'selvedge-swatch-look-1', persist: true });
-  const apply = ({ look }) => { setSkeinLook(look); closePop(); render(); };
-  apply(kit.getValues());
-  kit.subscribe(apply);
-}).catch(() => {});

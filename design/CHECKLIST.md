@@ -66,7 +66,7 @@ Delivery
 - [x] Shortcut key (kbd)
 - [x] Badge / count
 - [x] Divider
-- [x] Skein (a thread colour as a skein, not a flat swatch)
+- [x] Swatch (a thread colour as a chip)
 - [x] Spinner and progress bar
 - [x] Focus ring
 
@@ -77,7 +77,7 @@ Panel pieces
 - [x] Stitch row: preview, name, submenu arrow
 - [x] Stitch library: grouped list (Counted, Fill, Freeform), submenu for variants
 - [x] Colour picker: sources as tabs (In this piece, Floss library, My palettes, From image), search, recent
-- [x] Skein list (In this piece): count, skeins needed, click to select by colour
+- [x] Swatch list (Canvas colours): count, click to select by colour
 - [x] Layer row: show/hide, lock, drag to reorder
 - [x] Image object controls: drop zone, Pattern and Stitched toggles, conversion settings
 - [x] Text object controls: text, style, font, size, spacing, baseline
@@ -124,17 +124,17 @@ A first assembly is on the Panel tab (`design/panel.html`), to see the component
 | What the panel is acting on | Context header with actions | Panel top |
 | Stitch | Stitch row that opens the stitch library | Panel: Stitch |
 | Stitch variant | Submenu off a stitch row | Stitch library |
-| Thread colour | Skein that opens the colour picker | Panel: Thread |
+| Thread colour | Swatch that opens the colour picker | Panel: Thread |
 | Colour sources | Tabs inside the picker | Colour picker |
 | Floss search | Search field | Colour picker |
-| Colours from an image | Drop zone, then a row of skeins | Colour picker |
+| Colours from an image | Drop zone, then a row of swatches | Colour picker |
 | Thread type | Select | Panel: Thread |
 | Strands | Stage slider | Panel: Thread |
 | Perle weight | Segmented pill | Panel: Thread (perle only) |
 | Density | Stage slider | Panel: Fill |
 | Angle | Dial or number field | Panel: Fill, satin |
 | Fill variant | Small grid of previews | Panel: Fill |
-| Colours in this piece | Skein list | Panel |
+| Canvas colours | Swatch list | Panel |
 | Layers | Layer rows | Panel |
 | Image: Pattern, Stitched | Toggle switches | Panel: Image |
 | Image: colours, detail, dither, background, outline | Number field, slider, toggles | Panel: Image |
@@ -146,7 +146,7 @@ A first assembly is on the Panel tab (`design/panel.html`), to see the component
 | Baseline: straight / arc | Segmented pill plus a slider | Panel: Text |
 | Fabric | Grid of fabric previews, in two groups | Piece settings |
 | Count | Stage slider | Piece settings |
-| Fabric colour | Skein / colour picker | Piece settings |
+| Fabric colour | Swatch / colour picker | Piece settings |
 | Piece size | Number fields, unit pill, presets | Piece settings |
 | Stitch-in order, speed | Select, slider | Animate |
 | Playback | Play button and a scrub bar | Animate |
