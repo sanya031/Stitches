@@ -10,10 +10,10 @@ import { primitiveSvg } from './icons/primitives.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** What each setting draws, in either style. v is the (possibly in-between) value. marks: a marker every n stops (bar layout). */
+/** What each setting draws, in either style. v is the (possibly in-between) value. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
 export const STAGE_SETTINGS = {
   strands: {
-    label: 'Strands', stops: [1, 2, 3, 4, 6], initial: 2, marks: 1,
+    label: 'Strands', stops: [1, 2, 3, 4, 6], initial: 2, marks: 1, common: [2],
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
@@ -26,7 +26,7 @@ export const STAGE_SETTINGS = {
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, scale: 11 / v })
   },
   density: {
-    label: 'Density', stops: Array.from({ length: 101 }, (_, i) => i), initial: 85, marks: 10,
+    label: 'Density', stops: Array.from({ length: 101 }, (_, i) => i), initial: 85, marks: 10, common: [50],
     say: (v) => `${v}%`,
     thread: (v, o) => threadSvg('fill-columns', { ...o, density: v / 100 }),
     prim: (v, o) => primitiveSvg('fill-columns', { ...o, density: v / 100 })
@@ -43,6 +43,7 @@ export const STAGE_TUNING = {
   glide: 160,          // ms, the glide to the stop
   handle: 16,          // px, the bar handle's height (bar layout)
   markers: false,      // bar layout: markers on the box at every mark
+  markAlign: 'bottom', // where the markers sit: 'bottom' of the box or 'centre'
   magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
 };
 
@@ -66,7 +67,10 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
 
   const marks = def.marks || 1;
   // markers at every mark, inside the ends
-  const markHtml = () => Array.from({ length: Math.floor(last / marks) - 1 }, (_, i) => `<span class="ss-mark" style="left:${((i + 1) * marks / last) * 100}%"></span>`).join('');
+  const markHtml = () => Array.from({ length: Math.floor(last / marks) - 1 }, (_, i) => {
+    const at = (i + 1) * marks, common = def.common?.includes(def.stops[at]);
+    return `<span class="ss-mark${common ? ' ss-mark--common' : ''}" style="left:${(at / last) * 100}%"></span>`;
+  }).join('');
   const el = document.createElement('div');
   const numberBelow = layout === 'number', bar = layout === 'bar', live = layout === 'live' || bar;
   if (live) labelOutside = true;
@@ -109,6 +113,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     el.style.setProperty('--p', last ? pos / last : 0);
     el.style.setProperty('--ss-handle', `${tune('handle')}px`);
     el.classList.toggle('ss--marked', !!tune('markers'));
+    el.classList.toggle('ss--marks-centre', tune('markAlign') === 'centre');
     const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
   };
