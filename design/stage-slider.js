@@ -113,6 +113,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
     const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
+    el.classList.toggle('ss--moving', moving);
     valueEl.textContent = live && moving ? def.say(Number(at(pos).toFixed(1))) : def.say(shown);
     out.textContent = live ? (moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
@@ -161,6 +162,16 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   if (edit) {
     const nearest = (v) => def.stops.reduce((b, x, i) => (Math.abs(x - v) < Math.abs(def.stops[b] - v) ? i : b), 0);
     const goTo = (i) => { input.value = Math.max(0, Math.min(last, i)); settle(); edit.value = String(def.stops[index]); };
+    // the field fits the widest number it can hold, so its fill has the same padding on both sides; while
+    // dragging it widens for the decimal (no fill shows then)
+    const probe = Object.assign(document.createElement('span'), { className: 'ss-edit-probe' });
+    el.append(probe);
+    const widest = (texts) => Math.max(...texts.map((t) => { probe.textContent = t; return probe.getBoundingClientRect().width; }));
+    const fit = () => {
+      el.style.setProperty('--ss-edit-w', `${Math.ceil(widest(def.stops.map(String)))}px`);
+      el.style.setProperty('--ss-edit-w-moving', `${Math.ceil(widest(def.stops.map((v) => v.toFixed(1))))}px`);
+    };
+    fit(); document.fonts?.ready.then(fit);
     let before = '';
     edit.addEventListener('focus', () => { before = edit.value; edit.select(); });
     edit.addEventListener('pointerdown', (e) => e.stopPropagation());

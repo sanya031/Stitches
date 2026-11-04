@@ -15,7 +15,7 @@ const VERSIONS = {
   v6: { note: 'v6: as v5, with the markers through the middle of the box and longer; the marker for the most used value (2 strands, 50% density) is bolder.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre' } },
   v7: { note: 'v7: as v6, with the markers faint until one is in use: the marker the handle is on (pulled onto it while dragging, or landed on) shows at full strength.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35 } },
   v8: { note: 'v8: as v7, but untouched you see only the fill. Hover (or drag, or tab to it) and the handle and markers fade in.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
-  v9: { note: 'v9: as v8, and the number is a field. Press it: it fills to show it is selected; type a value or use the up and down arrows (shift for ten), Enter to keep it, Escape to undo. Typed values land on the nearest stop.', layout: 'bar', editable: true, tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
+  v9: { note: 'v9: as v8, and the number is a field. Hover it and a fill hugs the number; press it and an underline shows you are typing; type a value or use the up and down arrows (shift for ten), Enter to keep it, Escape to undo. Typed values land on the nearest stop.', layout: 'bar', editable: true, tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
 };
 const SETTINGS = ['strands', 'density'];
 

@@ -199,9 +199,12 @@
 .ss--bar:has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(-50%); pointer-events: none; }
 /* editable number: a field over the bar; pressing it fills it to show it's selected */
-.ss--bar .ss-edit { right: var(--space-4); z-index: 1; width: calc(var(--ss-chars, 4) * 1ch + var(--space-16)); height: calc(100% - var(--space-8)); padding: 0 var(--space-8); border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-variant-numeric: var(--numeric); text-align: right; outline: 0; pointer-events: auto; cursor: text; }
+.ss--bar .ss-edit { right: var(--space-6); z-index: 1; box-sizing: content-box; width: var(--ss-edit-w, 4ch); min-width: 0; height: calc(100% - var(--space-8)); padding: 0 var(--space-6); border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-variant-numeric: var(--numeric); text-align: right; outline: 0; pointer-events: auto; cursor: text; }
 .ss--bar .ss-edit:hover { background: var(--surface-selected); }
-.ss--bar .ss-edit:focus { background: var(--surface-selected); color: var(--text-strong); } /* selected: one quiet fill, no outline */
+.ss--bar .ss-edit:focus { background: linear-gradient(var(--border), var(--border)) no-repeat content-box 0 calc(100% - var(--space-4)) / 100% var(--border-width); color: var(--text-strong); } /* editing: an underline in the border colour under the number, no fill or outline (in dark, the border is the fill's colour) */
+.ss--bar.ss--marked:has(.ss-edit:focus) :is(.ss-mark, .ss-mark.is-active) { opacity: 0; } /* while typing, the markers step aside so none shows through behind the number */
+.ss--bar.ss--moving .ss-edit { width: var(--ss-edit-w-moving, 5ch); } /* room for the decimal while dragging */
+.ss--bar .ss-edit-probe { position: absolute; visibility: hidden; white-space: pre; font: inherit; font-variant-numeric: var(--numeric); pointer-events: none; } /* measures the widest number */
 .ss--bar .ss-edit::selection { background: var(--border); color: var(--text-strong); } /* the typed-over number, in a neutral, not the browser's blue */
 .ss--bare { grid-template-columns: minmax(0, 1fr); } /* the box holds only the slider */
 .ss-num { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); } /* the number under it */
