@@ -10,6 +10,7 @@ const VERSIONS = {
   v1: { note: 'v1, as in the system now: a native range input. Dragging previews in-between values in the bubble; letting go jumps to the nearest stop.', tuning: { ...STAGE_TUNING } },
   v2: { note: 'v2: no label. The box holds only the slider; under it, on the left, just the number, changing as you drag.', layout: 'number', tuning: { ...STAGE_TUNING } },
   v3: { note: 'v3: the label above the box. Inside, the slider and on the right just the number: one decimal while you drag (the value under the thumb), the stop once you let go.', layout: 'live', tuning: { ...STAGE_TUNING } },
+  v4: { note: 'v4: the whole box is the slider. It fills from the left up to the handle, a vertical bar you pull; press or drag anywhere in the box. Label above, number inside on the right.', layout: 'bar', tuning: { ...STAGE_TUNING } },
 };
 const SETTINGS = ['strands', 'density'];
 

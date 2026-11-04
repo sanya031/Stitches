@@ -51,6 +51,8 @@ export const STAGE_TUNING = {
  * left, just the number, following the thumb as it moves).
  * 'live': the label above the box; inside, the slider and on the right just the number, with one decimal while it
  * moves (the in-between value under the thumb), then the stop it lands on.
+ * 'bar': as 'live', but the whole box is the slider: it fills from the left up to a handle, a vertical bar you
+ * pull; press or drag anywhere in the box.
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
 export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'inline' } = {}) {
@@ -60,14 +62,14 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   let index = def.stops.indexOf(def.initial), hideTimer = 0;
 
   const el = document.createElement('div');
-  const numberBelow = layout === 'number', live = layout === 'live';
+  const numberBelow = layout === 'number', bar = layout === 'bar', live = layout === 'live' || bar;
   if (live) labelOutside = true;
   if (live) el.style.setProperty('--ss-chars', def.stops.at(-1).toFixed(1).length); // the widest number it can show
-  el.className = numberBelow ? 'ss ss--bare' : live ? 'ss ss--label-out ss--live' : labelOutside ? 'ss ss--label-out' : 'ss';
+  el.className = numberBelow ? 'ss ss--bare' : bar ? 'ss ss--live ss--bar' : live ? 'ss ss--label-out ss--live' : labelOutside ? 'ss ss--label-out' : 'ss';
   const label = `<label class="${labelOutside ? 'c-label' : 'ss-label'}" for="${uid}">${def.label}</label>`;
   if (labelOutside && !numberBelow) { host.classList.add('c-labelled'); host.insertAdjacentHTML('beforeend', label); }
   el.innerHTML = `${labelOutside || numberBelow ? '' : label}
-    <div class="ss-track">
+    <div class="ss-track">${bar ? '<span class="ss-clip"><span class="ss-fill"></span></span><span class="ss-handle"></span>' : ''}
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 && !live ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
     </div>
@@ -97,8 +99,9 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     valueEl.textContent = live && moving ? def.say(Number(at(pos).toFixed(1))) : def.say(shown);
     out.textContent = live ? (moving ? at(pos).toFixed(1) : String(def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
-    // the bubble rides the thumb
-    const r = input.getBoundingClientRect(), thumb = 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
+    // the bubble rides the thumb (in the bar, the handle at the fill's edge)
+    el.style.setProperty('--p', last ? pos / last : 0);
+    const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
   };
   const show = () => { clearTimeout(hideTimer); el.classList.add('ss-on'); };
