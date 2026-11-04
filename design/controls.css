@@ -196,6 +196,17 @@
 .ss--bar input[type="range"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; }
 .ss--bar input[type="range"]::-webkit-slider-thumb { width: 1px; height: var(--row-height); }
 .ss--bar input[type="range"]::-moz-range-thumb { width: 1px; height: var(--row-height); }
+/* hand feel: the box takes the pointer itself (stage-slider.js); vertical touch still scrolls the panel */
+.ss--hand { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+/* the surface (background, hover edge, fill) is drawn by the clip, so it can grow while held (--ss-grow, above and
+   below) and stretch past an end (--ss-stretch-l / -r, thinning by --ss-thin) without moving the number */
+.ss--hand, .ss--hand:hover { background: none; border-color: transparent; }
+.ss--hand .ss-clip { top: calc(var(--ss-thin, 0px) - var(--ss-grow, 0px) - var(--border-width)); bottom: calc(var(--ss-thin, 0px) - var(--ss-grow, 0px) - var(--border-width));
+  left: calc(-1 * var(--ss-stretch-l, 0px) - var(--border-width)); right: calc(-1 * var(--ss-stretch-r, 0px) - var(--border-width)); border-radius: var(--radius-md); background: var(--surface-field); }
+.ss--hand:hover .ss-clip, .ss--hand.ss-on .ss-clip { box-shadow: inset 0 0 0 var(--border-width) var(--border); }
+.ss--hand .ss-fill { top: var(--border-width); bottom: var(--border-width); left: var(--border-width); width: calc(var(--p, 0) * (100% - 2 * var(--border-width))); border-radius: calc(var(--radius-md) - var(--border-width)) 0 0 calc(var(--radius-md) - var(--border-width)); } /* inside the edge, as before */
+.ss--hand .ss-handle { transform: translate(calc(-50% + var(--ss-stretch-r, 0px) - var(--ss-stretch-l, 0px)), -50%); } /* rides the stretched end */
+.ss--hand input[type="range"] { pointer-events: none; }
 .ss--bar:has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted); transition: color var(--motion-tooltip-duration) ease-out; }
 .ss--bar:is(:hover, .ss-on, :focus-within) .ss-out { color: var(--text); } /* quieter at rest; its full colour when hovered or in use */

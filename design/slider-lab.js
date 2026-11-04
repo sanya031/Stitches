@@ -18,6 +18,7 @@ const VERSIONS = {
   v9: { note: 'v9: as v8, and the number is a field. Hover it and a fill hugs the number; press it and an underline shows you are typing; type a value or use the up and down arrows (shift for ten), Enter to keep it, Escape to undo. Typed values land on the nearest stop.', layout: 'bar', editable: true, tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
   v10: { note: 'v10: as v9, with a quieter bubble: the stitch as a line primitive (the same drawing as the stitch tiles) in the text colour on a plain square, smaller, instead of the thread on red cloth. Thickness and spacing still follow the value as you drag.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true } },
   v11: { note: 'v11: as v10, with a choice of motion for the bubble number. It starts plain, as in v10 (the default); pick another in the Slider panel (Number): Roll turns each digit like a combination lock, passing the digits between (going up, the new one comes down from above); Slide drops in only the digits that changed; Blur cross-fades them through a blur. Duration, ease, stagger (each place waits for the one to its right), slide distance, blur and edge fade tune it.', layout: 'bar', editable: true, style: 'prim', dials: 'v11-2', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none' } },
+  v12: { note: 'v12: as v11, and it feels like it is in your hand. Drag from where the value is: pressing never jumps it (a press and let go without moving still goes there). The box grows a little while you hold it. Pull past either end and it stretches, harder the further you go, then springs back. Move the pointer above or below the box while dragging to slow it down for fine values (a quarter of the speed 80px away; the readout shows the speed). Letting go springs onto the stop with the pill motion\'s spring; press again to catch it mid-way. On touch, only a sideways drag moves it, so the panel still scrolls.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none', hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring' } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -31,14 +32,15 @@ function render() {
   $('cases').innerHTML = SETTINGS.map((s) => `<section class="sl-case"><h2>${STAGE_SETTINGS[s].label}</h2>
     <div class="sl-big" data-host="${s}"></div>
     <div class="sl-panel" data-host="${s}" data-panel></div>
-    <dl class="sl-read" data-read="${s}"><dt>State</dt><dd data-k="state">rest</dd><dt>Position</dt><dd data-k="pos">–</dd><dt>Nearest stop</dt><dd data-k="stop">–</dd><dt>Speed</dt><dd data-k="speed">–</dd><dt>Value</dt><dd data-k="value">–</dd></dl></section>`).join('');
+    <dl class="sl-read" data-read="${s}"><dt>State</dt><dd data-k="state">rest</dd><dt>Position</dt><dd data-k="pos">–</dd><dt>Nearest stop</dt><dd data-k="stop">–</dd><dt>Speed</dt><dd data-k="speed">–</dd><dt>Scrub speed</dt><dd data-k="gain">full</dd><dt>Value</dt><dd data-k="value">–</dd></dl></section>`).join('');
   document.querySelectorAll('[data-host]').forEach((host) => {
     const s = host.dataset.host, def = STAGE_SETTINGS[s], read = document.querySelector(`[data-read="${s}"]`);
     const put = (k, v) => { read.querySelector(`[data-k="${k}"]`).textContent = v; };
     let last = null;
     createStageSlider(host, {
       setting: s, style: VERSIONS[version].style || 'thread', colour: hexOf('--terracotta-500'), labelOutside: 'panel' in host.dataset, tuning, layout: VERSIONS[version].layout || 'inline', editable: !!VERSIONS[version].editable,
-      onMove: (pos, state) => {
+      onMove: (pos, state, info) => {
+        if (info) put('gain', info.gain >= 0.99 ? 'full' : `${Math.round(info.gain * 100)}%`);
         const now = performance.now();
         if (last && state === 'dragging') put('speed', `${(Math.abs(pos - last.pos) / Math.max(1, now - last.t) * 1000).toFixed(1)} stops/s`);
         last = { pos, t: now };
@@ -84,7 +86,9 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     linger: [t.linger, 0, 2000, 10],
     keyLinger: [t.keyLinger, 0, 2000, 10],
     inBetween: t.inBetween,
-    release: { type: 'select', options: [{ value: 'jump', label: 'Jump to stop' }, { value: 'glide', label: 'Glide to stop' }], default: t.release },
+    release: { type: 'select', options: [{ value: 'jump', label: 'Jump to stop' }, { value: 'glide', label: 'Glide to stop' }, { value: 'spring', label: 'Spring to stop' }], default: t.release },
+    springDuration: [t.springDuration, 0.1, 1, 0.01],
+    springBounce: [t.springBounce, 0, 0.6, 0.01],
     glide: [t.glide, 40, 600, 10],
     handle: [t.handle, 8, 36, 1],
     markers: t.markers,
@@ -92,6 +96,14 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     reveal: t.reveal,
     markAlign: { type: 'select', options: [{ value: 'bottom', label: 'Bottom' }, { value: 'centre', label: 'Centre' }], default: t.markAlign },
     magnet: [t.magnet, 0, 0.5, 0.01],
+    feel: {
+      hand: t.hand,
+      relative: t.relative,
+      tapJump: t.tapJump,
+      grow: [t.grow, 0, 6, 0.5],
+      rubber: [t.rubber, 0, 32, 1],
+      fine: [t.fine, 0, 200, 5],
+    },
     number: {
       numberMotion: { type: 'select', options: [{ value: 'none', label: 'None' }, { value: 'roll', label: 'Roll (lock)' }, { value: 'slide', label: 'Slide' }, { value: 'blur', label: 'Blur' }], default: t.numberMotion },
       numberEase: { type: 'select', options: [{ value: 'smooth', label: 'Smooth' }, { value: 'spring', label: 'Spring' }, { value: 'linear', label: 'Linear' }], default: t.numberEase },
@@ -106,7 +118,7 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     id: `selvedge-slider-lab-${VERSIONS[version].dials || version}`, // dials: a new key when a version's starting values change persist: true,
     onAction: () => navigator.clipboard?.writeText(JSON.stringify(Object.fromEntries(Object.entries(kit.getValues()).filter(([k]) => k !== 'copy')), null, 2)),
   });
-  const apply = (v) => { v = { ...v, ...v.number }; for (const k of Object.keys(STAGE_TUNING)) if (k in v) tuning[k] = v[k]; }; // the Number folder's values sit under number
+  const apply = (v) => { v = { ...v, ...v.number, ...v.feel }; for (const k of Object.keys(STAGE_TUNING)) if (k in v) tuning[k] = v[k]; }; // the Number folder's values sit under number
   apply(kit.getValues());
   kit.subscribe(apply);
 }).catch(() => {});
