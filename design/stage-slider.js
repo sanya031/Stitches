@@ -10,23 +10,23 @@ import { primitiveSvg } from './icons/primitives.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** What each setting draws, in either style. v is the (possibly in-between) value. */
+/** What each setting draws, in either style. v is the (possibly in-between) value. marks: a marker every n stops (bar layout). */
 export const STAGE_SETTINGS = {
   strands: {
-    label: 'Strands', stops: [1, 2, 3, 4, 6], initial: 2,
+    label: 'Strands', stops: [1, 2, 3, 4, 6], initial: 2, marks: 1,
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
   },
   count: {
-    label: 'Count', stops: [11, 14, 16, 18], initial: 14,
+    label: 'Count', stops: [11, 14, 16, 18], initial: 14, marks: 1,
     say: (v) => `${v} per inch`,
     // the square shrinks as the count rises; the thread stays the same real width, so it fills more of it
     thread: (v, o) => threadSvg('stitch-full', { ...o, count: v, scale: 11 / v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, scale: 11 / v })
   },
   density: {
-    label: 'Density', stops: Array.from({ length: 101 }, (_, i) => i), initial: 85,
+    label: 'Density', stops: Array.from({ length: 101 }, (_, i) => i), initial: 85, marks: 10,
     say: (v) => `${v}%`,
     thread: (v, o) => threadSvg('fill-columns', { ...o, density: v / 100 }),
     prim: (v, o) => primitiveSvg('fill-columns', { ...o, density: v / 100 })
@@ -41,6 +41,9 @@ export const STAGE_TUNING = {
   inBetween: true,     // while dragging, the preview draws in-between values (false: only stops)
   release: 'jump',     // 'jump': the thumb lands on the nearest stop at once; 'glide': it slides there
   glide: 160,          // ms, the glide to the stop
+  handle: 16,          // px, the bar handle's height (bar layout)
+  markers: false,      // bar layout: markers on the box at every mark
+  magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
 };
 
 /**
@@ -61,6 +64,9 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   let glideRaf = 0;
   let index = def.stops.indexOf(def.initial), hideTimer = 0;
 
+  const marks = def.marks || 1;
+  // markers at every mark, inside the ends
+  const markHtml = () => Array.from({ length: Math.floor(last / marks) - 1 }, (_, i) => `<span class="ss-mark" style="left:${((i + 1) * marks / last) * 100}%"></span>`).join('');
   const el = document.createElement('div');
   const numberBelow = layout === 'number', bar = layout === 'bar', live = layout === 'live' || bar;
   if (live) labelOutside = true;
@@ -69,7 +75,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const label = `<label class="${labelOutside ? 'c-label' : 'ss-label'}" for="${uid}">${def.label}</label>`;
   if (labelOutside && !numberBelow) { host.classList.add('c-labelled'); host.insertAdjacentHTML('beforeend', label); }
   el.innerHTML = `${labelOutside || numberBelow ? '' : label}
-    <div class="ss-track">${bar ? '<span class="ss-clip"><span class="ss-fill"></span></span><span class="ss-handle"></span>' : ''}
+    <div class="ss-track">${bar ? `<span class="ss-clip"><span class="ss-fill"></span>${markHtml()}</span><span class="ss-handle"></span>` : ''}
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 && !live ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
     </div>
@@ -95,12 +101,14 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.45, colour, paper: style === 'thread' };
     art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
     art.dataset.style = style;
-    const moving = state === 'dragging' || state === 'gliding';
+    const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
     valueEl.textContent = live && moving ? def.say(Number(at(pos).toFixed(1))) : def.say(shown);
-    out.textContent = live ? (moving ? at(pos).toFixed(1) : String(def.stops[index]))
+    out.textContent = live ? (moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
     // the bubble rides the thumb (in the bar, the handle at the fill's edge)
     el.style.setProperty('--p', last ? pos / last : 0);
+    el.style.setProperty('--ss-handle', `${tune('handle')}px`);
+    el.classList.toggle('ss--marked', !!tune('markers'));
     const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
   };
@@ -124,7 +132,12 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   };
 
   input.addEventListener('pointerdown', () => { cancelAnimationFrame(glideRaf); show(); draw(Number(input.value), 'dragging'); });
-  input.addEventListener('input', () => { show(); draw(Number(input.value), 'dragging'); });
+  // magnet: near a mark, the handle is pulled onto it
+  const pull = (pos) => {
+    const m = tune('magnet') * marks, near = Math.round(pos / marks) * marks;
+    return m > 0 && Math.abs(pos - near) <= m ? near : pos;
+  };
+  input.addEventListener('input', () => { show(); const p = pull(Number(input.value)); if (p !== Number(input.value)) input.value = p; draw(p, 'dragging'); });
   input.addEventListener('change', () => { settle(); if (!input.matches(':active')) hide(); });
   addEventListener('pointerup', () => { if (el.classList.contains('ss-on') && document.activeElement === input) { settle(); hide(); } });
   // keys move a whole stop at a time, with the bubble up long enough to see it

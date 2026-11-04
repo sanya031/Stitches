@@ -11,6 +11,7 @@ const VERSIONS = {
   v2: { note: 'v2: no label. The box holds only the slider; under it, on the left, just the number, changing as you drag.', layout: 'number', tuning: { ...STAGE_TUNING } },
   v3: { note: 'v3: the label above the box. Inside, the slider and on the right just the number: one decimal while you drag (the value under the thumb), the stop once you let go.', layout: 'live', tuning: { ...STAGE_TUNING } },
   v4: { note: 'v4: the whole box is the slider. It fills from the left up to the handle, a vertical bar you pull; press or drag anywhere in the box. Label above, number inside on the right.', layout: 'bar', tuning: { ...STAGE_TUNING } },
+  v5: { note: 'v5: as v4 with a longer handle and markers at every whole number (every 10 for density). Near a marker, dragging pulls the handle onto it; letting go lands on the nearest whole number.', layout: 'bar', tuning: { ...STAGE_TUNING, handle: 24, markers: true, magnet: 0.15 } },
 };
 const SETTINGS = ['strands', 'density'];
 
@@ -78,6 +79,9 @@ import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(
     inBetween: t.inBetween,
     release: { type: 'select', options: [{ value: 'jump', label: 'Jump to stop' }, { value: 'glide', label: 'Glide to stop' }], default: t.release },
     glide: [t.glide, 40, 600, 10],
+    handle: [t.handle, 8, 36, 1],
+    markers: t.markers,
+    magnet: [t.magnet, 0, 0.5, 0.01],
     copy: { type: 'action', label: 'Copy values' },
   }, {
     id: `selvedge-slider-lab-${version}`, persist: true,
