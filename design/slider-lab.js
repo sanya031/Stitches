@@ -9,6 +9,7 @@ import { hexOf } from './colour-field.js';
 const VERSIONS = {
   v1: { note: 'v1, as in the system now: a native range input. Dragging previews in-between values in the bubble; letting go jumps to the nearest stop.', tuning: { ...STAGE_TUNING } },
   v2: { note: 'v2: no label. The box holds only the slider; under it, on the left, just the number, changing as you drag.', layout: 'number', tuning: { ...STAGE_TUNING } },
+  v3: { note: 'v3: the label above the box. Inside, the slider and on the right just the number: one decimal while you drag (the value under the thumb), the stop once you let go.', layout: 'live', tuning: { ...STAGE_TUNING } },
 };
 const SETTINGS = ['strands', 'density'];
 

@@ -173,6 +173,7 @@
 .ss:hover { border-color: var(--border); }
 .ss.ss-on { border-color: var(--focus); }
 .ss-label { color: var(--text-muted); }
+.ss--live .ss-out { min-width: calc(var(--ss-chars, 4) * 1ch); } /* room for a decimal, so the track doesn't shift as the number changes */
 .ss--bare { grid-template-columns: minmax(0, 1fr); } /* the box holds only the slider */
 .ss-num { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); } /* the number under it */
 .ss--label-out { grid-template-columns: minmax(var(--space-48), 1fr) auto; } /* label above, outside the box: the slider gets the room */
