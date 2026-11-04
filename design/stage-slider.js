@@ -7,6 +7,7 @@
 // value, so the change reads as continuous under the finger; the readout and the result are always a stop.
 import { threadSvg } from './icons/thread.js';
 import { primitiveSvg } from './icons/primitives.js';
+import { createNumberMotion, NUMBER_MOTION } from './number-motion.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -48,6 +49,9 @@ export const STAGE_TUNING = {
   markOpacity: 1,      // markers' opacity when not in use; the one the handle is on is always full
   reveal: false,       // bar layout: the handle and markers show only on hover, drag or keyboard focus; untouched, just the fill
   magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
+  // the bubble's number as it changes (number-motion.js): motion 'none' | 'roll' | 'slide' | 'blur', and its feel
+  numberMotion: NUMBER_MOTION.motion, numberDuration: NUMBER_MOTION.duration, numberStagger: NUMBER_MOTION.stagger,
+  numberDistance: NUMBER_MOTION.distance, numberBlur: NUMBER_MOTION.blur, numberFade: NUMBER_MOTION.fade, numberEase: NUMBER_MOTION.ease,
 };
 
 /**
@@ -98,6 +102,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   }
   const input = el.querySelector('input'), bubble = el.querySelector('.ss-bubble'), art = el.querySelector('.ss-art');
   const valueEl = el.querySelector('.ss-value'), edit = el.querySelector('.ss-edit');
+  const number = createNumberMotion(valueEl);
   const outEl = el.querySelector('output') || host.querySelector('.ss-num');
   // the number: shown in an output, or, when editable, in its field (left alone while someone is typing in it)
   const out = { set textContent(t) { if (edit) { if (document.activeElement !== edit) edit.value = t; } else outEl.textContent = t; } };
@@ -116,7 +121,10 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
     el.classList.toggle('ss--moving', moving);
     const tip = def.tip || def.say;
-    valueEl.textContent = live && moving ? tip(Number(at(pos).toFixed(1))) : tip(shown);
+    number.set(live && moving ? tip(Number(at(pos).toFixed(1))) : tip(shown), {
+      motion: tune('numberMotion'), duration: tune('numberDuration'), stagger: tune('numberStagger'),
+      distance: tune('numberDistance'), blur: tune('numberBlur'), fade: tune('numberFade'), ease: tune('numberEase'),
+    });
     out.textContent = live ? (moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
     // the bubble rides the thumb (in the bar, the handle at the fill's edge)

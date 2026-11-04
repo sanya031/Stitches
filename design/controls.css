@@ -370,6 +370,17 @@
 .c-bar__sep { align-self: stretch; width: var(--border-width); margin: var(--space-4); background: var(--border-subtle); }
 .c-bar__zoom { min-width: var(--space-48); color: var(--text); font: var(--type-label); text-align: center; font-variant-numeric: var(--numeric); }
 
+/* @control number-motion */
+/* a number drawn digit by digit (number-motion.js); each digit sits in a column one line tall, with half a line
+   above and below where a changing digit can show as it arrives or leaves, faded by --num-fade (0 … 1) */
+.c-num { display: inline-flex; align-items: flex-start; --num-h: 1lh; --num-pad: calc(var(--num-h) * 0.5); }
+.c-num__col { position: relative; display: inline-block; box-sizing: content-box; height: var(--num-h); padding-block: var(--num-pad); margin-block: calc(var(--num-pad) * -1); overflow: hidden;
+  --num-a: calc(25% - var(--num-fade, 0) * 25%);
+  mask-image: linear-gradient(transparent var(--num-a), #000 25%, #000 75%, transparent calc(100% - var(--num-a))); }
+.c-num__strip { display: flex; flex-direction: column; gap: var(--num-pad); } /* roll: the wheel of digits, spaced so only one shows at rest */
+.c-num__strip > span, .c-num__d { display: block; height: var(--num-h); }
+.c-num__out { position: absolute; left: 0; top: var(--num-pad); } /* slide and blur: the digit leaving */
+
 /* @control tooltip */
 /* As shadcn/ui's tooltip: dark on light (light on dark), 12px text, an arrow at the trigger. tooltip.js shows it. */
 .c-tooltip { position: relative; display: inline-flex; align-items: center; gap: var(--space-6); width: fit-content; max-width: 320px; padding: var(--space-6) var(--space-12); border-radius: var(--radius-md); background: var(--text-strong); color: var(--surface-panel); font: var(--type-label); }
