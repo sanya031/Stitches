@@ -45,6 +45,7 @@ export const STAGE_TUNING = {
   markers: false,      // bar layout: markers on the box at every mark
   markAlign: 'bottom', // where the markers sit: 'bottom' of the box or 'centre'
   markOpacity: 1,      // markers' opacity when not in use; the one the handle is on is always full
+  reveal: false,       // bar layout: the handle and markers show only on hover, drag or keyboard focus; untouched, just the fill
   magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
 };
 
@@ -117,6 +118,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     el.classList.toggle('ss--marks-centre', tune('markAlign') === 'centre');
     // the marker in use (the handle is on it, snapped or settled) shows at full strength; the rest are faint
     el.style.setProperty('--ss-mark-opacity', tune('markOpacity'));
+    el.classList.toggle('ss--reveal', !!tune('reveal'));
     el.querySelectorAll('.ss-mark').forEach((m) => m.classList.toggle('is-active', Number(m.dataset.at) === pos));
     const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;
