@@ -10,11 +10,12 @@ import { primitiveSvg } from './icons/primitives.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** What each setting draws, in either style. v is the (possibly in-between) value. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
+/** What each setting draws, in either style. v is the (possibly in-between) value. say: the value in words; tip: what the bubble shows, when not that. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
 export const STAGE_SETTINGS = {
   strands: {
     label: 'Strands', stops: [1, 2, 3, 4, 5, 6], initial: 2, marks: 1, common: [2],
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
+    tip: (v) => String(v), // the bubble shows just the number
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
   },
@@ -114,7 +115,8 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     art.dataset.style = style;
     const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos); // on a stop (or pulled onto a mark) it reads as the whole number
     el.classList.toggle('ss--moving', moving);
-    valueEl.textContent = live && moving ? def.say(Number(at(pos).toFixed(1))) : def.say(shown);
+    const tip = def.tip || def.say;
+    valueEl.textContent = live && moving ? tip(Number(at(pos).toFixed(1))) : tip(shown);
     out.textContent = live ? (moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
     // the bubble rides the thumb (in the bar, the handle at the fill's edge)
