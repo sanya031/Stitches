@@ -42,6 +42,7 @@
   --surface-field: var(--neutral-100);
   --surface-raised: var(--neutral-0);
   --surface-selected: var(--neutral-0);
+  --slider-fill: var(--neutral-0);      /* the filled part of a bar slider */
   /* Text and icons */
   --text-strong: var(--neutral-950);
   --text: var(--neutral-900);
@@ -86,6 +87,7 @@
   --surface-field: var(--neutral-800);
   --surface-raised: var(--neutral-800);
   --surface-selected: var(--neutral-700);
+  --slider-fill: var(--neutral-600);    /* a step lighter than selected, so the bar reads as the control */
   /* Text and icons */
   --text-strong: var(--neutral-50);
   --text: var(--neutral-100);
@@ -129,6 +131,7 @@
     --surface-field: var(--neutral-800);
     --surface-raised: var(--neutral-800);
     --surface-selected: var(--neutral-700);
+    --slider-fill: var(--neutral-600);    /* a step lighter than selected, so the bar reads as the control */
     /* Text and icons */
     --text-strong: var(--neutral-50);
     --text: var(--neutral-100);
