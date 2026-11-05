@@ -49,8 +49,12 @@ export const STAGE_TUNING = {
   // how the value is shown while it changes: 'bubble' (a square over the handle, following it), 'inline' (a small
   // drawing in the box, beside the number), 'fill' (the fill itself drawn as laid thread: thicker lines for strands,
   // closer for density), 'strip' (a row of the stops' drawings over the box, the nearest one selected), 'patch'
-  // (a 4 × 4 patch of cloth over the box's start, with the value in words), 'none' (just the number)
+  // (a 4 × 4 patch of cloth over the box's start, with the value in words), 'inbar' (the stops' drawings inside
+  // the box in place of the markers, only while in use: faint, the ones near the handle in full), 'none' (just the number)
   display: 'bubble',
+  inbarFaint: 0.25,    // inbar: how strong a drawing far from the handle is
+  inbarReach: 1,       // inbar: how many marks away from the handle a drawing starts to come up to full
+  inbarSize: 20,       // px, inbar: each drawing
   bubbleSize: 104,     // px, the preview square
   bubbleGap: 4,        // px between the bubble and the box (bar layout)
   linger: 450,         // ms the bubble stays after release
@@ -133,11 +137,14 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const inlineEl = el.querySelector('.ss-inline'), stripEl = el.querySelector('.ss-strip');
   const patchArt = el.querySelector('.ss-patch__art'), patchSay = el.querySelector('.ss-patch__say');
   // the strip: every stop when there are few, else every quarter; each drawn once, at its place along the box
-  const stripAt = last <= 10 ? def.stops.map((_, i) => i) : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * last));
-  let stripKey = '';
-  const drawStrip = () => {
-    const key = `${style}${colour}`; if (key === stripKey) return; stripKey = key;
-    stripEl.innerHTML = stripAt.map((i) => `<span class="ss-strip__cell" data-i="${i}" style="--at:${last ? i / last : 0}">${(style === 'thread' ? def.thread : def.prim)(def.stops[i], { size: 24, id: `${uid}-s${i}`, holes: 0.2, colour, paper: style === 'thread' })}</span>`).join('');
+  // inbar: where the markers would be (every mark, inside the ends)
+  const stripStops = last <= 10 ? def.stops.map((_, i) => i) : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * last));
+  const inbarStops = Array.from({ length: Math.floor(last / marks) - 1 }, (_, i) => (i + 1) * marks);
+  let stripKey = '', stripAt = stripStops;
+  const drawStrip = (inbar) => {
+    const size = inbar ? tune('inbarSize') : 24, key = `${style}${colour}${inbar}${size}`; if (key === stripKey) return; stripKey = key;
+    stripAt = inbar ? inbarStops : stripStops;
+    stripEl.innerHTML = stripAt.map((i) => `<span class="ss-strip__cell" data-i="${i}" style="--at:${last ? i / last : 0}">${(style === 'thread' ? def.thread : def.prim)(def.stops[i], { size, id: `${uid}-s${i}`, holes: inbar ? 0 : 0.2, colour, paper: style === 'thread' })}</span>`).join('');
   };
   const number = createNumberMotion(valueEl);
   const outEl = el.querySelector('output') || host.querySelector('.ss-num');
@@ -159,8 +166,15 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
       art.dataset.style = style;
     } else if (display === 'inline') inlineEl.innerHTML = def.prim(v, { size: 20, id: `${uid}-in`, holes: 0 });
     else if (display === 'fill' && def.lines) { const l = def.lines(v); el.style.setProperty('--ss-line-w', `${l.w.toFixed(2)}px`); el.style.setProperty('--ss-line-pitch', `${l.pitch.toFixed(2)}px`); }
-    else if (display === 'strip') {
-      drawStrip();
+    else if (display === 'inbar') {
+      drawStrip(true);
+      const reach = Math.max(0.01, tune('inbarReach') * marks), faint = tune('inbarFaint');
+      stripEl.querySelectorAll('.ss-strip__cell').forEach((c) => {
+        const near = Math.max(0, 1 - Math.abs(Number(c.dataset.i) - pos) / reach); // 1 on the handle, 0 a reach away
+        c.style.opacity = (faint + (1 - faint) * near).toFixed(3);
+      });
+    } else if (display === 'strip') {
+      drawStrip(false);
       const near = stripAt.reduce((b, i) => (Math.abs(i - pos) < Math.abs(b - pos) ? i : b), stripAt[0]);
       stripEl.querySelectorAll('.ss-strip__cell').forEach((c) => c.classList.toggle('is-selected', Number(c.dataset.i) === near));
     } else if (display === 'patch') {

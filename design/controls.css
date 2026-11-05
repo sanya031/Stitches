@@ -252,6 +252,10 @@
 .ss-patch__art svg { display: block; border-radius: var(--radius-md); }
 .ss-patch__art[data-style="prim"] { border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); }
 .ss-patch__say { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }
+/* inbar: the stops' drawings inside the box, where the markers would be; only while in use, faint, coming up to
+   full as the handle nears each (stage-slider.js sets each one's opacity) */
+.ss[data-display="inbar"] .ss-strip { display: block; position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity var(--motion-tooltip-duration) ease-out; }
+.ss[data-display="inbar"] .ss-strip__cell { left: calc(var(--at) * 100%); padding: 0; color: var(--icon-active); }
 .ss-on[data-display] :is(.ss-strip, .ss-patch) { opacity: 1; } /* in use: shown (after both, so it wins) */
 
 /* @control number-field */
