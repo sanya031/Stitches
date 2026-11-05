@@ -234,6 +234,25 @@
 .ss-art svg { display: block; border-radius: var(--radius-md); }
 .ss-art[data-style="prim"] { border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); }
 .ss-value { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }
+.ss-inline, .ss-strip, .ss-patch { display: none; }
+.ss[data-display]:not([data-display="bubble"]) .ss-bubble { display: none; }
+/* inline: a small drawing in the box, just left of the number */
+.ss[data-display="inline"] .ss-inline { display: block; position: absolute; top: 50%; right: calc(var(--space-6) * 3 + var(--ss-edit-w, 4ch) + var(--space-2)); color: var(--icon); transform: translateY(-50%); pointer-events: none; transition: color var(--motion-tooltip-duration) ease-out; }
+.ss[data-display="inline"]:is(:hover, .ss-on, :focus-within) .ss-inline { color: var(--icon-active); }
+.ss-inline svg { display: block; }
+/* fill: the filled part drawn as laid thread, its lines as thick and as close as the value */
+.ss[data-display="fill"] .ss-fill { background-image: repeating-linear-gradient(90deg, var(--border-strong) 0 var(--ss-line-w, 1.5px), transparent var(--ss-line-w, 1.5px) var(--ss-line-pitch, 8px)); }
+/* strip: the stops' drawings in a row over the box, each over its place; the nearest is selected */
+.ss[data-display="strip"] .ss-strip { display: block; position: absolute; left: 0; right: 0; bottom: calc(100% + var(--border-width) + var(--ss-bubble-gap, var(--tooltip-offset))); z-index: var(--z-popover); height: var(--row-height); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); opacity: 0; pointer-events: none; transition: opacity var(--motion-tooltip-duration) ease-out; }
+.ss-strip__cell { position: absolute; top: 50%; left: clamp(var(--space-16), calc(var(--at) * 100%), calc(100% - var(--space-16))); padding: var(--space-2); border-radius: var(--radius-sm); color: var(--icon); transform: translate(-50%, -50%); }
+.ss-strip__cell.is-selected { background: var(--surface-selected); color: var(--icon-active); }
+.ss-strip__cell svg { display: block; }
+/* patch: a patch of cloth over the start of the box, with the value in words; it stays put while the handle moves */
+.ss[data-display="patch"] .ss-patch { display: grid; gap: var(--inline-gap); position: absolute; left: 0; bottom: calc(100% + var(--border-width) + var(--ss-bubble-gap, var(--tooltip-offset))); z-index: var(--z-popover); padding: var(--space-8); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); opacity: 0; pointer-events: none; transition: opacity var(--motion-tooltip-duration) ease-out; }
+.ss-patch__art svg { display: block; border-radius: var(--radius-md); }
+.ss-patch__art[data-style="prim"] { border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); }
+.ss-patch__say { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }
+.ss-on[data-display] :is(.ss-strip, .ss-patch) { opacity: 1; } /* in use: shown (after both, so it wins) */
 
 /* @control number-field */
 .c-field { display: inline-flex; align-items: center; gap: var(--inline-gap); width: 100%; height: var(--row-height); padding: 0 var(--space-8) 0 var(--space-12); border: var(--border-width) solid transparent; border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); font: var(--type-label); }

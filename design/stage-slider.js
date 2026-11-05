@@ -23,12 +23,14 @@ export const STAGE_SETTINGS = {
     label: 'Strands', stops: [1, 2, 3, 4, 5, 6], initial: 2, marks: 1, common: [2],
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
     tip: (v) => String(v), // the bubble shows just the number
+    lines: (v) => ({ w: 0.6 + 0.7 * v, pitch: 8 }), // the thread fill: thicker lines, the same spacing
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
   },
   count: {
     label: 'Count', stops: [11, 14, 16, 18], initial: 14, marks: 1,
     say: (v) => `${v} per inch`,
+    lines: (v) => ({ w: 2, pitch: 96 / v }),
     // the square shrinks as the count rises; the thread stays the same real width, so it fills more of it
     thread: (v, o) => threadSvg('stitch-full', { ...o, count: v, scale: 11 / v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, scale: 11 / v })
@@ -36,6 +38,7 @@ export const STAGE_SETTINGS = {
   density: {
     label: 'Density', stops: Array.from({ length: 101 }, (_, i) => i), initial: 85, marks: 10, common: [50],
     say: (v) => `${v}%`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 100) }), // the same lines, packed closer
     thread: (v, o) => threadSvg('fill-columns', { ...o, density: v / 100 }),
     prim: (v, o) => primitiveSvg('fill-columns', { ...o, density: v / 100 })
   }
@@ -43,6 +46,11 @@ export const STAGE_SETTINGS = {
 
 /** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's. */
 export const STAGE_TUNING = {
+  // how the value is shown while it changes: 'bubble' (a square over the handle, following it), 'inline' (a small
+  // drawing in the box, beside the number), 'fill' (the fill itself drawn as laid thread: thicker lines for strands,
+  // closer for density), 'strip' (a row of the stops' drawings over the box, the nearest one selected), 'patch'
+  // (a 4 × 4 patch of cloth over the box's start, with the value in words), 'none' (just the number)
+  display: 'bubble',
   bubbleSize: 104,     // px, the preview square
   bubbleGap: 4,        // px between the bubble and the box (bar layout)
   linger: 450,         // ms the bubble stays after release
@@ -108,6 +116,9 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     <div class="ss-track">${bar ? `<span class="ss-clip"><span class="ss-fill"></span>${markHtml()}</span><span class="ss-handle"></span>` : ''}
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 && !live ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
+      <div class="ss-inline" aria-hidden="true"></div>
+      <div class="ss-strip" aria-hidden="true"></div>
+      <div class="ss-patch" aria-hidden="true"><div class="ss-patch__art"></div><div class="ss-patch__say"></div></div>
     </div>
     ${numberBelow ? '' : bar && editable ? `<input class="ss-out ss-edit" inputmode="decimal" spellcheck="false" aria-label="${def.label}, type a value">` : `<output class="ss-out mono" for="${uid}"></output>`}`;
   host.append(el);
@@ -119,6 +130,15 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   }
   const input = el.querySelector('input'), bubble = el.querySelector('.ss-bubble'), art = el.querySelector('.ss-art');
   const valueEl = el.querySelector('.ss-value'), edit = el.querySelector('.ss-edit');
+  const inlineEl = el.querySelector('.ss-inline'), stripEl = el.querySelector('.ss-strip');
+  const patchArt = el.querySelector('.ss-patch__art'), patchSay = el.querySelector('.ss-patch__say');
+  // the strip: every stop when there are few, else every quarter; each drawn once, at its place along the box
+  const stripAt = last <= 10 ? def.stops.map((_, i) => i) : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * last));
+  let stripKey = '';
+  const drawStrip = () => {
+    const key = `${style}${colour}`; if (key === stripKey) return; stripKey = key;
+    stripEl.innerHTML = stripAt.map((i) => `<span class="ss-strip__cell" data-i="${i}" style="--at:${last ? i / last : 0}">${(style === 'thread' ? def.thread : def.prim)(def.stops[i], { size: 24, id: `${uid}-s${i}`, holes: 0.2, colour, paper: style === 'thread' })}</span>`).join('');
+  };
   const number = createNumberMotion(valueEl);
   const outEl = el.querySelector('output') || host.querySelector('.ss-num');
   // the number: shown in an output, or, when editable, in its field (left alone while someone is typing in it)
@@ -132,9 +152,22 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const draw = (pos, state = 'rest') => {
     const v = tune('inBetween') ? at(pos) : def.stops[Math.round(pos)], shown = def.stops[Math.round(pos)];
     onMove?.(pos, state, { gain: scrubGain });
-    const opts = { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.2, colour, paper: style === 'thread' };
-    art.innerHTML = style === 'thread' ? def.thread(v, opts) : def.prim(v, opts);
-    art.dataset.style = style;
+    const display = tune('display'), drawn = style === 'thread' ? def.thread : def.prim;
+    el.dataset.display = display;
+    if (display === 'bubble') {
+      art.innerHTML = drawn(v, { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.2, colour, paper: style === 'thread' });
+      art.dataset.style = style;
+    } else if (display === 'inline') inlineEl.innerHTML = def.prim(v, { size: 20, id: `${uid}-in`, holes: 0 });
+    else if (display === 'fill' && def.lines) { const l = def.lines(v); el.style.setProperty('--ss-line-w', `${l.w.toFixed(2)}px`); el.style.setProperty('--ss-line-pitch', `${l.pitch.toFixed(2)}px`); }
+    else if (display === 'strip') {
+      drawStrip();
+      const near = stripAt.reduce((b, i) => (Math.abs(i - pos) < Math.abs(b - pos) ? i : b), stripAt[0]);
+      stripEl.querySelectorAll('.ss-strip__cell').forEach((c) => c.classList.toggle('is-selected', Number(c.dataset.i) === near));
+    } else if (display === 'patch') {
+      patchArt.innerHTML = drawn(v, { size: 96, frame: 'patch', n: 4, id: `${uid}-patch`, holes: style === 'thread' ? 0.5 : 0.2, colour, paper: style === 'thread' });
+      patchArt.dataset.style = style;
+      patchSay.textContent = def.say(shown);
+    }
     const moving = (state === 'dragging' || state === 'gliding') && !Number.isInteger(pos) && tune('decimals'); // on a stop (or pulled onto a mark) it reads as the whole number
     el.classList.toggle('ss--moving', moving);
     const tip = def.tip || def.say;
