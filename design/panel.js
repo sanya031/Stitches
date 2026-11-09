@@ -3,7 +3,7 @@
 // "Showing" changes what the Stitch tab acts on. Every pill moves with the saved pill motion.
 import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
-import { createStageSlider, STAGE_PANEL } from './stage-slider.js';
+import { createStageSlider } from './stage-slider.js';
 import { swatch } from './swatch.js';
 import { colourFieldHtml, createColourField, hexOf, parseHex } from './colour-field.js';
 import { createTooltips } from './tooltip.js';
@@ -89,7 +89,7 @@ function wire(root) {
   stylePills(root);
   root.querySelectorAll('[data-pill]').forEach(motion);
   root.querySelectorAll('[data-tiles]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tile' }));
-  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, colour: threadColour(), ...STAGE_PANEL, tuning: { ...STAGE_PANEL.tuning } }));
+  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, colour: threadColour() }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
   root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
   // icons centred on their drawing, as on the Controls tab

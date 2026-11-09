@@ -104,9 +104,9 @@ const SPECS = [
     ['Live', [['Drag me', slider('', { live: true })]]],
     ['States', [['Rest', slider('')], ['Hover', slider('is-hover')], ['Dragging', slider('is-dragging')], ['Focus', slider('is-focus')], ['Disabled', slider('is-disabled')], ['Mixed', slider('is-mixed', { val: 'Mixed' })], ['At zero', slider('', { v: 0 })], ['At full', slider('', { v: 100 })]]]
   ] },
-  { group: 'Values', id: 'stage-slider', title: 'Stage slider', note: 'For settings a newcomer may not know. Dragging shows the thread changing in a bubble over the thumb. Drag the live ones.', cell: 280, stage: true, rows: [
-    ['Live', [['Strands, thread', '<div data-stage="strands" data-look="thread"></div>'], ['Count, primitive', '<div data-stage="count" data-look="prim"></div>'], ['Density, primitive', '<div data-stage="density" data-look="prim"></div>']]],
-    ['While dragging', [['Bubble, thread', '<div data-stage="strands" data-look="thread" data-held style="padding-top:150px"></div>'], ['Bubble, primitive', '<div data-stage="density" data-look="prim" data-held style="padding-top:150px"></div>']]]
+  { group: 'Values', id: 'stage-slider', title: 'Stage slider', note: 'For settings a newcomer may not know. The whole box is the slider: drag anywhere to move the value from where it is (above or below the box for fine steps). The stitch at the start redraws as you go; the number is a field you can type in. Drag the live ones.', cell: 280, stage: true, rows: [
+    ['Live', [['Strands', '<div data-stage="strands" style="width:100%"></div>'], ['Count', '<div data-stage="count" style="width:100%"></div>'], ['Density', '<div data-stage="density" style="width:100%"></div>']]],
+    ['In use', [['Strands', '<div data-stage="strands" data-held style="width:100%"></div>'], ['Density', '<div data-stage="density" data-held style="width:100%"></div>']]]
   ] },
   { group: 'Values', id: 'number-field', title: 'Number field', note: 'Drag the label to scrub, or type. Steppers and the unit are optional. Fixed-width digits so values line up.', blocks: ['number-field', 'shared'], cell: 180, rows: [
     ['States', [['Rest', num('')], ['Hover', num('is-hover')], ['Editing', num('is-focus')], ['Disabled', num('is-disabled')], ['Mixed', num('is-mixed', { value: '', ph: 'Mixed' })], ['Error', `<div style="width:100%">${num('is-error', { value: '9000' })}<span class="c-hint c-hint--error">Up to 400 squares</span></div>`]]],
@@ -206,7 +206,7 @@ main.querySelectorAll('[data-colour-field]').forEach((el) => createColourField(e
 const rootStyle = () => getComputedStyle(document.documentElement);
 const threadColour = rootStyle().getPropertyValue('--terracotta-500').trim();
 main.querySelectorAll('[data-stage]').forEach((host) => {
-  createStageSlider(host, { setting: host.dataset.stage, style: host.dataset.look, colour: threadColour });
+  createStageSlider(host, { setting: host.dataset.stage, colour: threadColour });
   if ('held' in host.dataset) { host.querySelector('.ss').classList.add('ss-on'); host.querySelector('input').tabIndex = -1; host.style.pointerEvents = 'none'; }
 });
 

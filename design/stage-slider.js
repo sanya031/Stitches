@@ -45,60 +45,52 @@ export const STAGE_SETTINGS = {
   }
 };
 
-/** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's. */
+/** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's: slider lab v18.2. */
 export const STAGE_TUNING = {
   // how the value is shown while it changes: 'bubble' (a square over the handle, following it), 'inline' (a small
   // drawing in the box, beside the number), 'fill' (the fill itself drawn as laid thread: thicker lines for strands,
   // closer for density), 'strip' (a row of the stops' drawings over the box, the nearest one selected), 'patch'
   // (a 4 × 4 patch of cloth over the box's start, with the value in words), 'inbar' (the stops' drawings inside
   // the box in place of the markers, only while in use: faint, the ones near the handle in full), 'none' (just the number)
-  display: 'bubble',
+  display: 'inline',
   // inline: where the drawing sits. 'end' (in the box, 4px left of the number), 'start' (in the box at its start),
   // 'beside' (outside the box on the right, after a divider), 'swap' (the drawing in the box, the number outside
   // on the right after a divider), 'before' (outside the box on the left, before a divider), 'label' (in the label
   // row above, on the right), 'lead' (in the box at its start, the number right after it, both on the left, like a
   // design tool's number field)
-  inlinePlace: 'end',
+  inlinePlace: 'lead',
   fill: true,          // bar layout: false hides the fill and the handle; the drawing and the number show the value
   inlineSize: 16,      // px: one of the icon sizes, 16, 20 or 24; the stitch fills it
   inlineDivider: true, // beside, swap, before: a divider between the box and what sits outside it
   inbarFaint: 0.25,    // inbar: how strong a drawing far from the handle is
   inbarReach: 1,       // inbar: how many marks away from the handle a drawing starts to come up to full
   inbarSize: 20,       // px, inbar: each drawing
-  bubbleSize: 104,     // px, the preview square
+  bubbleSize: 64,      // px, the preview square
   bubbleGap: 4,        // px between the bubble and the box (bar layout)
   linger: 450,         // ms the bubble stays after release
   keyLinger: 900,      // ms it stays after an arrow key
   inBetween: true,     // while dragging, the preview draws in-between values (false: only stops)
-  decimals: true,      // while dragging, the number shows the in-between value (2.4); false: only the stop it will land on, so it never suggests a value you can't pick
-  release: 'jump',     // 'jump': the thumb lands on the nearest stop at once; 'glide': it slides there; 'spring': it springs there (catch it mid-way)
+  decimals: false,     // while dragging, the number shows the in-between value (2.4); false: only the stop it will land on, so it never suggests a value you can't pick
+  release: 'spring',   // 'jump': the thumb lands on the nearest stop at once; 'glide': it slides there; 'spring': it springs there (catch it mid-way)
   glide: 160,          // ms, the glide to the stop
   springDuration: pillToken('duration', 0.38), // s, the spring's visual duration (the pill's Squash spring)
   springBounce: pillToken('bounce', 0.18),     // 0 … 1
   // hand feel (bar layout): the box handles the pointer itself
-  hand: false,         // on: the features below; off: the native range input
+  hand: true,          // on: the features below; off: the native range input
   relative: true,      // dragging moves the value by how far you move, from where it is; pressing doesn't jump it
   tapJump: true,       // with relative: a press and let go without moving jumps to that point
-  grow: 0,             // px the box grows on every side while held (0: off)
-  rubber: 0,           // px it can stretch past either end, with resistance, springing back on release (0: off)
-  fine: 0,             // px above or below the box at which dragging is at quarter speed (0: off)
-  handle: 16,          // px, the bar handle's height (bar layout)
-  markers: false,      // bar layout: markers on the box at every mark
-  markAlign: 'bottom', // where the markers sit: 'bottom' of the box or 'centre'
-  markOpacity: 1,      // markers' opacity when not in use; the one the handle is on is always full
-  reveal: false,       // bar layout: the handle and markers show only on hover, drag or keyboard focus; untouched, just the fill
-  magnet: 0,           // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
+  grow: 2,             // px the box grows on every side while held (0: off)
+  rubber: 16,          // px it can stretch past either end, with resistance, springing back on release (0: off)
+  fine: 80,            // px above or below the box at which dragging is at quarter speed (0: off)
+  handle: 24,          // px, the bar handle's height (bar layout)
+  markers: true,       // bar layout: markers on the box at every mark
+  markAlign: 'centre', // where the markers sit: 'bottom' of the box or 'centre'
+  markOpacity: 0.35,   // markers' opacity when not in use; the one the handle is on is always full
+  reveal: true,        // bar layout: the handle and markers show only on hover, drag or keyboard focus; untouched, just the fill
+  magnet: 0.15,        // 0 … 0.5 of the gap between marks: within it, dragging pulls the handle onto the mark
   // the bubble's number as it changes (number-motion.js): motion 'none' | 'roll' | 'slide' | 'blur', and its feel
   numberMotion: NUMBER_MOTION.motion, numberDuration: NUMBER_MOTION.duration, numberStagger: NUMBER_MOTION.stagger,
   numberDistance: NUMBER_MOTION.distance, numberBlur: NUMBER_MOTION.blur, numberFade: NUMBER_MOTION.fade, numberEase: NUMBER_MOTION.ease,
-};
-
-/** The slider the panel uses: slider lab v18.2 (bar layout, the stitch drawing at the start with the number after
- * it, fill and handle, hand feel, editable number). Pass as createStageSlider(host, { setting, ...STAGE_PANEL }). */
-export const STAGE_PANEL = {
-  layout: 'bar', editable: true, style: 'prim',
-  tuning: { bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none',
-    hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'inline', inlinePlace: 'lead', inlineSize: 16 },
 };
 
 /**
@@ -115,7 +107,7 @@ export const STAGE_PANEL = {
  * on the nearest stop) or step with the up and down arrows (shift for ten), Enter or leaving keeps it, Escape undoes.
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'thread', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'inline', editable = false } = {}) {
+export function createStageSlider(host, { setting, style = 'prim', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'bar', editable = true } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
   const tune = (k) => (k in tuning ? tuning[k] : STAGE_TUNING[k]);
   let glideRaf = 0, scrubGain = 1;

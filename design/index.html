@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/styles.css">
   <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="controls.css"> <!-- the stage sliders -->
   <style>
     :root {
       --ground: #121418; --panel: #16181D; --raised: #1E2128; --well: #0F1114; --line: #262A32; --line-3: #3A3F49;
@@ -66,23 +67,8 @@
     h3.sub { margin: 20px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
     /* stage slider: Procreate-style live preview bubble over the thumb while dragging */
     .controls-demo { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: 24px; align-items: start; }
-    .mock-panel { padding: 20px 16px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: grid; gap: 4px; }
-    .ss { display: grid; grid-template-columns: 64px 1fr 84px; align-items: center; gap: 10px; min-height: 44px; }
-    .ss-label { color: var(--muted); }
-    .ss-out { text-align: right; color: var(--dim); }
-    .ss-track { position: relative; }
-    .ss input { width: 100%; height: 44px; margin: 0; accent-color: var(--brass); background: transparent; display: block; }
-    .ss-bubble { position: absolute; bottom: calc(100% + 2px); left: 0; z-index: 5; display: grid; justify-items: center; gap: 6px; padding: 8px 8px 6px;
-      background: var(--raised); border: 1px solid var(--line-3); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,.5);
-      pointer-events: none; opacity: 0; transform: translateX(-50%) translateY(6px) scale(.86); transform-origin: 50% 100%;
-      transition: opacity .18s ease, transform .22s cubic-bezier(.2,.9,.3,1.2); }
-    .ss-on .ss-bubble { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); transition: opacity .12s ease, transform .26s cubic-bezier(.2,.9,.3,1.25); }
-    .ss-art svg { display: block; border-radius: 10px; }
-    .ss-art[data-style="prim"] { color: var(--ink); background: var(--well); border-radius: 10px; }
-    .ss-value { color: var(--brass); font-weight: 500; }
-    .ss-on .ss-out { color: var(--ink); }
+    .mock-panel { padding: 20px 16px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: grid; gap: var(--row-gap); }
     @media (max-width: 720px) { .controls-demo { grid-template-columns: 1fr; } }
-    @media (prefers-reduced-motion: reduce) { .ss-bubble, .ss-on .ss-bubble { transition: opacity .12s; transform: translateX(-50%); } }
     @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
     .tab-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; color: var(--ink); text-decoration: none; }
     .tab-link.is-current { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
@@ -291,10 +277,9 @@
     <section aria-labelledby="controls-title">
       <h2 id="controls-title" style="margin-top:40px">Controls · stage sliders</h2>
       <div class="controls-demo">
-        <div class="mock-panel" id="stage-sliders"></div>
+        <div class="mock-panel" id="stage-sliders"><div data-stage="strands"></div><div data-stage="count"></div><div data-stage="density"></div></div>
         <div>
-          <p class="lede">For settings a newcomer may not know. Drag a slider (or use the arrow keys): like the brush-size preview in Procreate, a bubble rides the thumb with one square of cloth and the thread on it, redrawn as you go. More strands thicken the thread. A higher count shrinks the square while the thread stays the same width. Density packs the lines closer. Let go and it settles on a real value and fades.</p>
-          <div class="controls"><div class="pill" role="group" aria-label="Preview style" id="stage-style"><button data-style="thread" aria-pressed="true">Thread</button><button data-style="prim">Primitive</button></div></div>
+          <p class="lede">For settings a newcomer may not know. The whole box is the slider: drag anywhere (or use the arrow keys) and the value moves from where it is. The stitch at the start of the box redraws as you go: more strands thicken it, a higher count shrinks its square, density packs the lines closer. Let go and it springs onto a real value. Click the number to type one.</p>
         </div>
       </div>
     </section>
@@ -347,12 +332,7 @@
     import { createStageSlider } from './stage-slider.js';
 
     // stage sliders: one preview square per setting, redrawn live under the thumb
-    const stageSliders = ['strands', 'count', 'density'].map((k) => createStageSlider(document.getElementById('stage-sliders'), { setting: k }));
-    document.getElementById('stage-style').addEventListener('click', (e) => {
-      const b = e.target.closest('button'); if (!b) return;
-      for (const x of e.currentTarget.children) x.setAttribute('aria-pressed', String(x === b));
-      stageSliders.forEach((s) => s.setStyle(b.dataset.style));
-    });
+    document.querySelectorAll('#stage-sliders [data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage }));
 
     const view = { size: 24, stroke: 1.75, q: '', colour: '#C8343B', frame: 'zoom', primSize: 72, primColour: '#EEE9E0', threadSize: 96, holes: 0.3 };
     // files per frame, for the copy toast
