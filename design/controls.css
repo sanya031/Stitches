@@ -208,7 +208,7 @@
 .ss--hand .ss-handle { transform: translate(calc(-50% + var(--ss-stretch-r, 0px) - var(--ss-stretch-l, 0px)), -50%); } /* rides the stretched end */
 .ss--hand input[type="range"] { pointer-events: none; }
 .ss--bar:not(.ss--pointer):has(input[type="range"]:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
-.ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted); transition: color var(--motion-tooltip-duration) ease-out; }
+.ss--bar .ss-out { position: absolute; right: var(--space-12); top: 50%; transform: translateY(calc(-50% - var(--ss-digit-dy, 0px))); /* the digits' middle on the box's middle */ pointer-events: none; color: var(--text-muted); transition: color var(--motion-tooltip-duration) ease-out; }
 .ss--bar:is(:hover, .ss-on, :focus-within) .ss-out { color: var(--text); } /* quieter at rest; its full colour when hovered or in use */
 /* editable number: a field over the bar; pressing it fills it to show it's selected */
 .ss--bar .ss-edit { right: var(--space-6); z-index: 1; box-sizing: content-box; width: var(--ss-edit-w, 4ch); min-width: 0; height: calc(100% - var(--space-8)); padding: 0 var(--space-6); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-variant-numeric: var(--numeric); text-align: right; outline: 0; pointer-events: auto; cursor: text; }

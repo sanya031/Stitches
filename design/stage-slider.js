@@ -23,6 +23,7 @@ export const STAGE_SETTINGS = {
     label: 'Strands', stops: [1, 2, 3, 4, 5, 6], initial: 2, marks: 1, common: [2],
     say: (v) => `${v} strand${v > 1 ? 's' : ''}`,
     tip: (v) => String(v), // the bubble shows just the number
+    crop: '1.5 1.5 21 21', // the inline drawing's view: the cross reaches its corners with round caps, so it gets more room to read the same size as the others (and its caps never clip)
     lines: (v) => ({ w: 0.6 + 0.7 * v, pitch: 8 }), // the thread fill: thicker lines, the same spacing
     thread: (v, o) => threadSvg('stitch-full', { ...o, strands: v }),
     prim: (v, o) => primitiveSvg('stitch-full', { ...o, strands: v })
@@ -147,6 +148,16 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const probe = Object.assign(document.createElement('span'), { className: 'ss-edit-probe' });
   if (bar) el.append(probe);
   const textW = (t) => { probe.textContent = t; return probe.getBoundingClientRect().width; };
+  // the digits sit low in their line (the line keeps room for descenders), so the number is lifted until the digits'
+  // middle is the box's middle, level with the drawing's
+  const centreDigits = () => {
+    const ctx = document.createElement('canvas').getContext('2d');
+    const cs = getComputedStyle(probe);
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; // the shorthand reads back empty when set from a var
+    const m = ctx.measureText('0123456789');
+    el.style.setProperty('--ss-digit-dy', `${((m.fontBoundingBoxAscent - m.fontBoundingBoxDescent - m.actualBoundingBoxAscent) / 2).toFixed(2)}px`);
+  };
+  if (bar) { centreDigits(); document.fonts?.ready.then(centreDigits); }
   const inlineEl = el.querySelector('.ss-inline'), stripEl = el.querySelector('.ss-strip');
   const patchArt = el.querySelector('.ss-patch__art'), patchSay = el.querySelector('.ss-patch__say');
   // the strip: every stop when there are few, else every quarter; each drawn once, at its place along the box
@@ -179,7 +190,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
       art.dataset.style = style;
     } else if (display === 'inline') {
       const size = tune('inlineSize');
-      inlineEl.innerHTML = def.prim(v, { size, id: `${uid}-in`, holes: 0 }).replace('viewBox="0 0 24 24"', 'viewBox="3.5 3.5 17 17"'); // cropped to the stitch (its square is 5..19), so the size and the 4px gap are what you see
+      inlineEl.innerHTML = def.prim(v, { size, id: `${uid}-in`, holes: 0 }).replace('viewBox="0 0 24 24"', `viewBox="${def.crop || '3.5 3.5 17 17'}"`); // cropped to the stitch (its square is 5..19), so the size and the 4px gap are what you see
       el.dataset.place = tune('inlinePlace');
       el.classList.toggle('ss--divided', !!tune('inlineDivider'));
       el.style.setProperty('--ss-inline-size', `${size}px`);
