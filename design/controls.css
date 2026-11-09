@@ -237,7 +237,24 @@
 .ss-inline, .ss-strip, .ss-patch { display: none; }
 .ss[data-display]:not([data-display="bubble"]) .ss-bubble { display: none; }
 /* inline: a small drawing in the box, just left of the number */
-.ss[data-display="inline"] .ss-inline { display: block; position: absolute; top: 50%; right: calc(var(--space-6) * 3 + var(--ss-edit-w, 4ch) + var(--space-2)); color: var(--icon); transform: translateY(-50%); pointer-events: none; transition: color var(--motion-tooltip-duration) ease-out; }
+.ss-divider { display: none; }
+.ss[data-display="inline"] { --ss-out-gap: var(--space-8); } /* box to what sits outside it */
+.ss[data-display="inline"].ss--divided { --ss-out-gap: calc(var(--space-8) * 2 + var(--border-width)); } /* box, 8, divider, 8 */
+.ss[data-display="inline"] .ss-inline { display: block; position: absolute; top: 50%; right: calc(var(--space-12) + var(--ss-num-w, 1ch) + var(--space-4)); color: var(--icon); transform: translateY(-50%); pointer-events: none; transition: color var(--motion-tooltip-duration) ease-out; } /* end: 4px left of the number's digits */
+.ss[data-place="start"] .ss-inline { right: auto; left: var(--space-12); }
+/* beside and before: the box gives up room for the drawing outside it, with a divider between */
+.ss[data-place="beside"], .ss[data-place="swap"] { margin-right: calc(var(--ss-out-gap) + var(--ss-side-w, var(--icon-md))); }
+.ss[data-place="before"] { margin-left: calc(var(--ss-out-gap) + var(--ss-side-w, var(--icon-md))); }
+.ss[data-place="beside"] .ss-inline { right: auto; left: calc(100% + var(--ss-out-gap)); }
+.ss[data-place="before"] .ss-inline { right: calc(100% + var(--ss-out-gap)); }
+.ss--divided:is([data-place="beside"], [data-place="swap"], [data-place="before"]) .ss-divider { display: block; position: absolute; top: 50%; left: calc(100% + var(--space-8)); width: var(--border-width); height: var(--space-16); background: var(--border); transform: translateY(-50%); }
+.ss--divided[data-place="before"] .ss-divider { left: auto; right: calc(100% + var(--space-8)); }
+/* swap: the drawing in the box where the number was, the number outside after the divider */
+.ss[data-place="swap"] .ss-inline { right: var(--space-12); }
+.ss[data-place="swap"] .ss-out { right: auto; left: calc(100% + var(--ss-out-gap)); }
+.ss[data-place="swap"] .ss-edit { left: calc(100% + var(--ss-out-gap) - var(--space-6)); text-align: left; } /* its digits line up with the gap; the field's padding hangs back over it */
+/* label: in the label row above, at its right end */
+.ss[data-place="label"] .ss-inline { top: calc(-1 * (var(--space-6) + var(--icon-sm) / 2)); right: 0; }
 .ss[data-display="inline"]:is(:hover, .ss-on, :focus-within) .ss-inline { color: var(--icon-active); }
 .ss-inline svg { display: block; }
 /* fill: the filled part drawn as laid thread, its lines as thick and as close as the value */

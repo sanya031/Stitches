@@ -52,6 +52,13 @@ export const STAGE_TUNING = {
   // (a 4 × 4 patch of cloth over the box's start, with the value in words), 'inbar' (the stops' drawings inside
   // the box in place of the markers, only while in use: faint, the ones near the handle in full), 'none' (just the number)
   display: 'bubble',
+  // inline: where the drawing sits. 'end' (in the box, 4px left of the number), 'start' (in the box at its start),
+  // 'beside' (outside the box on the right, after a divider), 'swap' (the drawing in the box, the number outside
+  // on the right after a divider), 'before' (outside the box on the left, before a divider), 'label' (in the label
+  // row above, on the right)
+  inlinePlace: 'end',
+  inlineSize: 16,      // px: one of the icon sizes, 16, 20 or 24; the stitch fills it
+  inlineDivider: true, // beside, swap, before: a divider between the box and what sits outside it
   inbarFaint: 0.25,    // inbar: how strong a drawing far from the handle is
   inbarReach: 1,       // inbar: how many marks away from the handle a drawing starts to come up to full
   inbarSize: 20,       // px, inbar: each drawing
@@ -121,6 +128,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
       <input id="${uid}" type="range" min="0" max="${last}" step="${last > 10 && !live ? 1 : 0.01}" value="${index}" aria-valuetext="${def.say(def.stops[index])}">
       <div class="ss-bubble" aria-hidden="true"><div class="ss-art"></div><div class="ss-value mono"></div></div>
       <div class="ss-inline" aria-hidden="true"></div>
+      <span class="ss-divider" aria-hidden="true"></span>
       <div class="ss-strip" aria-hidden="true"></div>
       <div class="ss-patch" aria-hidden="true"><div class="ss-patch__art"></div><div class="ss-patch__say"></div></div>
     </div>
@@ -134,6 +142,9 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   }
   const input = el.querySelector('input'), bubble = el.querySelector('.ss-bubble'), art = el.querySelector('.ss-art');
   const valueEl = el.querySelector('.ss-value'), edit = el.querySelector('.ss-edit');
+  const probe = Object.assign(document.createElement('span'), { className: 'ss-edit-probe' });
+  if (bar) el.append(probe);
+  const textW = (t) => { probe.textContent = t; return probe.getBoundingClientRect().width; };
   const inlineEl = el.querySelector('.ss-inline'), stripEl = el.querySelector('.ss-strip');
   const patchArt = el.querySelector('.ss-patch__art'), patchSay = el.querySelector('.ss-patch__say');
   // the strip: every stop when there are few, else every quarter; each drawn once, at its place along the box
@@ -164,7 +175,13 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     if (display === 'bubble') {
       art.innerHTML = drawn(v, { size: tune('bubbleSize'), id: `${uid}-art`, holes: style === 'thread' ? 0.7 : 0.2, colour, paper: style === 'thread' });
       art.dataset.style = style;
-    } else if (display === 'inline') inlineEl.innerHTML = def.prim(v, { size: 20, id: `${uid}-in`, holes: 0 });
+    } else if (display === 'inline') {
+      const size = tune('inlineSize');
+      inlineEl.innerHTML = def.prim(v, { size, id: `${uid}-in`, holes: 0 }).replace('viewBox="0 0 24 24"', 'viewBox="3.5 3.5 17 17"'); // cropped to the stitch (its square is 5..19), so the size and the 4px gap are what you see
+      el.dataset.place = tune('inlinePlace');
+      el.classList.toggle('ss--divided', !!tune('inlineDivider'));
+      el.style.setProperty('--ss-inline-size', `${size}px`);
+    }
     else if (display === 'fill' && def.lines) { const l = def.lines(v); el.style.setProperty('--ss-line-w', `${l.w.toFixed(2)}px`); el.style.setProperty('--ss-line-pitch', `${l.pitch.toFixed(2)}px`); }
     else if (display === 'inbar') {
       drawStrip(true);
@@ -191,6 +208,13 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     });
     out.textContent = live ? (moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]))
       : numberBelow ? String(shown) : def.say(def.stops[index]);
+    if (display === 'inline' && bar) {
+      // the number's own width, so the drawing keeps 4px from its digits; and the room taken outside the box
+      const numText = live && moving ? at(pos).toFixed(1) : String(state === 'dragging' || state === 'gliding' ? shown : def.stops[index]);
+      el.style.setProperty('--ss-num-w', `${textW(numText).toFixed(1)}px`);
+      const widestNum = Math.max(...def.stops.map((x) => textW(String(x))));
+      el.style.setProperty('--ss-side-w', `${Math.ceil(tune('inlinePlace') === 'swap' ? widestNum + (edit ? 12 : 0) : tune('inlineSize'))}px`);
+    }
     // the bubble rides the thumb (in the bar, the handle at the fill's edge)
     el.style.setProperty('--p', last ? pos / last : 0);
     el.style.setProperty('--ss-bubble-gap', `${tune('bubbleGap')}px`);
@@ -324,8 +348,6 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const goTo = (i) => { settle(Number(input.value), Math.max(0, Math.min(last, i))); edit.value = String(def.stops[index]); };
     // the field fits the widest number it can hold, so its fill has the same padding on both sides; while
     // dragging it widens for the decimal (no fill shows then)
-    const probe = Object.assign(document.createElement('span'), { className: 'ss-edit-probe' });
-    el.append(probe);
     const widest = (texts) => Math.max(...texts.map((t) => { probe.textContent = t; return probe.getBoundingClientRect().width; }));
     const fit = () => {
       el.style.setProperty('--ss-edit-w', `${Math.ceil(widest(def.stops.map(String)))}px`);
