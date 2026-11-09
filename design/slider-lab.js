@@ -1,7 +1,7 @@
 // The slider lab: the stage slider on its own, to iterate on how it feels. Each iteration is a version in
 // VERSIONS; the version pill switches between them so they can be compared. The Slider panel (DialKit) tunes
 // the version shown live, and copies its values; values that win become STAGE_TUNING in stage-slider.js.
-import { createStageSlider, STAGE_TUNING, STAGE_SETTINGS } from './stage-slider.js';
+import { createStageSlider, STAGE_TUNING, STAGE_SETTINGS, STAGE_PANEL } from './stage-slider.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { hexOf } from './colour-field.js';
 
@@ -32,7 +32,7 @@ const VERSIONS = {
   'v16.2': { note: 'v16.2: as v16, but the drawings are inside the slider, in place of the markers. They are there only while you use it: faint, and each comes up to full colour as the handle gets close to it. Untouched, the box shows only the fill and the number.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: false, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none', hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'inbar' } },
   v17: { note: 'v17: as v13, with a patch instead of the bubble: a 4 × 4 patch of cloth over the start of the box, with the value in words under it. It stays put while the handle moves, and shows how the setting looks over an area, not one square.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none', hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'patch' } },
   v18: { note: 'v18: like a number field in a design tool. In the box, on the left, the stitch drawing and the number right after it (6px, the icon-to-label gap); no fill or handle. Drag anywhere in the box to scrub the value from where it is: the drawing and the number change as you go. Click the number to type.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none', hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'inline', inlinePlace: 'lead', fill: false, markers: false, inlineSize: 16 } },
-  'v18.2': { note: 'v18.2: as v18, with the fill and handle back, so you also see where the value sits in its range.', layout: 'bar', editable: true, style: 'prim', tuning: { ...STAGE_TUNING, bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none', hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'inline', inlinePlace: 'lead', inlineSize: 16 } },
+  'v18.2': { note: 'v18.2: as v18, with the fill and handle back, so you also see where the value sits in its range. This is the slider the Panel tab uses (STAGE_PANEL).', ...STAGE_PANEL, tuning: { ...STAGE_TUNING, ...STAGE_PANEL.tuning } },
 };
 const SETTINGS = ['strands', 'density'];
 

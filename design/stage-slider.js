@@ -93,6 +93,14 @@ export const STAGE_TUNING = {
   numberDistance: NUMBER_MOTION.distance, numberBlur: NUMBER_MOTION.blur, numberFade: NUMBER_MOTION.fade, numberEase: NUMBER_MOTION.ease,
 };
 
+/** The slider the panel uses: slider lab v18.2 (bar layout, the stitch drawing at the start with the number after
+ * it, fill and handle, hand feel, editable number). Pass as createStageSlider(host, { setting, ...STAGE_PANEL }). */
+export const STAGE_PANEL = {
+  layout: 'bar', editable: true, style: 'prim',
+  tuning: { bubbleSize: 64, handle: 24, markers: true, magnet: 0.15, markAlign: 'centre', markOpacity: 0.35, reveal: true, numberMotion: 'none',
+    hand: true, relative: true, tapJump: true, grow: 2, rubber: 16, fine: 80, release: 'spring', decimals: false, display: 'inline', inlinePlace: 'lead', inlineSize: 16 },
+};
+
 /**
  * Build a stage slider in `host`. options: setting (a STAGE_SETTINGS key), style ('thread' | 'prim'),
  * colour (thread colour), onChange(value), labelOutside (the label sits above the box, the slider fills it),
@@ -147,14 +155,20 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
   const valueEl = el.querySelector('.ss-value'), edit = el.querySelector('.ss-edit');
   const probe = Object.assign(document.createElement('span'), { className: 'ss-edit-probe' });
   if (bar) el.append(probe);
-  const textW = (t) => { probe.textContent = t; return probe.getBoundingClientRect().width; };
+  // measured from the font, not the page, so it works while the slider is hidden (a closed section); digits are
+  // tabular (all as wide as 0), as the number is drawn
+  const ctx2d = document.createElement('canvas').getContext('2d');
+  const fontOf = () => { const cs = getComputedStyle(probe); return `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; }; // the shorthand reads back empty when set from a var
+  const textW = (t) => {
+    ctx2d.font = fontOf();
+    const zero = ctx2d.measureText('0').width;
+    return [...t].reduce((w, ch) => w + (/\d/.test(ch) ? zero : ctx2d.measureText(ch).width), 0);
+  };
   // the digits sit low in their line (the line keeps room for descenders), so the number is lifted until the digits'
   // middle is the box's middle, level with the drawing's
   const centreDigits = () => {
-    const ctx = document.createElement('canvas').getContext('2d');
-    const cs = getComputedStyle(probe);
-    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; // the shorthand reads back empty when set from a var
-    const m = ctx.measureText('0123456789');
+    ctx2d.font = fontOf();
+    const m = ctx2d.measureText('0123456789');
     el.style.setProperty('--ss-digit-dy', `${((m.fontBoundingBoxAscent - m.fontBoundingBoxDescent - m.actualBoundingBoxAscent) / 2).toFixed(2)}px`);
   };
   if (bar) { centreDigits(); document.fonts?.ready.then(centreDigits); }
@@ -362,7 +376,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     const goTo = (i) => { settle(Number(input.value), Math.max(0, Math.min(last, i))); edit.value = String(def.stops[index]); };
     // the field fits the widest number it can hold, so its fill has the same padding on both sides; while
     // dragging it widens for the decimal (no fill shows then)
-    const widest = (texts) => Math.max(...texts.map((t) => { probe.textContent = t; return probe.getBoundingClientRect().width; }));
+    const widest = (texts) => Math.max(...texts.map(textW));
     const fit = () => {
       el.style.setProperty('--ss-edit-w', `${Math.ceil(widest(def.stops.map(String)))}px`);
       el.style.setProperty('--ss-edit-w-moving', `${Math.ceil(widest(def.stops.map((v) => v.toFixed(1))))}px`);
