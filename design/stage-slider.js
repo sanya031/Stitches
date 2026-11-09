@@ -55,8 +55,10 @@ export const STAGE_TUNING = {
   // inline: where the drawing sits. 'end' (in the box, 4px left of the number), 'start' (in the box at its start),
   // 'beside' (outside the box on the right, after a divider), 'swap' (the drawing in the box, the number outside
   // on the right after a divider), 'before' (outside the box on the left, before a divider), 'label' (in the label
-  // row above, on the right)
+  // row above, on the right), 'lead' (in the box at its start, the number right after it, both on the left, like a
+  // design tool's number field)
   inlinePlace: 'end',
+  fill: true,          // bar layout: false hides the fill and the handle; the drawing and the number show the value
   inlineSize: 16,      // px: one of the icon sizes, 16, 20 or 24; the stitch fills it
   inlineDivider: true, // beside, swap, before: a divider between the box and what sits outside it
   inbarFaint: 0.25,    // inbar: how strong a drawing far from the handle is
@@ -225,6 +227,7 @@ export function createStageSlider(host, { setting, style = 'thread', colour = '#
     el.style.setProperty('--ss-mark-opacity', tune('markOpacity'));
     el.classList.toggle('ss--reveal', !!tune('reveal'));
     if (bar) el.classList.toggle('ss--hand', !!tune('hand'));
+    if (bar) el.classList.toggle('ss--nofill', !tune('fill'));
     el.querySelectorAll('.ss-mark').forEach((m) => m.classList.toggle('is-active', Number(m.dataset.at) === pos));
     const r = input.getBoundingClientRect(), thumb = bar ? 0 : 22, x = thumb / 2 + (pos / last) * (r.width - thumb);
     bubble.style.left = `${x}px`;

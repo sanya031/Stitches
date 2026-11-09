@@ -253,6 +253,12 @@
 .ss[data-place="swap"] .ss-inline { right: var(--space-12); }
 .ss[data-place="swap"] .ss-out { right: auto; left: calc(100% + var(--ss-out-gap)); }
 .ss[data-place="swap"] .ss-edit { left: calc(100% + var(--ss-out-gap) - var(--space-6)); text-align: left; } /* its digits line up with the gap; the field's padding hangs back over it */
+/* lead: the drawing at the box's start and the number right after it, both on the left, like a design tool's number field */
+.ss[data-place="lead"] .ss-inline { right: auto; left: var(--space-12); }
+.ss[data-place="lead"] .ss-out { right: auto; left: calc(var(--space-12) + var(--ss-inline-size, var(--icon-sm)) + var(--inline-gap)); }
+.ss[data-place="lead"] .ss-edit { left: calc(var(--space-12) + var(--ss-inline-size, var(--icon-sm)) + var(--inline-gap) - var(--space-6)); text-align: left; } /* the digits start a gap after the drawing; the field's padding hangs back */
+/* no fill: the box shows no fill or handle, only the drawing and the number; dragging still scrubs it */
+.ss--nofill :is(.ss-fill, .ss-handle) { display: none; }
 /* label: in the label row above, at its right end */
 .ss[data-place="label"] .ss-inline { top: calc(-1 * (var(--space-6) + var(--icon-sm) / 2)); right: 0; }
 .ss[data-display="inline"]:is(:hover, .ss-on, :focus-within) .ss-inline { color: var(--icon-active); }
