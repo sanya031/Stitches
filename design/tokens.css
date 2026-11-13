@@ -40,8 +40,11 @@
   --surface-bench: var(--neutral-200);
   --surface-panel: var(--neutral-50);
   --surface-field: var(--neutral-100);
+  --surface-well: var(--neutral-100);   /* an inset well inside something raised (the picker's pill and pans) */
   --surface-raised: var(--neutral-0);
   --surface-selected: var(--neutral-0);
+  --surface-hover: var(--neutral-50);   /* a menu item under the pointer, on a raised surface: fainter than selected */
+  --surface-selected-raised: var(--neutral-100); /* the selected menu item, on a raised surface (selected is white, like the surface) */
   --slider-fill: var(--neutral-0);      /* the filled part of a bar slider */
   /* Text and icons */
   --text-strong: var(--neutral-950);
@@ -85,8 +88,11 @@
   --surface-bench: var(--neutral-950);
   --surface-panel: var(--neutral-900);
   --surface-field: var(--neutral-800);
+  --surface-well: var(--neutral-900);   /* raised is 800 in dark, so the well goes a step darker */
   --surface-raised: var(--neutral-800);
   --surface-selected: var(--neutral-700);
+  --surface-hover: color-mix(in oklch, var(--neutral-700) 50%, var(--neutral-800));
+  --surface-selected-raised: var(--neutral-700);
   --slider-fill: var(--neutral-600);    /* a step lighter than selected, so the bar reads as the control */
   /* Text and icons */
   --text-strong: var(--neutral-50);
@@ -129,8 +135,11 @@
     --surface-bench: var(--neutral-950);
     --surface-panel: var(--neutral-900);
     --surface-field: var(--neutral-800);
+    --surface-well: var(--neutral-900);
     --surface-raised: var(--neutral-800);
     --surface-selected: var(--neutral-700);
+    --surface-hover: color-mix(in oklch, var(--neutral-700) 50%, var(--neutral-800));
+    --surface-selected-raised: var(--neutral-700);
     --slider-fill: var(--neutral-600);    /* a step lighter than selected, so the bar reads as the control */
     /* Text and icons */
     --text-strong: var(--neutral-50);

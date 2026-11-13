@@ -5,7 +5,12 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { swatch } from './swatch.js';
-import { colourFieldHtml, createColourField, hexOf, parseHex } from './colour-field.js';
+import { hexOf, parseHex } from './colour-field.js';
+import { createColourPicker, FLOAT_TUNING } from './colour-picker.js';
+import { OUTLINE_STITCHES, outlineSvg } from './outline-stitches.js';
+import { createPicturePopup } from './picture-popup.js';
+import { drawCallaLilies } from '../lab/starter.js';
+import { createFloatingPalette } from './floating-palette.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
@@ -25,7 +30,8 @@ const seg = (opts, sel = 0, { lg = false, icons = false, id = '' } = {}) => `<di
   const [value, label] = Array.isArray(o) ? o : [o, o];
   return `<button class="c-reset c-seg__opt c-focus" aria-pressed="${i === sel}" data-value="${value}"${icons ? ` aria-label="${label}" title="${label}"` : ` data-label="${label}"`}>${icons ? ic(value) : label}</button>`;
 }).join('')}</div>`;
-const sw = (label, on = false, mixed = false) => `<button class="c-reset c-switch c-switch--field c-focus ${mixed ? 'is-mixed' : ''}" role="switch" aria-checked="${on}" data-switch><span class="c-switch__track"><span class="c-switch__thumb"></span></span>${label}</button>`;
+// a switch: the field with its label, Off and On always in view as a small pill; mixed, neither is pressed
+const sw = (label, on = false, mixed = false) => `<button class="c-reset c-switch c-focus ${mixed ? 'is-mixed' : ''}" role="switch" aria-checked="${mixed ? 'mixed' : on}" data-switch>${label}<span class="c-seg c-seg--soft" aria-hidden="true">${['Off', 'On'].map((w, i) => `<span class="c-seg__opt" data-label="${w}" aria-pressed="${!mixed && on === (i === 1)}">${w}</span>`).join('')}</span></button>`;
 const slider = (label, v, { unit = '%', mixed = false } = {}) => `<div class="c-slider ${mixed ? 'is-mixed' : ''}" style="--v:${v}%" data-slider data-unit="${unit}"><span>${label}</span><span class="c-slider__track"><span class="c-slider__fill"></span><span class="c-slider__thumb" tabindex="0" role="slider" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}"></span></span><span class="c-slider__value">${mixed ? 'Mixed' : `${v}${unit}`}</span></div>`;
 const num = (label, value, unit = '', { mixed = false, steps = true } = {}) => `<label class="c-field c-field--num ${mixed ? 'is-mixed' : ''}"><span class="c-field__label">${label}</span><input inputmode="numeric" value="${mixed ? '' : value}" placeholder="${mixed ? 'Mixed' : ''}" aria-label="${label}"><span class="c-field__unit">${unit}</span>${steps ? `<span class="c-field__steps">${ic('minus')}${ic('plus')}</span>` : ''}</label>`;
 const select = (label, value, options, { mixed = false } = {}) => `<button class="c-reset c-select c-focus ${mixed ? 'is-mixed' : ''}" data-select="${options.join('|')}"><span class="c-select__label">${label}</span><span class="c-select__value">${mixed ? 'Mixed' : value}</span>${ic('chevron-down')}</button>`;
@@ -33,12 +39,13 @@ const swatchShow = (colour, cls = '') => swatch(colour, { tag: 'span', cls });
 const swatchBtn = (colour, cls = '', count = '') => swatch(colour, { cls, attrs: 'data-swatch', extra: count ? `<span class="c-badge c-swatch__n">${count}</span>` : '' });
 const prop = (label, control) => control; // the label lives inside the control now
 const stack = (control) => `<div class="c-prop c-prop--stack">${control}</div>`;
-const section = (title, body, { action = '', open = true } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead"><button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${title}${ic(open ? 'chevron-down' : 'chevron-right')}</button>${action}</div>${body}</div>`;
+// add: a + in the header, just before the chevron (Pattern, Outline); action: one after it (the parked Layers)
+const section = (title, body, { action = '', open = true, add = '' } = {}) => `<div class="c-panel__section" data-open="${open}"><div class="c-panel__sechead">${add ? `<span class="c-panel__secadd">${add}</span>` : ''}<button class="c-reset c-section c-focus" aria-expanded="${open}" data-section>${title}${ic(open ? 'chevron-down' : 'chevron-right')}</button>${action}</div>${body}</div>`;
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
 // the colour row: the thread as a swatch and its hex code; any colour can be used
 const swatchHtml = (hex, mixed = false) => `${swatchShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
-const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><button class="c-reset c-swatchrow c-focus" data-picker aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button></div>`;
-const stage = (setting) => `<div data-stage="${setting}"></div>`;
+const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><button class="c-reset c-swatchrow c-focus" data-picker="thread" aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button></div>`;
+const stage = (setting, initial) => `<div data-stage="${setting}"${initial != null ? ` data-initial="${initial}"` : ''}></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
 // one tile per stitch type: quarter and three-quarter show one corner, the panel doesn't pick a direction
@@ -46,24 +53,119 @@ const STITCHES = Object.keys(PRIMITIVES).filter((n) => !/-(tr|bl|br)$/.test(n)).
 const stitchName = (n) => PRIMITIVES[n].label.replace(/, top left$/, '');
 const tiles = (sel = 0) => `<div class="c-tilegrid" data-tiles>${STITCHES.map((n, i) => `<button class="c-reset c-tile c-focus tz-host" aria-label="${stitchName(n)}" data-tip="${stitchName(n)}" aria-pressed="${i === sel}">${zoomPrim(n)}</button>`).join('')}</div>`;
 // every stitch on the canvas by type and setting: the same stitch at another thickness is its own row
-const CANVAS_STITCHES = [['stitch-full', 'Thickness 2', 6120], ['stitch-half', 'Thickness 1', 2840], ['stitch-full', 'Thickness 3', 980], ['stitch-back', 'Thickness 1', 1210], ['fill-weave-3', 'Density 60%', 540], ['stitch-knot', 'Thickness 2', 150]];
-const canvasStitches = section('Canvas stitches', `<div data-canvas-stitches>${CANVAS_STITCHES.map(([n, detail, count]) => `<button class="c-reset c-row c-focus tz-host" data-count="${count}"><span class="c-row__art">${zoomPrim(n)}</span>${stitchName(n)}<span class="c-row__detail">${detail} · ${count.toLocaleString('en')}</span></button>`).join('')}</div><span class="c-hint">Click a stitch to select every one like it</span>`);
+// [stitch, strands, density (% or null), count]. Each row is one split field like the panel's others: the stitch's
+// drawing and its count, then strands and density, each behind its icon and typed into in place (a stitch with no
+// density shows a dash there); hide and delete sit outside the field, and clicking the field selects them. The words are in the tooltips.
+// after each row's field: hide (or show) and delete every stitch in it; clicking the field itself selects them
+const rowActions = (hidden) => `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="${hidden ? 'Show' : 'Hide'} these stitches" aria-pressed="${!!hidden}" data-tip="${hidden ? 'Show' : 'Hide'}" data-row-hide>${ic(hidden ? 'eye-off' : 'eye')}</button>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Delete these stitches" data-tip="Delete" data-row-delete>${ic('bin')}</button>`;
+const CANVAS_STITCHES = [['stitch-full', 2, null, 6120], ['stitch-half', 1, null, 2840], ['stitch-full', 3, null, 980], ['stitch-back', 1, null, 1210], ['fill-weave-3', 2, 60, 540], ['stitch-knot', 2, null, 150]];
+const stitchWords = (n, strands, density, count) => `${stitchName(n)}, ${strands} strand${strands > 1 ? 's' : ''}${density != null ? `, density ${density}%` : ''}, ${count.toLocaleString('en')} stitches`;
+const canvasStitches = () => section('Canvas stitches', `<div data-canvas-stitches>${CANVAS_STITCHES.map(([n, strands, density, count, hidden]) => {
+  const words = stitchWords(n, strands, density, count);
+  return `<div class="c-row c-row--field${hidden ? ' is-hidden' : ''}" data-count="${count}" data-stitch="${n}"><div class="c-field c-field--split" role="group" aria-label="${words}">`
+    + `<span class="c-field__cell c-field__cell--lead tz-host" data-tip="${words}"><span class="c-row__art">${zoomPrim(n)}</span>${count.toLocaleString('en')}</span>`
+    + `<label class="c-field__cell c-field__cell--num" data-tip="Strands">${ic('strands')}<input value="${strands}" inputmode="numeric" maxlength="1" aria-label="Strands" data-stitch-set="strands"></label>`
+    + (density != null
+      ? `<label class="c-field__cell c-field__cell--num" data-tip="Density">${ic('density')}<input value="${density}" inputmode="numeric" maxlength="3" aria-label="Density" data-stitch-set="density"></label>`
+      : `<span class="c-field__cell c-field__cell--num is-disabled" data-tip="No density for this stitch">${ic('density')}<span class="c-field__none">–</span></span>`)
+    + `</div>${rowActions(hidden)}</div>`;
+}).join('')}</div>`);
 const PIECE = [['--terracotta-500', 412], ['--leaf-500', 236], ['--ochre-300', 188], ['--periwinkle-400', 97], ['--neutral-950', 64]];
-const inPiece = () => section('Canvas colours', `<div class="c-piece">${PIECE.map(([c, n], i) => `<div class="c-piece__item">${swatchBtn(c, i === 0 ? 'is-selected' : '')}<span class="c-piece__n">${n}</span></div>`).join('')}</div><span class="c-hint">Click a colour to select every stitch in it</span>`);
+// Canvas colours: rows like Canvas stitches, one split field each (the colour's chip and its hex, typed into in
+// place, then its stitch count), with hide and delete after the field
+const inPiece = () => section('Canvas colours', `<div data-canvas-colours>${PIECE.map(([c, n, hidden]) => { const hex = hexOf(c); return `<div class="c-row c-row--field${hidden ? ' is-hidden' : ''}" data-count="${n}" data-hex="${hex}"><div class="c-field c-field--split" role="group" aria-label="${hex}, ${n.toLocaleString('en')} stitches">`
+  + `<span class="c-field__cell c-field__cell--lead"><span class="c-row__art">${swatchShow(c)}</span><input value="${hex}" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Hex for ${n} stitches" data-hex-edit></span>`
+  + `<span class="c-field__cell c-field__cell--count" data-tip="${n.toLocaleString('en')} stitches">${n.toLocaleString('en')}</span>`
+  + `</div>${rowActions(hidden)}</div>`; }).join('')}</div>`);
 const layerRow = (name, cls = '', eye = 'eye') => `<div class="c-layer ${cls}"><span class="c-layer__name">${name}</span><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Show or hide" data-toggle>${ic(eye)}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Lock" data-toggle>${ic('lock')}</button></div>`;
+// Layers: out of the panel for now (it may live somewhere else); kept here, built as it was, to place again
 const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitches', 'is-selected')}${layerRow('Calla lilies photo', 'is-hidden', 'eye-off')}</div>`, { action: iconbtn('plus', 'Add layer', 'c-iconbtn--sm') });
-const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}`);
+// Pattern: the squares to stitch over. Two ways in, both in view while it's empty: Picture (a field like Colour; once a
+// picture is in, its thumbnail and name, and it opens the picture pop-up beside the panel) and Pattern colours (empty,
+// "Add a pattern square", which does what the header's + does: adds the Thread colour to place squares with). With a
+// picture: Show stitches (the picture stitched over its pattern), Show pattern and Opacity; the pattern's colours as
+// rows like Canvas colours (clicking one focuses it, the eye hides it)
+const pattern = { picture: null, name: '', thumb: '', result: null, state: {}, hand: [] }; // hand: colours added with +
+const patternColours = () => [...(pattern.result?.palette.filter((p) => !p.outline).map((p) => [p.hex.toUpperCase(), p.count]) || []), ...pattern.hand.map((h) => [h, 0])];
+const patternRows = () => patternColours().map(([hex, n]) => `<div class="c-row c-row--field" data-count="${n}" data-pattern-hex="${hex}"><div class="c-field c-field--split" role="group" aria-label="${hex}, ${n.toLocaleString('en')} squares">`
+  + `<span class="c-field__cell c-field__cell--lead"><span class="c-row__art">${swatchShow(hex)}</span>${hex}</span><span class="c-field__cell c-field__cell--count" data-tip="${n.toLocaleString('en')} squares">${n.toLocaleString('en')}</span></div>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Hide this colour" data-tip="Hide" data-pattern-eye>${ic('eye')}</button></div>`).join('');
+const patternSection = () => {
+  const has = pattern.picture || pattern.hand.length;
+  const picture = `<div class="c-labelled"><span class="c-label">Picture</span><button class="c-reset c-swatchrow c-focus" data-picture aria-haspopup="dialog">${pattern.picture
+    ? `<img src="${pattern.thumb}" alt=""><span>${pattern.name}</span>` : `${ic('picture')}<span class="c-swatchrow__muted">Choose or drop a picture</span>`}</button></div>`;
+  const colours = `<div class="c-labelled"><span class="c-label">Pattern colours</span>${has ? `<div data-pattern-colours>${patternRows()}</div>`
+    : `<button class="c-reset c-swatchrow c-focus" data-pattern-add>${ic('plus')}<span class="c-swatchrow__muted">Add a pattern square</span></button>`}</div>`;
+  return section('Pattern', picture + (pattern.picture ? stack(sw('Show stitches', true)) : '') + (has ? `${stack(sw('Show pattern', true))}${stage('opacity', 60)}` : '') + colours,
+    { add: `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Add a pattern colour" data-tip="Add a pattern colour" data-pattern-add>${ic('plus')}</button>` });
+};
+// the picture pop-up beside the panel, as the colour picker opens; what it was set to is kept for next time
+function openPicture(trigger) {
+  closePop();
+  const el = document.createElement('div'); el.className = 'c-pop c-pop--side';
+  document.body.append(el); trigger.classList.add('is-open'); pop = { el, trigger };
+  pop.popup = createPicturePopup(el, {
+    image: pattern.picture, name: pattern.name, state: pattern.state,
+    onChange: (r) => {
+      pattern.result = r;
+      const list = panel.querySelector('[data-pattern-colours]'); if (list) list.innerHTML = patternRows();
+      if (pop?.popup) { pattern.thumb = pop.popup.thumb(); panel.querySelector('[data-picture] img')?.setAttribute('src', pattern.thumb); } // turned or cropped
+    },
+    onClose: () => { closePop(); trigger.focus(); },
+    onAction: (a, on) => {
+      if (a === 'remove') { closePop(); Object.assign(pattern, { picture: null, name: '', thumb: '', result: null, state: {} }); render(); toast('Picture removed'); }
+      if (a === 'crop' && on) toast('Crop on the cloth: drag its frame');
+    },
+  });
+  pattern.state = pop.popup.state;
+  let top = null;
+  const place = () => {
+    const p = panel.getBoundingClientRect(), r = trigger.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, gap = 8;
+    const beside = p.left >= w + gap * 2;
+    el.style.left = `${beside ? p.left - w - gap : Math.max(gap, Math.min(r.left, innerWidth - w - gap))}px`;
+    top = Math.max(gap, Math.min(top ?? (beside ? r.top - 8 : r.bottom + 4), innerHeight - h - gap));
+    el.style.top = `${top}px`;
+  };
+  pop.place = place; place();
+  pop.resize = new ResizeObserver(place); pop.resize.observe(el);
+}
+// a picture chosen (here, the sample calla lilies): the field shows it and the pop-up opens on it
+function choosePicture() {
+  pattern.picture = drawCallaLilies(450, 800); pattern.name = 'calla-lilies.png'; pattern.state = {};
+  render();
+  const trigger = panel.querySelector('[data-picture]');
+  openPicture(trigger);
+  pattern.thumb = pop.popup.thumb();
+  trigger.querySelector('img')?.setAttribute('src', pattern.thumb);
+  const list = panel.querySelector('[data-pattern-colours]'); if (list) list.innerHTML = patternRows();
+}
+
+// Outline: a line around a picture or a selection, like a stroke in Figma. Empty, just its + and an Add an outline
+// field that does the same; added, its colour (a colour field that opens the picker, the bin after it removes the
+// outline), the stitch it's worked in (tiles, names in the tooltips), strands, detail (how many edges get a line) and
+// which edges (all of them, or only the outer edge, around the shape)
+let outline = null; // { hex, stitch, edges }
+const outlineSection = () => section('Outline', outline
+  ? `<div class="c-labelled"><span class="c-label">Colour</span><div class="c-row c-row--field"><button class="c-reset c-swatchrow c-focus" data-picker="outline" aria-haspopup="dialog" aria-label="Outline colour"><span class="c-swatchrow__swatch">${swatchHtml(outline.hex)}</span></button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Remove outline" data-tip="Remove outline" data-outline-remove>${ic('bin')}</button></div></div>`
+    + `<div class="c-labelled"><span class="c-label">Stitch</span><div class="c-tilegrid" data-tiles data-outline-stitch>${OUTLINE_STITCHES.map(([k, name]) => `<button class="c-reset c-tile c-focus" aria-label="${name}" data-tip="${name}" data-value="${k}" aria-pressed="${k === outline.stitch}">${outlineSvg(k)}</button>`).join('')}</div></div>`
+    + `${stage('strands')}${stage('detail', 50)}`
+    + `<div class="c-labelled"><span class="c-label">Edges</span><div class="c-seg" role="group" data-pill data-outline-edges>${[['all', 'All edges', 'Around the shape and between its colours'], ['outside', 'Outer edge', 'Only around the shape']].map(([v, l, tip]) => `<button class="c-reset c-seg__opt c-focus" data-value="${v}" data-label="${l}" data-tip="${tip}" aria-pressed="${v === outline.edges}">${l}</button>`).join('')}</div></div>`
+  : `<div class="c-labelled"><span class="c-label">Outline</span><button class="c-reset c-swatchrow c-focus" data-outline-add><span class="c-ic">${svg('plus')}</span><span class="c-swatchrow__muted">Add an outline</span></button></div>`,
+  { add: outline ? '' : `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Add an outline" data-tip="Add an outline" data-outline-add>${ic('plus')}</button>` });
+// colour, strands, then density (no fill angle: the fills' own drawings set their direction)
+const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}${mixed ? slider('Density', 0, { mixed: true }) : stage('density')}`);
 
 // ─── the panel for each tab and context ──────────────────────────────────────
 const STITCH_TAB = {
   tool: () => head('Tool', 'Stitch', '')
-    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${section('Fill', `${stage('density')}${prop('Angle', num('Angle', 45, '°', { steps: false }))}`, { open: false })}${inPiece()}${canvasStitches}${layers}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${patternSection()}${outlineSection()}${inPiece()}${canvasStitches()}</div>`,
   selection: () => head('Selection', '142 stitches', '3 colours · 2 stitch types', `${iconbtn('tool-pan', 'Move')}${iconbtn('recolour', 'Recolour')}${iconbtn('rotate', 'Rotate')}${iconbtn('clear', 'Delete')}`)
-    + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${section('Fill', `${slider('Density', 0, { mixed: true })}${prop('Angle', num('Angle', '', '°', { mixed: true, steps: false }))}`)}${inPiece()}${canvasStitches}</div>`,
+    + `<div class="c-panel__body">${section('Stitch', `${tiles(-1)}<span class="c-hint">Mixed: pick one to change them all</span>`)}${thread(true)}${patternSection()}${outlineSection()}${inPiece()}${canvasStitches()}</div>`,
   image: () => head('Image', 'Calla lilies photo', '2400 × 1800 px → 120 × 90 squares', `${iconbtn('picture', 'Replace image')}${iconbtn('clear', 'Remove image')}`)
-    + `<div class="c-panel__body">${section('Turn into', `${stack(sw('Pattern', true))}${stack(sw('Stitched', true))}`)}${section('Colours', `${prop('Colours', num('Colours', 11, 'threads'))}${slider('Detail', 70)}${stack(sw('Dither'))}${stack(sw('Remove background', true))}${stack(sw('Outline', true))}`)}${section('Size on fabric', `<div class="c-prop__pair">${num('W', 120, 'sq')}${num('H', 90, 'sq')}</div>${seg(['Squares', 'cm', 'in'])}<span class="c-hint">21.8 × 16.3 cm at 14 count</span>`)}${layers}</div>`,
+    + `<div class="c-panel__body">${section('Turn into', `${stack(sw('Pattern', true))}${stack(sw('Stitched', true))}`)}${section('Colours', `${prop('Colours', num('Colours', 11, 'threads'))}${slider('Detail', 70)}${stack(sw('Dither'))}${stack(sw('Remove background', true))}`)}${section('Size on fabric', `<div class="c-prop__pair">${num('W', 120, 'sq')}${num('H', 90, 'sq')}</div>${seg(['Squares', 'cm', 'in'])}<span class="c-hint">21.8 × 16.3 cm at 14 count</span>`)}${outlineSection()}</div>`,
   text: () => head('Text', '“Hello”', 'Script · stem stitch · 2 strands')
-    + `<div class="c-panel__body">${section('Text', `${stack('<label class="c-field"><input value="Hello" aria-label="Text"></label>')}${seg(['Sampler', 'Script'], 1)}${prop('Font', select('Font', 'Pacifico line', ['Pacifico line', 'Sampler 7', 'Sampler 9']))}${prop('Size', num('Size', 18, 'sq'))}${slider('Spacing', 40)}`)}${section('Baseline', `${seg(['Straight', 'Arc'], 1)}${slider('Curve', 30)}`)}${thread()}${layers}</div>`
+    + `<div class="c-panel__body">${section('Text', `${stack('<label class="c-field"><input value="Hello" aria-label="Text"></label>')}${seg(['Sampler', 'Script'], 1)}${prop('Font', select('Font', 'Pacifico line', ['Pacifico line', 'Sampler 7', 'Sampler 9']))}${prop('Size', num('Size', 18, 'sq'))}${slider('Spacing', 40)}`)}${section('Baseline', `${seg(['Straight', 'Arc'], 1)}${slider('Curve', 30)}`)}${thread()}${outlineSection()}</div>`
 };
 const ANIMATE = () => head('Animate', 'Calla lilies', 'Stitches in, then reacts to touch and wear')
   + `<div class="c-panel__body">${section('Stitch in', `${prop('Order', select('Order', 'By colour', ['By colour', 'By row', 'Like a hand', 'By layer']))}${slider('Speed', 55)}<div class="c-play"><button class="c-reset c-iconbtn c-iconbtn--secondary c-focus" aria-label="Play">${ic('play')}</button><span class="c-slider" style="--v:0%;display:block;min-height:0"><span class="c-slider__track" style="display:block"><span class="c-slider__fill"></span><span class="c-slider__thumb"></span></span></span><span class="c-slider__value">0:00</span></div>`)}${section('Touch', `${slider('Tug', 60)}${slider('Spring back', 45)}`)}${section('Wear', `${slider('Rate', 30)}${slider('Snap at', 85)}${stack(sw('Heals slowly', true))}${seg(['Fresh', 'Dulled', 'Fuzzed', 'Split', 'Snapped'])}${stack(btn('secondary', 'Mend worn stitches', 'mend'))}`)}</div>`;
@@ -83,13 +185,14 @@ const PILL_STYLES = [['', 'Rounded'], ['c-seg--soft', 'Soft'], ['c-seg--square',
 $('pill-style').innerHTML = PILL_STYLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
 
 function stylePills(root = document) {
-  root.querySelectorAll('[data-pill]').forEach((el) => { el.classList.remove(...STYLE_CLASSES); if (pillStyle) el.classList.add(...pillStyle.split(' ')); });
+  root.querySelectorAll('[data-pill]:not(.c-picker [data-pill])').forEach((el) => { el.classList.remove(...STYLE_CLASSES); if (pillStyle) el.classList.add(...pillStyle.split(' ')); });
 }
 function wire(root) {
   stylePills(root);
   root.querySelectorAll('[data-pill]').forEach(motion);
+  root.querySelectorAll('[data-switch] .c-seg').forEach((el) => { el._motion = motion(el); });
   root.querySelectorAll('[data-tiles]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tile' }));
-  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, colour: threadColour() }));
+  root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, colour: threadColour(), initial: host.dataset.initial ? Number(host.dataset.initial) : undefined }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
   root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
   // icons centred on their drawing, as on the Controls tab
@@ -121,7 +224,7 @@ function liveSlider(el) {
   thumb.addEventListener('keydown', (e) => { const d = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key]; if (d != null) { e.preventDefault(); set(Number(thumb.getAttribute('aria-valuenow')) + d); } });
 }
 let pop = null;
-const closePop = () => { if (pop) { pop.el.remove(); pop.trigger.classList.remove('is-open'); pop = null; } };
+const closePop = () => { if (pop) { pop.popup?.destroy(); pop.resize?.disconnect(); pop.el.remove(); pop.trigger.classList.remove('is-open'); pop = null; } };
 function openPop(trigger, html) {
   closePop();
   const el = document.createElement('div'); el.className = 'c-pop'; el.innerHTML = html;
@@ -132,48 +235,84 @@ function openPop(trigger, html) {
   el.style.left = `${Math.max(0, Math.min(r.left - box.left, box.width - el.offsetWidth))}px`;
   wire(el);
 }
-// The colour picker: Canvas (colours already used), Custom (any colour, or a thread number), Saved, From image.
-// A sample of thread numbers, so embroiderers can find a thread's colour; the full chart comes with the real app.
-const THREADS = [['310', '#000000'], ['B5200', '#FFFFFF'], ['321', '#C72B3B'], ['666', '#E31D42'], ['3830', '#B95544'], ['3865', '#F9F7F1'], ['444', '#FFD600'], ['700', '#07733F'], ['797', '#13477D'], ['550', '#5C184E'], ['943', '#3D9384'], ['3747', '#D3D7ED']];
+// The colour picker (colour-picker.js) opens beside the panel, over the cloth, so it never runs past the panel's
+// edge or covers the panel; on a narrow screen it opens under the colour row instead.
+// how the picker's Extract is laid out, from the Colour picker dials (DialKit, bottom right)
+const pickerLayout = { extractLayout: 'card', extractBottom: 'both', canvasOpen: true };
+let dialEl = null;
 const SAVED = [['Calla lilies', ['--terracotta-500', '--leaf-500', '--ochre-300', '--neutral-50']], ['Spring', ['--periwinkle-400', '--lilac-400', '--leaf-500', '--ochre-300', '--crimson-500']]];
-const swatchPick = (colour) => { const hex = colour.startsWith('--') ? hexOf(colour) : colour; return swatch(hex, { cls: hex === threadHex ? 'is-selected' : '', attrs: `data-pick="${hex}" data-tip="${hex}"` }); };
-const PICKER_TABS = {
-  canvas: () => `<div class="c-swatchgrid">${PIECE.map(([c]) => swatchPick(c)).join('')}</div><span class="c-hint">Colours already on the canvas</span>`,
-  custom: () => `${colourFieldHtml()}<label class="c-field"><span class="c-field__label">Hex</span><input value="${threadHex}" aria-label="Hex code" spellcheck="false" data-hex></label>`
-    + `<label class="c-field c-search">${ic('search')}<input placeholder="Hex or thread number" aria-label="Search by hex or thread number" data-find></label><div data-found></div>`,
-  saved: () => SAVED.map(([name, cs]) => `<div class="c-group-label">${name}</div><div class="c-swatchgrid">${cs.map(swatchPick).join('')}</div>`).join(''),
-  image: () => `<div class="c-drop">${ic('picture')}Drop an image to pull its colours</div>`,
-};
-const pickerHtml = () => `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg([['canvas', 'Canvas'], ['custom', 'Custom'], ['saved', 'Saved'], ['image', 'From image']], 1)}<div class="c-picker__body" data-picker-body></div></div>`;
-
-// set the thread colour everywhere it shows: the colour row, the field, the hex input, the picked swatch
-function setThread(hex, from) {
+// The palette in hand: shared by the picker and, torn off, the floating palette over the cloth (one at a time).
+// Where it floats and which way it lies are remembered.
+const palStore = { saved: SAVED, palette: null, orient: 'row', pos: null, out: false };
+try { const k = JSON.parse(localStorage.getItem('selvedge-floating-palette')); if (k) Object.assign(palStore, { pos: k.pos, orient: k.orient }); } catch {}
+let floating = null;
+// the thread colour changed in the picker: the colour row and the floating palette follow
+function onThread(hex) {
   threadHex = hex;
-  const row = panel.querySelector('[data-picker] .c-swatchrow__swatch'); if (row) row.innerHTML = swatchHtml(hex);
-  if (!pop) return;
-  if (from !== 'field') pop.field?.set(hex);
-  const input = pop.el.querySelector('[data-hex]'); if (input && from !== 'hex') input.value = hex;
-  pop.el.querySelectorAll('[data-pick]').forEach((x) => x.classList.toggle('is-selected', x.dataset.pick === hex));
+  const row = panel.querySelector('[data-picker="thread"] .c-swatchrow__swatch'); if (row) row.innerHTML = swatchHtml(hex);
+  floating?.setHex();
 }
-function showPickerTab(name) {
-  const body = pop.el.querySelector('[data-picker-body]');
-  body.innerHTML = PICKER_TABS[name]();
-  pop.field = name === 'custom' ? createColourField(body, { hex: threadHex, onChange: (hex) => setThread(hex, 'field') }) : null;
-  wire(body);
-}
-function wirePicker() {
-  showPickerTab('custom');
-  pop.el.querySelector('[data-pill]').addEventListener('click', (e) => { const o = e.target.closest('.c-seg__opt'); if (o) showPickerTab(o.dataset.value); });
-  pop.el.addEventListener('input', (e) => {
-    if (e.target.matches('[data-hex]')) { const hex = parseHex(e.target.value); if (hex) setThread(hex, 'hex'); }
-    if (e.target.matches('[data-find]')) {
-      const q = e.target.value.trim().replace(/^#/, '').toUpperCase(), out = pop.el.querySelector('[data-found]');
-      const hex = parseHex(q), hits = q ? THREADS.filter(([n]) => n.toUpperCase().startsWith(q)).slice(0, 4) : [];
-      out.innerHTML = (hex ? [[null, hex]] : []).concat(hits).map(([n, h]) => `<button class="c-reset c-row c-focus" data-pick="${h}"><span class="c-row__art">${swatchShow(h)}</span>${n ? `Thread ${n}` : 'Hex'}<span class="c-row__detail">${h}</span></button>`).join('')
-        || (q ? '<div class="c-empty"><strong>Nothing found</strong>Try a hex code or a thread number</div>' : '');
-    }
+// a colour tapped in the floating palette: through the picker when it's open, so it follows too
+const pickThread = (hex) => (pop?.picker ? pop.picker.set(hex) : onThread(hex));
+function floatPalette({ grab, rects }) {
+  palStore.out = true;
+  floating?.remove(false);
+  floating = createFloatingPalette({
+    store: palStore, getHex: () => threadHex, onPick: pickThread,
+    onPalette: (i) => pop?.picker?.palette(i), onChange: () => pop?.picker?.refresh(), onDock: dockPalette,
+    // the cloth's area, right of the tool bar
+    bounds: () => { const c = $('canvas').getBoundingClientRect(), t = document.querySelector('[data-tools]').getBoundingClientRect(); return new DOMRect(t.right, c.top, c.right - t.right, c.height); },
+    dockTarget: () => pop?.el, onRender: wire,
   });
-  pop.el.addEventListener('click', (e) => { const p = e.target.closest('[data-pick]'); if (p) setThread(p.dataset.pick); });
+  if (grab) {
+    // torn off: it carries on with the pointer, held where it was taken (within its own, narrower, width)
+    grab.dx = Math.min(grab.dx, floating.el.offsetWidth - 24); grab.dy = Math.min(grab.dy, 16);
+    floating.grab(grab);
+    return;
+  }
+  // popped out: it flies to where it last floated, or the cloth's top left, beside the tool bar
+  const tools = document.querySelector('[data-tools]').getBoundingClientRect(), c = $('canvas').getBoundingClientRect();
+  floating.place(palStore.pos || { x: tools.right + 16, y: c.top + 16 });
+  floating.flyFrom(rects);
+}
+function dockPalette() {
+  if (!floating) return;
+  const rects = floating.rects();
+  floating.remove(!pop?.picker); floating = null; palStore.out = false;
+  pop?.picker?.dock(rects);
+}
+// the outline's colour changed in the picker
+function onOutline(hex) {
+  outline.hex = hex;
+  const row = panel.querySelector('[data-picker="outline"] .c-swatchrow__swatch'); if (row) row.innerHTML = swatchHtml(hex);
+}
+function openPicker(trigger) {
+  closePop();
+  const forOutline = trigger.dataset.picker === 'outline';
+  const el = document.createElement('div'); el.className = 'c-pop c-pop--side';
+  document.body.append(el); trigger.classList.add('is-open'); pop = { el, trigger };
+  pop.picker = createColourPicker(el, {
+    ...pickerLayout, hex: forOutline ? outline.hex : threadHex, canvas: PIECE.map(([c]) => c), saved: palStore.saved, palette: palStore.palette, paletteOut: palStore.out,
+    onChange: forOutline ? onOutline : onThread,
+    onPalette: (i) => { palStore.palette = i; floating?.redraw(); }, onSaved: () => floating?.redraw(),
+    onFloat: floatPalette, onDock: dockPalette,
+    onClose: () => { closePop(); trigger.focus(); },
+    onRender: (part) => { wire(part); pop?.place?.(); },
+  });
+  // placed again whenever it changes size (another pill), so it stays inside the window. Once open its top edge
+  // stays put: it grows and shrinks from the bottom, and only moves up if it would run past the window's bottom.
+  let top = null;
+  const place = () => {
+    const p = panel.getBoundingClientRect(), r = trigger.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, gap = 8;
+    const beside = p.left >= w + gap * 2;
+    el.style.left = `${beside ? p.left - w - gap : Math.max(gap, Math.min(r.left, innerWidth - w - gap))}px`;
+    const want = top ?? (beside ? r.top - 8 : r.bottom + 4);
+    top = Math.max(gap, Math.min(want, innerHeight - h - gap));
+    el.style.top = `${top}px`;
+  };
+  pop.place = place; place();
+  pop.resize = new ResizeObserver(place); pop.resize.observe(el);
+  el.querySelector('.c-seg__opt[aria-pressed="true"]')?.focus({ preventScroll: true, focusVisible: false });
 }
 createTooltips();
 let toastTimer;
@@ -181,7 +320,8 @@ const toast = (m) => { toastEl.textContent = m; toastEl.style.opacity = 1; clear
 
 document.addEventListener('click', (e) => {
   const t = e.target;
-  if (pop && !pop.el.contains(t) && !pop.trigger.contains(t)) closePop();
+  if (floating?.justDragged()) return; // the click a drag ends with (torn off the picker, let go over the cloth)
+  if (pop && !e.composedPath().includes(pop.el) && !pop.trigger.contains(t) && !dialEl?.contains(t) && !(floating && e.composedPath().includes(floating.el)) && !t.closest('.c-menu--float')) closePop(); // a part the picker just redrew is no longer in it, but was
   const modeOpt = t.closest('#mode .c-seg__opt');
   if (modeOpt) { mode = modeOpt.dataset.value; setTimeout(render, 0); return; }
   const sec = t.closest('[data-section]');
@@ -191,18 +331,39 @@ document.addEventListener('click', (e) => {
   const tool = t.closest('[data-tools] .c-tool');
   if (tool) tool.parentElement.querySelectorAll('.c-tool').forEach((x) => x.setAttribute('aria-pressed', x === tool));
   const swi = t.closest('[data-switch]');
-  if (swi) { swi.classList.remove('is-mixed'); swi.setAttribute('aria-checked', swi.getAttribute('aria-checked') !== 'true'); }
+  if (swi) {
+    // a click on Off or On sets that; anywhere else on the field flips it
+    const opt = t.closest('.c-switch .c-seg__opt'), on = opt ? opt.dataset.label === 'On' : swi.getAttribute('aria-checked') !== 'true';
+    swi.classList.remove('is-mixed'); swi.setAttribute('aria-checked', on);
+    swi.querySelectorAll('.c-seg__opt').forEach((o, i) => o.setAttribute('aria-pressed', i === (on ? 1 : 0)));
+    swi.querySelector('.c-seg')._motion?.select(on ? 1 : 0);
+  }
   const tog = t.closest('[data-toggle]');
   if (tog) { tog.classList.toggle('is-selected'); const row = tog.closest('.c-layer'); if (row && tog === row.querySelector('[data-toggle]')) { row.classList.toggle('is-hidden'); tog.innerHTML = ic(row.classList.contains('is-hidden') ? 'eye-off' : 'eye'); } }
   const layer = t.closest('.c-layer');
   if (layer && !tog) layer.parentElement.querySelectorAll('.c-layer').forEach((x) => x.classList.toggle('is-selected', x === layer));
-  const cs = t.closest('[data-canvas-stitches] .c-row');
-  if (cs) { cs.parentElement.querySelectorAll('.c-row').forEach((x) => x.classList.toggle('is-selected', x === cs)); toast(`Selected ${Number(cs.dataset.count).toLocaleString('en')} stitches`); }
+  const fieldRow = t.closest('.c-row--field .c-field--split')?.closest('.c-row');
+  if (fieldRow) selectRow(fieldRow, !t.closest('input'));
+  const hideBtn = t.closest('[data-row-hide]');
+  if (hideBtn) hideRow(hideBtn.closest('.c-row'));
+  const delBtn = t.closest('[data-row-delete]');
+  if (delBtn) deleteRow(delBtn.closest('.c-row'));
   const sk = t.closest('[data-swatch]');
-  if (sk && !t.closest('.c-pop')) { sk.closest('.c-piece').querySelectorAll('.c-swatch').forEach((x) => x.classList.toggle('is-selected', x === sk)); toast(`Selected the ${sk.parentElement.querySelector('.c-piece__n')?.textContent || ''} stitches in this colour`); }
   if (sk && t.closest('.c-pop')) { sk.parentElement.querySelectorAll('.c-swatch').forEach((x) => x.classList.toggle('is-selected', x === sk)); }
+  const pic = t.closest('[data-picture]');
+  if (pic) { if (!pattern.picture) choosePicture(); else if (pop?.trigger === pic) closePop(); else openPicture(pic); return; }
+  if (t.closest('[data-pattern-add]')) {
+    if (!pattern.hand.includes(threadHex.toUpperCase()) && !patternColours().some(([h]) => h === threadHex.toUpperCase())) pattern.hand.push(threadHex.toUpperCase());
+    render(); toast(`Placing squares in ${threadHex.toUpperCase()}`); return;
+  }
+  const eye = t.closest('[data-pattern-eye]');
+  if (eye) { const row = eye.closest('.c-row'), hidden = row.classList.toggle('is-hidden'); eye.innerHTML = ic(hidden ? 'eye-off' : 'eye'); eye.dataset.tip = hidden ? 'Show' : 'Hide'; eye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} this colour`); return; }
+  if (t.closest('[data-outline-add]')) { outline = { hex: context === 'image' ? hexOf('--neutral-950') : threadHex, stitch: 'back', edges: 'all' }; render(); return; }
+  if (t.closest('[data-outline-remove]')) { if (pop?.trigger?.dataset.picker === 'outline') closePop(); outline = null; render(); return; }
+  const outlineTile = t.closest('[data-outline-stitch] .c-tile'); if (outlineTile) outline.stitch = outlineTile.dataset.value;
+  const outlineEdge = t.closest('[data-outline-edges] .c-seg__opt'); if (outlineEdge) outline.edges = outlineEdge.dataset.value;
   const picker = t.closest('[data-picker]');
-  if (picker) { if (pop?.trigger === picker) closePop(); else { openPop(picker, pickerHtml()); wirePicker(); } }
+  if (picker) { if (pop?.trigger === picker) closePop(); else openPicker(picker); }
   const sel = t.closest('[data-select]');
   if (sel) {
     if (pop?.trigger === sel) closePop();
@@ -213,6 +374,81 @@ document.addEventListener('click', (e) => {
   if (t.closest('.c-code .c-iconbtn')) toast('Copied the embed code');
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+// Canvas colours and Canvas stitches rows: clicking (or typing into) a field selects its stitches on the canvas;
+// clicking a selected one again, outside its inputs, lets them go. Hide and delete act on the whole row.
+const rowData = (row) => row.dataset.hex ? PIECE.find(([c]) => hexOf(c) === row.dataset.hex) : CANVAS_STITCHES[[...row.parentElement.children].indexOf(row)];
+const rowWords = (row) => (row.dataset.patternHex ? `${Number(row.dataset.count).toLocaleString('en')} squares in ${row.dataset.patternHex}` : `${Number(row.dataset.count).toLocaleString('en')} stitches${row.dataset.hex ? ` in ${row.dataset.hex}` : ''}`);
+function selectRow(row, toggle = true) {
+  const on = !(toggle && row.classList.contains('is-selected'));
+  if (on === row.classList.contains('is-selected')) return;
+  panel.querySelectorAll('.c-row--field.is-selected').forEach((x) => x.classList.remove('is-selected'));
+  row.classList.toggle('is-selected', on);
+  toast(on ? `Selected ${rowWords(row)}` : 'Selection cleared');
+}
+function hideRow(row) {
+  const hidden = !row.classList.contains('is-hidden'), btn = row.querySelector('[data-row-hide]'), d = rowData(row);
+  row.classList.toggle('is-hidden', hidden);
+  if (d) d[row.dataset.hex ? 2 : 4] = hidden;
+  btn.innerHTML = ic(hidden ? 'eye-off' : 'eye');
+  btn.setAttribute('aria-pressed', hidden); btn.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} these stitches`); btn.dataset.tip = hidden ? 'Show' : 'Hide';
+  toast(`${hidden ? 'Hid' : 'Showing'} ${rowWords(row)}`);
+}
+function deleteRow(row) {
+  const list = row.dataset.hex ? PIECE : CANVAS_STITCHES, i = list.indexOf(rowData(row));
+  if (i >= 0) list.splice(i, 1);
+  toast(`Deleted ${rowWords(row)}`);
+  const done = () => row.remove();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { done(); return; }
+  row.style.overflow = 'hidden';
+  row.animate([{ height: `${row.offsetHeight}px`, opacity: 1 }, { height: '0px', marginTop: '0px', opacity: 0 }], { duration: 200, easing: 'ease-in' }).onfinish = done;
+  setTimeout(done, 260);
+}
+document.addEventListener('focusin', (e) => { const row = e.target.closest?.('.c-row--field'); if (row && e.target.matches('input')) selectRow(row, false); });
+// Canvas colours: type a new hex over a colour and every stitch in it changes; Enter or leaving the field keeps it,
+// Escape (or something that isn't a colour) puts the old one back
+const hexEdit = (input, keep) => {
+  const row = input.closest('.c-row'), old = row.dataset.hex, hex = keep && parseHex(input.value);
+  input.value = hex || old;
+  input.closest('.c-field').classList.remove('is-error');
+  if (!hex || hex === old) return;
+  const i = PIECE.findIndex(([c]) => hexOf(c) === old);
+  if (i >= 0) PIECE[i][0] = hex;
+  row.dataset.hex = hex;
+  row.querySelector('.c-row__art').innerHTML = swatchShow(hex);
+  row.querySelector('.c-field--split').setAttribute('aria-label', `${hex}, ${Number(row.dataset.count).toLocaleString('en')} stitches`);
+  toast(`Changed ${Number(row.dataset.count).toLocaleString('en')} stitches to ${hex}`);
+};
+document.addEventListener('keydown', (e) => {
+  const input = e.target.closest?.('[data-hex-edit]');
+  if (!input) return;
+  if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+  if (e.key === 'Escape') { e.stopPropagation(); input.value = input.closest('.c-row').dataset.hex; input.blur(); }
+});
+document.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-hex-edit]')) hexEdit(e.target, true); });
+// Canvas stitches: a new strands (1–6) or density (10–100%) changes every stitch in that row; Enter or leaving keeps
+// it (held to its range), Escape puts the old one back
+document.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-stitch-set]')) { e.target.dataset.was = e.target.value; e.target.select(); } });
+document.addEventListener('keydown', (e) => {
+  const input = e.target.closest?.('[data-stitch-set]');
+  if (!input) return;
+  if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+  if (e.key === 'Escape') { e.stopPropagation(); input.value = input.dataset.was; input.blur(); }
+});
+document.addEventListener('change', (e) => {
+  const input = e.target.closest?.('[data-stitch-set]');
+  if (!input) return;
+  const density = input.dataset.stitchSet === 'density', [lo, hi] = density ? [10, 100] : [1, 6], v = parseInt(input.value, 10);
+  if (Number.isNaN(v)) { input.value = input.dataset.was; return; }
+  input.value = Math.max(lo, Math.min(hi, v));
+  if (input.value === input.dataset.was) return;
+  input.dataset.was = input.value;
+  const row = input.closest('.c-row'), get = (k) => row.querySelector(`[data-stitch-set="${k}"]`)?.value;
+  const words = stitchWords(row.dataset.stitch, Number(get('strands')), get('density') ?? null, Number(row.dataset.count));
+  row.querySelector('.c-field--split').setAttribute('aria-label', words);
+  row.querySelector('.c-field__cell--lead').dataset.tip = words;
+  toast(`${Number(row.dataset.count).toLocaleString('en')} stitches now ${density ? `at density ${input.value}%` : `in ${input.value} strand${input.value > 1 ? 's' : ''}`}`);
+});
+document.addEventListener('input', (e) => { if (e.target.matches?.('[data-hex-edit]')) e.target.closest('.c-field').classList.toggle('is-error', !parseHex(e.target.value)); });
 $('context').addEventListener('change', (e) => { context = e.target.value; render(); });
 $('pill-style').addEventListener('change', (e) => { pillStyle = e.target.value; stylePills(); try { localStorage.setItem('selvedge-panel-pill', pillStyle); } catch {} });
 
@@ -229,3 +465,37 @@ if (savedPill !== null && PILL_STYLES.some(([v]) => v === savedPill)) { pillStyl
 renderStage();
 render();
 
+
+// ─── Colour picker dials: try the Extract layouts ────────────────────────────
+import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
+  dialEl = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: true }).element; // clicks in it leave the picker open
+  const kit = createDialKit('Colour picker', {
+    extractLayout: { type: 'select', label: 'Extract layout', options: [{ value: 'card', label: 'Card' }, { value: 'strip', label: 'Strip' }, { value: 'stack', label: 'Stacked' }], default: pickerLayout.extractLayout },
+    extractBottom: { type: 'select', label: 'Under Extract', options: [{ value: 'both', label: 'Saved + canvas' }, { value: 'saved', label: 'Saved' }, { value: 'canvas', label: 'Canvas' }, { value: 'none', label: 'Nothing' }], default: pickerLayout.extractBottom },
+    canvasOpen: pickerLayout.canvasOpen,
+    sample: { type: 'action', label: 'Open Extract with a sample image' },
+  }, {
+    id: 'selvedge-picker-extract', persist: true,
+    onAction: async () => {
+      // after this click has finished (it would otherwise count as a click outside the picker and close it)
+      await new Promise((r) => setTimeout(r, 0));
+      if (!pop?.picker) document.querySelector('[data-picker="thread"]')?.click();
+      await new Promise((r) => setTimeout(r, 50));
+      // a stand-in picture: a dusk harbour in bands
+      const c = Object.assign(document.createElement('canvas'), { width: 120, height: 90 }), x = c.getContext('2d');
+      [['#F4F1DE', 0, 30], ['#E9C46A', 30, 15], ['#E76F51', 45, 10], ['#2A6F97', 55, 20], ['#264653', 75, 15]].forEach(([col, y, h]) => { x.fillStyle = col; x.fillRect(0, y, 120, h); });
+      const blob = await new Promise((r) => c.toBlob(r));
+      pop?.picker?.tab('extract');
+      pop?.picker?.loadImage(new File([blob], 'harbour-at-dusk.png', { type: 'image/png' }));
+    },
+  });
+  // how the palette tears off and floats (FLOAT_TUNING in colour-picker.js)
+  const fk = createDialKit('Floating palette', {
+    tear: [FLOAT_TUNING.tear, 8, 80, 1], resist: [FLOAT_TUNING.resist, 0, 1, 0.05], lift: [FLOAT_TUNING.lift, 1, 1.12, 0.01],
+    snap: [FLOAT_TUNING.snap, 0, 80, 1], fly: [FLOAT_TUNING.fly, 100, 900, 10], stagger: [FLOAT_TUNING.stagger, 0, 120, 5],
+  }, { id: 'selvedge-floating-palette-dials', persist: true });
+  Object.assign(FLOAT_TUNING, fk.getValues()); fk.subscribe((v) => Object.assign(FLOAT_TUNING, v));
+  const apply = (v) => { Object.assign(pickerLayout, { extractLayout: v.extractLayout, extractBottom: v.extractBottom, canvasOpen: v.canvasOpen }); pop?.picker?.layout({ ...pickerLayout }); };
+  apply(kit.getValues());
+  kit.subscribe(apply);
+}).catch(() => {});

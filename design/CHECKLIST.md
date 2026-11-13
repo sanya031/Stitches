@@ -76,7 +76,7 @@ Panel pieces
 - [x] Field row: label, control, value, "Mixed" state
 - [x] Stitch row: preview, name, submenu arrow
 - [x] Stitch library: grouped list (Counted, Fill, Freeform), submenu for variants
-- [x] Colour picker: sources as tabs (In this piece, Floss library, My palettes, From image), search, recent
+- [x] Colour picker: pills (Custom, Extract, Saved), thread-on-cloth preview with stitch and fabric, field + hue + eyedropper, notation (Hex, RGB, HSL, Thread search), nearest thread, canvas colours always shown
 - [x] Swatch list (Canvas colours): count, click to select by colour
 - [x] Layer row: show/hide, lock, drag to reorder
 - [x] Image object controls: drop zone, Pattern and Stitched toggles, conversion settings

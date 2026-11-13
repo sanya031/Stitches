@@ -4,7 +4,9 @@ import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
 import { createStageSlider } from './stage-slider.js';
 import { swatch } from './swatch.js';
-import { colourFieldHtml, createColourField } from './colour-field.js';
+import { createColourField, hexOf } from './colour-field.js';
+import { colourPickerHtml, createColourPicker, previewHtml } from './colour-picker.js';
+import { floatingPaletteHtml } from './floating-palette.js';
 import { createTooltips } from './tooltip.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { createZoomMotion } from './zoom-motion.js';
@@ -22,8 +24,14 @@ const states = (names, fn) => names.map((s) => [s, fn(STATE[s] ?? '', s)]);
 const dis = (cls) => (cls.includes('is-disabled') ? ' disabled aria-disabled="true"' : '');
 // thread colours are content, drawn from the palettes
 const swatchOf = (colour, cls = '', extra = '') => swatch(colour, { cls, extra });
-const TABS = ['Canvas', 'Custom', 'Saved', 'From image'];
 const SWATCHES = ['--terracotta-500', '--ochre-300', '--leaf-500', '--periwinkle-400', '--lilac-400', '--crimson-500', '--neutral-950', '--neutral-50', '--terracotta-300', '--periwinkle-700'];
+// the colour picker, held in a state: the canvas's colours and one saved palette, from the palettes
+const ON_CANVAS = SWATCHES.slice(0, 5).map(hexOf), PALETTES = [['Calla lilies', [...ON_CANVAS.slice(0, 3), hexOf('--neutral-50')]], ['Spring', SWATCHES.slice(3, 8).map(hexOf)]];
+// a stand-in picture for the Extract states: bands of the colours pulled from it
+const EXTRACTED = ['#2A6F97', '#E9C46A', '#E76F51', '#264653', '#F4F1DE'];
+const SAMPLE_IMAGE = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5">${EXTRACTED.map((c, i) => `<rect y="${i}" width="5" height="1" fill="${c}"/>`).join('')}</svg>`)}`;
+const picker = (state = {}) => colourPickerHtml({ hex: hexOf('--terracotta-500'), canvas: ON_CANVAS, saved: PALETTES, ...state });
+const floatpal = (state = {}) => `<div style="position:relative">${floatingPaletteHtml({ hex: hexOf('--terracotta-500'), saved: PALETTES, palette: 1, ...state })}</div>`;
 
 const btn = (kind, cls, label, inner = '') => `<button class="c-reset c-btn c-btn--${kind} c-focus ${cls}"${dis(cls)}>${inner}${label}</button>`;
 const BTN_STATES = ['Rest', 'Hover', 'Pressed', 'Focus', 'Disabled', 'Loading'];
@@ -31,7 +39,8 @@ const btnRow = (kind, label) => states(BTN_STATES, (c, s) => btn(kind, c, s === 
 const iconbtn = (kind, cls, name = 'undo') => `<button class="c-reset c-iconbtn ${kind ? `c-iconbtn--${kind}` : ''} c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
 const tool = (cls, name = 'tool-stitch') => `<button class="c-reset c-tool c-focus ${cls}" aria-label="${name}"${dis(cls)}>${ic(name)}</button>`;
 const seg = (opts, sel, { cls = '', optCls = {}, live = false, icons = false, motion = '' } = {}) => `<div class="c-seg ${cls} ${icons ? 'c-seg--icons' : ''}" role="group"${motion ? ` data-motion="${motion}"` : live ? ' data-live' : ''}>${opts.map((o, i) => `<button class="c-reset c-seg__opt c-focus ${i === sel && !live ? 'is-selected' : ''} ${optCls[i] || ''}"${live ? ` aria-pressed="${i === sel}"` : ''}${dis(optCls[i] || '')}${motion && !icons ? ` data-label="${o}"` : ''}>${icons ? ic(o) : o}</button>`).join('')}</div>`;
-const sw = (cls, label = 'Stitched', live = false) => `<button class="c-reset c-switch c-focus ${cls}" role="switch"${live ? ' data-live aria-checked="false"' : ''}${dis(cls)}><span class="c-switch__track"><span class="c-switch__thumb"></span></span>${label}</button>`;
+// the switch: a field, its label, then Off and On as a small pill (the current one pressed; mixed, neither)
+const sw = (cls, label = 'Stitched', live = false) => { const on = cls.includes('is-on'), mixed = cls.includes('is-mixed'); return `<button class="c-reset c-switch c-focus ${cls}" role="switch" aria-checked="${mixed ? 'mixed' : on}"${live ? ' data-live' : ''}${dis(cls)}>${label}<span class="c-seg c-seg--soft" aria-hidden="true"${live ? ' data-motion="squash"' : ''}>${['Off', 'On'].map((w, i) => `<span class="c-seg__opt" data-label="${w}" aria-pressed="${!mixed && on === (i === 1)}">${w}</span>`).join('')}</span></button>`; };
 const check = (cls) => `<button class="c-reset c-check c-focus ${cls}" role="checkbox"${dis(cls)}><span class="c-check__box">${cls.includes('is-on') ? ic('check') : cls.includes('is-mixed') ? ic('minus') : ''}</span>Outline</button>`;
 const slider = (cls, { v = 60, label = 'Density', val = `${v}%`, live = false } = {}) => `<div class="c-slider ${cls}" style="--v:${v}%"${live ? ' data-live' : ''}><span>${label}</span><span class="c-slider__track"><span class="c-slider__fill"></span><span class="c-slider__thumb"${live ? ' tabindex="0" role="slider" aria-label="Density" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"' : ''}></span></span><span class="c-slider__value">${val}</span></div>`;
 const num = (cls, { label = 'W', value = '120', unit = 'sq', ph = '', steps = true } = {}) => `<label class="c-field c-field--num ${cls}"><span class="c-field__label">${label}</span><input inputmode="numeric" value="${value}" placeholder="${ph}" aria-label="${label}"${dis(cls)}><span class="c-field__unit">${unit}</span>${steps ? `<span class="c-field__steps">${ic('minus')}${ic('plus')}</span>` : ''}</label>`;
@@ -89,7 +98,7 @@ const SPECS = [
   { group: 'Choices', id: 'segmented-styles', title: 'Segmented pill styles', note: 'Ten looks for the same control, mixing rounded and less rounded, with and without a container. All move with the saved pill motion. The classes under each one combine, so any mix is possible.', blocks: ['segmented-styles', 'segmented-motion', 'segmented', 'shared'], cell: 300, rows: [
     ['Styles', SEG_STYLES.map(styleCell)]
   ] },
-  { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. Mixed means the selection holds both.', cell: 150, rows: [
+  { group: 'Choices', id: 'switch', title: 'Toggle switch', note: 'On or off, applies straight away. A field like the panel\'s others: the label, then Off and On always in view as a small pill, the current one filled (Squash). Click anywhere on it to flip it, or click Off or On. Mixed means the selection holds both: neither is filled.', cell: 268, rows: [
     ['Live', [['Click me', sw('', 'Stitched', true)]]],
     ['Off', states(['Rest', 'Hover', 'Focus', 'Disabled'], (c) => sw(c))],
     ['On', states(['Rest', 'Hover', 'Focus', 'Disabled'], (c) => sw(`is-on ${c}`))],
@@ -135,8 +144,20 @@ const SPECS = [
     ['With detail', [['Canvas stitches', `<div style="width:260px">${row('', 'Full cross', 'stitch-full').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Thickness 2 · 6,120</span>')}${row('is-selected', 'Weave 3×3', 'fill-weave-3').replace(/<span class="c-ic c-row__end">.*?<\/span>/, '<span class="c-row__detail">Density 60% · 540</span>')}</div>`]]],
     ['Library', [['Grouped list', `<div class="c-menu" style="width:260px"><div class="c-group-label">Counted</div>${row('is-selected')}${row('', 'Half cross', 'stitch-half')}${row('is-hover', 'Backstitch', 'stitch-back')}<div class="c-group-label">Fill</div>${row('', 'Columns', 'fill-columns')}${row('', 'Weave', 'fill-weave-3')}</div>`]]]
   ] },
-  { group: 'Thread and stitches', id: 'colour-picker', title: 'Colour picker', note: 'A popover with four sources as a pill: Canvas (colours already used), Custom (any colour: field, hue, hex, or search a hex or a thread number), Saved (palettes) and From image. Colours are hex.', blocks: ['colour-picker', 'colour-field', 'swatch', 'shared'], cell: 320, rows: [
-    ['Forms', [['Canvas', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 0)}<div class="c-swatchgrid">${SWATCHES.slice(0, 5).map((s, i) => swatchOf(s, i === 0 ? 'is-selected' : '')).join('')}</div></div>`], ['Custom', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}<div class="c-picker__body" data-colour-field>${colourFieldHtml()}<label class="c-field"><span class="c-field__label">Hex</span><input value="#B84216" aria-label="Hex code"></label>${search('', '')}</div></div>`], ['Thread number found', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}${search('is-focus', '3830')}<button class="c-reset c-row c-focus"><span class="c-row__art">${swatch('#B95544', { tag: 'span' })}</span>Thread 3830<span class="c-row__detail">#B95544</span></button></div>`], ['Nothing found', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 1)}${search('is-focus', 'zzz')}<div class="c-empty"><strong>Nothing found</strong>Try a hex code or a thread number</div></div>`], ['From image', `<div class="c-popover"><div class="c-popover__title">Thread colour</div>${seg(TABS, 3)}${drop('is-hover', `${ic('picture')}Drop an image to pull its colours`)}</div>`]]]
+  { group: 'Thread and stitches', id: 'colour-picker', title: 'Colour picker', note: 'Opens beside the panel. Three sources as a pill: Custom (the colour field and hue, with the eyedropper), Extract (pull the main colours from an image) and Saved (palettes). Under every pill: the colour as thread on cloth, the colour as text in a notation (Hex, or RGB and HSL with a box per number), and the colours already on the canvas. Colours sit in pans, like a paint set: one block of small boxes with no gaps, empty ones waiting; hover rings a box and its tooltip gives the hex. Try the live one.', blocks: ['colour-picker', 'colour-preview', 'colour-field', 'select', 'shared'], cell: 320, rows: [
+    ['Forms', [['Custom', picker()], ['RGB', picker({ notation: 'rgb' })], ['HSL', picker({ notation: 'hsl', hex: hexOf('--leaf-500') })]]],
+    ['Menus', [['Stitch', picker({ menu: 'stitch' })], ['Fabric', picker({ menu: 'fabric', fabric: 'linen' })], ['Notation', picker({ menu: 'notation', notation: 'rgb' })]]],
+    ['Pills', [['Extract', picker({ tab: 'extract' })], ['Extract, colours', picker({ tab: 'extract', extracted: EXTRACTED, image: { url: SAMPLE_IMAGE, name: 'harbour-at-dusk.jpg' } })], ['Extract, saved', picker({ tab: 'extract', extracted: EXTRACTED, image: { url: SAMPLE_IMAGE, name: 'harbour-at-dusk.jpg' }, extractSaved: true })], ['Saved', picker({ tab: 'saved' })]]],
+    ['Live', [['Try it', '<div data-live-picker></div>']]],
+  ] },
+  { group: 'Thread and stitches', id: 'floating-palette', title: 'Floating palette', note: 'The picker\'s palette, torn off to float over the cloth, so changing thread is one tap while you stitch. Hover the palette\'s row in the picker and a grip shows: drag the row out (it resists, then tears free) or press the pop-out button. Floating, it is the palette and nothing else: tap a colour to stitch with it, tap an empty pan to keep the colour in hand. Let go near the cloth\'s edge and it snaps there, standing up as a column at the left or right; drop it on the picker, press its cross or Bring back and its colours fly home. One at a time. Try it on the Panel tab.', blocks: ['floating-palette', 'colour-picker', 'shared'], cell: 320, rows: [
+    ['In the picker', [['Docked', picker({ palette: 1 })], ['Hover', picker({ palette: 1, palHover: true })], ['Floating', picker({ palette: 1, paletteOut: true })]]],
+    ['Floating', [['Row', floatpal()], ['Carried', floatpal({ dragging: true })], ['Menu', `<div style="min-height:150px">${floatpal({ menu: true })}</div>`], ['New palette', floatpal({ palette: null })]], 240],
+    ['At the side', [['Column', floatpal({ orient: 'column' })]], 124],
+  ] },
+  { group: 'Thread and stitches', id: 'colour-preview', title: 'Colour preview', note: 'The colour as thread on cloth: two by two of a stitch on a fabric (on the dot grid the holes show in full), in the fabric\'s own colour. The chips choose the stitch and the fabric, icons only; their names are in the tooltips.', blocks: ['colour-preview', 'shared'], cell: 268, rows: [
+    ['Fabrics', [['Aida', previewHtml({ hex: hexOf('--terracotta-500') })], ['Linen', previewHtml({ hex: hexOf('--leaf-500'), fabric: 'linen', stitch: 'stitch-half' })], ['Denim', previewHtml({ hex: hexOf('--ochre-300'), fabric: 'denim', stitch: 'fill-weave-3' })], ['Dot grid', previewHtml({ hex: hexOf('--periwinkle-700'), fabric: 'dots', stitch: 'stitch-back' })]]],
+    ['Chip', states(['Rest', 'Hover', 'Focus'], (c) => `<button class="c-reset c-chip c-focus ${c}">${prim('stitch-full', 20)}${ic('chevron-down')}</button>`).concat([['Open', `<button class="c-reset c-chip c-focus is-open">${prim('stitch-full', 20)}${ic('chevron-down')}</button>`]]), 120],
   ] },
   { group: 'Panel pieces', id: 'layer-row', title: 'Layer row', note: 'Name, show or hide, lock. Drag to reorder.', blocks: ['layer-row', 'icon-button', 'shared'], cell: 240, rows: [
     ['States', [['Rest', layer('')], ['Hover', layer('is-hover')], ['Selected', layer('is-selected')], ['Hidden', layer('is-hidden', 'Calla lilies', 'eye-off')], ['Dragging', layer('is-dragging')], ['Renaming', layer('is-renaming')]]]
@@ -199,8 +220,17 @@ main.querySelectorAll('.c-ic svg').forEach((el) => {
 
 const zoom = createZoomMotion(() => motionFrom(TUNING));
 main.querySelectorAll('.tz-host').forEach((h) => { Object.assign(h.querySelector('svg').dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
-// the colour field in the picker's Custom form is live
-main.querySelectorAll('[data-colour-field]').forEach((el) => createColourField(el, { hex: '#B84216', onChange: (hex) => { el.querySelector('input').value = hex; } }));
+// the held pickers: the colour field drawn at each one's colour, and an open menu placed under its trigger
+main.querySelectorAll('.c-picker').forEach((el) => {
+  if (el.querySelector('.c-colourfield')) createColourField(el, { hex: el.dataset.hex });
+  const menu = el.querySelector('.c-picker__menu:not(:empty)');
+  if (!menu) return;
+  requestAnimationFrame(() => {
+    const t = el.querySelector(`[data-pk-menu="${menu.dataset.for}"]`).getBoundingClientRect(), box = el.getBoundingClientRect();
+    menu.style.top = `${t.bottom - box.top + 4}px`;
+    menu.style.left = `${Math.max(8, Math.min(t.left - box.left, box.width - menu.offsetWidth - 8))}px`;
+  });
+});
 
 // the slider's preview uses a real palette colour as its thread
 const rootStyle = () => getComputedStyle(document.documentElement);
@@ -240,9 +270,17 @@ document.getElementById('theme').addEventListener('click', (e) => { const b = e.
 // ─── segmented pill motion, tuned with DialKit ───────────────────────────────
 const dialValues = Object.fromEntries(Object.entries(SEG_MOTIONS).map(([k, m]) => [k, dialDefaults(m.dials)]));
 const motions = {};
-main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion; (motions[k] ||= []).push(createSegMotion(el, () => dialValues[k])); });
+main.querySelectorAll('[data-motion]').forEach((el) => { const k = el.dataset.motion, m = createSegMotion(el, () => dialValues[k]); el._motion = m; (motions[k] ||= []).push(m); });
 // the live stitch grid travels with the same motion
 main.querySelectorAll('.c-tilegrid[data-live]').forEach((el) => motions.squash.push(createSegMotion(el, () => dialValues.squash, { option: '.c-tile' })));
+// the live colour picker: its pill moves with the same motion, its icons centred like the rest
+main.querySelectorAll('[data-live-picker]').forEach((host) => createColourPicker(host, {
+  hex: hexOf('--terracotta-500'), canvas: ON_CANVAS, saved: PALETTES.map(([n, cs]) => [n, [...cs]]),
+  onRender: (part) => {
+    part.querySelectorAll('[data-pill]').forEach((el) => motions.squash.push(createSegMotion(el, () => dialValues.squash)));
+    part.querySelectorAll('.c-ic svg').forEach((el) => { const b = el.getBBox(); if (b.width || b.height) el.setAttribute('viewBox', `${b.x + b.width / 2 - 12} ${b.y + b.height / 2 - 12} 24 24`); });
+  },
+}));
 // the page still works if the panel can't load
 import('https://cdn.jsdelivr.net/npm/dialkit@2.0.0/dist/vanilla/index.js').then(({ createDialKit, createDialRoot }) => {
   const dialRoot = createDialRoot({ position: 'bottom-right', theme: document.documentElement.dataset.theme, defaultOpen: false });
@@ -258,7 +296,12 @@ main.addEventListener('click', (e) => {
   const opt = e.target.closest('[data-live] .c-seg__opt, [data-live] .c-tile');
   if (opt) opt.parentElement.querySelectorAll('[aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', b === opt));
   const swi = e.target.closest('.c-switch[data-live]');
-  if (swi) swi.setAttribute('aria-checked', swi.getAttribute('aria-checked') !== 'true');
+  if (swi) {
+    const o = e.target.closest('.c-seg__opt'), on = o ? o.dataset.label === 'On' : swi.getAttribute('aria-checked') !== 'true', seg = swi.querySelector('.c-seg');
+    swi.setAttribute('aria-checked', on);
+    seg.querySelectorAll('.c-seg__opt').forEach((x, i) => x.setAttribute('aria-pressed', i === (on ? 1 : 0)));
+    seg._motion?.select(on ? 1 : 0);
+  }
 });
 function setSlider(el, v) {
   v = Math.max(0, Math.min(100, Math.round(v)));

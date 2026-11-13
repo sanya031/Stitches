@@ -35,11 +35,23 @@ function hsvToHex({ h, s, v }) {
 }
 
 /** Markup for the field and the hue slider; createColourField() brings it to life. */
-export const colourFieldHtml = () => `<div class="c-colourfield" tabindex="0" role="slider" aria-label="Saturation and brightness"><span class="c-colourfield__thumb"></span></div>`
-  + `<div class="c-hue" tabindex="0" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360"><span class="c-hue__thumb"></span></div>`;
+export const fieldHtml = () => `<div class="c-colourfield" tabindex="0" role="slider" aria-label="Saturation and brightness"><span class="c-colourfield__thumb"></span></div>`;
+export const hueHtml = () => `<div class="c-hue" tabindex="0" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360"><span class="c-hue__thumb"></span></div>`;
 
-/** Wire a field and hue slider inside root. onChange(hex) on every move; set(hex) moves them without calling it. */
-export function createColourField(root, { hex = '#B84216', onChange = () => {} } = {}) {
+// The hue bar's hand feel, as the stage slider's (STAGE_TUNING.hand): drag moves the hue from where it is, the bar
+// grows while held, moving the pointer above or below it slows the drag, and it stops at the ends. No stops along
+// it: hue is continuous, so it stays where you let go.
+export const HUE_TUNING = {
+  tapJump: 3,      // px: a press that moves less than this jumps to where it was pressed
+  fine: 80,        // px above or below the bar for quarter speed
+};
+export const colourFieldHtml = () => fieldHtml() + hueHtml();
+
+/**
+ * Wire a field and hue slider inside root. onChange(hex) on every move; set(hex) moves them without calling it.
+ * hand: the hue bar takes the hand feel (HUE_TUNING).
+ */
+export function createColourField(root, { hex = '#B84216', onChange = () => {}, hand = false } = {}) {
   const field = root.querySelector('.c-colourfield'), hue = root.querySelector('.c-hue');
   let c = hexToHsv(hex);
 
@@ -66,7 +78,32 @@ export function createColourField(root, { hex = '#B84216', onChange = () => {} }
     });
   }
   drag(field, (x, y) => { c.s = x; c.v = 1 - y; });
-  drag(hue, (x) => { c.h = Math.min(359.9, x * 360); });
+  if (hand) handHue(); else drag(hue, (x) => { c.h = Math.min(359.9, x * 360); });
+
+  function handHue() {
+    hue.classList.add('c-hue--hand');
+    hue.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault(); hue.focus({ preventScroll: true, focusVisible: false });
+      hue.setPointerCapture(e.pointerId);
+      const r = hue.getBoundingClientRect(), x0 = e.clientX;
+      let last = e.clientX, moved = false;
+      hue.classList.add('is-held');
+      const move = (ev) => {
+        if (Math.abs(ev.clientX - x0) >= HUE_TUNING.tapJump) moved = true;
+        if (!moved) return;
+        const off = Math.max(0, r.top - ev.clientY, ev.clientY - r.bottom), speed = 1 / (1 + 3 * Math.min(1, off / HUE_TUNING.fine));
+        c.h = clamp(c.h + ((ev.clientX - last) / r.width) * 360 * speed, 0, 359.9);
+        last = ev.clientX; change();
+      };
+      const up = (ev) => {
+        if (!moved) { c.h = Math.min(359.9, clamp((ev.clientX - r.left) / r.width) * 360); change(); }
+        hue.classList.remove('is-held');
+        hue.removeEventListener('pointermove', move); hue.removeEventListener('pointerup', up); hue.removeEventListener('pointercancel', up);
+      };
+      hue.addEventListener('pointermove', move); hue.addEventListener('pointerup', up); hue.addEventListener('pointercancel', up);
+    });
+  }
 
   field.addEventListener('keydown', (e) => {
     const k = e.shiftKey ? 0.1 : 0.01, d = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, k], ArrowDown: [0, -k] }[e.key];
@@ -74,9 +111,48 @@ export function createColourField(root, { hex = '#B84216', onChange = () => {} }
   });
   hue.addEventListener('keydown', (e) => {
     const k = e.shiftKey ? 10 : 1, d = { ArrowLeft: -k, ArrowDown: -k, ArrowRight: k, ArrowUp: k }[e.key];
-    if (!d) return; e.preventDefault(); c.h = (c.h + d + 360) % 360; change();
+    if (!d) return; e.preventDefault(); c.h = clamp(c.h + d, 0, 359.9); change();
   });
 
   draw();
   return { set(next) { const h = c.h; c = hexToHsv(next); if (!c.s || !c.v) c.h = h; draw(); } };
+}
+
+// ─── notations: the same colour as hex, RGB or HSL, to show in a field and read back what's typed ───
+const rgbOf = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const hexFromRgb = (rgb) => `#${rgb.map((v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+function hslOf(hex) {
+  const [r, g, b] = rgbOf(hex).map((v) => v / 255), max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0, { h } = hexToHsv(hex);
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+function hexFromHsl([h, s, l]) {
+  s = clamp(s / 100); l = clamp(l / 100);
+  const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  return hexFromRgb([0, 8, 4].map((n) => (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))) * 255));
+}
+export const NOTATIONS = [['hex', 'Hex'], ['rgb', 'RGB'], ['hsl', 'HSL']];
+
+/** The colour written in a notation: '#B84216', '184, 66, 22' or '16°, 79%, 40%'. */
+export function formatColour(hex, notation = 'hex') {
+  if (notation === 'rgb') return rgbOf(hex).join(', ');
+  if (notation === 'hsl') { const [h, s, l] = hslOf(hex); return `${h}°, ${s}%, ${l}%`; }
+  return hex;
+}
+/** What's typed in a notation as #RRGGBB, or null while it isn't a colour yet. */
+export function parseColour(text, notation = 'hex') {
+  if (notation === 'hex') return parseHex(text);
+  const n = text.match(/-?\d+(\.\d+)?/g);
+  if (!n || n.length !== 3) return null;
+  const v = n.map(Number);
+  return notation === 'rgb' ? hexFromRgb(v) : hexFromHsl(v);
+}
+
+/** The colour as its three numbers in a notation: [r, g, b] or [h, s, l]; for fields with one box per number. */
+export const colourParts = (hex, notation) => (notation === 'hsl' ? hslOf(hex) : rgbOf(hex));
+/** Three typed numbers in a notation as #RRGGBB, or null while one isn't a number yet. RGB 0–255; HSL 0–360, 0–100, 0–100. */
+export function colourFromParts(parts, notation) {
+  const v = parts.map((t) => (String(t).trim() === '' ? NaN : Number(t)));
+  if (v.some((x) => !Number.isFinite(x))) return null;
+  return notation === 'hsl' ? hexFromHsl([((v[0] % 360) + 360) % 360, v[1], v[2]]) : hexFromRgb(v);
 }

@@ -104,27 +104,17 @@
 .c-seg--invert .c-seg__opt[aria-pressed="true"], .c-seg--invert.c-seg--icons .c-seg__opt[aria-pressed="true"] { color: var(--surface-panel); }
 
 /* @control switch */
-.c-switch { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); color: var(--text); font: var(--type-label); cursor: pointer; }
-.c-switch__track { display: inline-flex; align-items: center; width: var(--space-40); height: var(--space-24); padding: var(--space-2); border-radius: var(--radius-pill); background: var(--control-track); }
-.c-switch__thumb { width: var(--space-20); height: var(--space-20); border-radius: var(--radius-pill); background: var(--surface-panel); }
-.c-switch[aria-checked="true"] .c-switch__track, .c-switch.is-on .c-switch__track { justify-content: flex-end; background: var(--control-fill); }
-.c-switch:hover .c-switch__track, .c-switch.is-hover .c-switch__track { background: var(--border-strong); }
-.c-switch[aria-checked="true"]:hover .c-switch__track, .c-switch.is-on.is-hover .c-switch__track { background: var(--text-strong); }
-.c-switch.is-mixed .c-switch__track { justify-content: center; }
-.c-switch.is-mixed .c-switch__thumb { width: var(--space-12); height: var(--space-2); }
+/* a switch is a field: the label on the left and both states always in view on the right, Off and On as a small
+   segmented pill (the system's pill; it moves with the Squash motion where seg-motion.js runs), the current one filled.
+   Clicking anywhere on the field toggles; Space or Enter too. Mixed: neither is filled. */
+.c-switch { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); width: 100%; height: var(--row-height); padding: 0 var(--space-2) 0 var(--space-12); border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); font: var(--type-label); text-align: left; cursor: pointer; user-select: none; }
+.c-switch:hover, .c-switch.is-hover { color: var(--text-strong); }
+.c-switch .c-seg { flex: none; padding: 0; background: none; }
+.c-switch .c-seg__opt { min-width: 0; min-height: calc(var(--row-height) - var(--space-4)); padding: 0 var(--space-12); font: var(--type-label); cursor: inherit; }
+.c-switch:hover .c-seg__opt:not([aria-pressed="true"]), .c-switch.is-hover .c-seg__opt:not([aria-pressed="true"]) { color: var(--text); }
 .c-switch:disabled, .c-switch.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
-.c-switch:disabled .c-switch__track, .c-switch.is-disabled .c-switch__track { background: var(--border-subtle); }
-.c-switch.is-disabled .c-switch__thumb { background: var(--text-disabled); }
-
-/* a switch as a field row: label left, switch right, the panel's row height */
-.c-switch--field { justify-content: space-between; width: 100%; min-height: 0; height: var(--row-height); padding: 0 var(--space-6) 0 var(--space-12); border-radius: var(--radius-md); background: var(--surface-field); color: var(--text-muted); }
-.c-switch--field .c-switch__track { order: 2; width: var(--space-32); height: var(--space-20); }
-.c-switch--field .c-switch__thumb { width: var(--space-16); height: var(--space-16); }
-.c-switch--field[aria-checked="true"], .c-switch--field.is-on { color: var(--text); }
-
-/* the ring hugs the track, not the label */
-.c-switch.c-focus:focus-visible, .c-switch.c-focus.is-focus { outline: 0; }
-.c-switch:focus-visible .c-switch__track, .c-switch.is-focus .c-switch__track { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+.c-switch:disabled .c-seg__opt, .c-switch.is-disabled .c-seg__opt { color: var(--text-disabled); }
+.c-switch:disabled .c-seg__opt[aria-pressed="true"], .c-switch.is-disabled .c-seg__opt[aria-pressed="true"], .c-switch.is-disabled .c-seg__thumb { background: var(--border-subtle); }
 
 /* @control checkbox */
 .c-check { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); color: var(--text); font: var(--type-label); cursor: pointer; }
@@ -262,6 +252,11 @@
 /* label: in the label row above, at its right end */
 .ss[data-place="label"] .ss-inline { top: calc(-1 * (var(--space-6) + var(--icon-sm) / 2)); right: 0; }
 .ss[data-display="inline"]:is(:hover, .ss-on, :focus-within) .ss-inline { color: var(--icon-active); }
+/* handle: the drawing rides beside the handle on a raised pill, like a tooltip, only while in use; it flips to the
+   handle's left past 60% so it stays clear of the number */
+.ss[data-place="handle"] .ss-inline { right: auto; left: clamp(var(--space-6), calc(var(--p, 0) * 100%), calc(100% - var(--space-6))); z-index: 2; padding: var(--space-4); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--icon-active); box-shadow: var(--shadow-float); transform: translate(var(--space-8), -50%); opacity: 0; transition: opacity var(--motion-tooltip-duration) ease-out; }
+.ss[data-place="handle"][data-side="left"] .ss-inline { transform: translate(calc(-100% - var(--space-8)), -50%); }
+.ss[data-place="handle"].ss-on .ss-inline { opacity: 1; }
 .ss-inline svg { display: block; }
 /* fill: the filled part drawn as laid thread, its lines as thick and as close as the value */
 .ss[data-display="fill"] .ss-fill { background-image: repeating-linear-gradient(90deg, var(--border-strong) 0 var(--ss-line-w, 1.5px), transparent var(--ss-line-w, 1.5px) var(--ss-line-pitch, 8px)); }
@@ -284,7 +279,7 @@
 /* @control number-field */
 .c-field { display: inline-flex; align-items: center; gap: var(--inline-gap); width: 100%; height: var(--row-height); padding: 0 var(--space-8) 0 var(--space-12); border: var(--border-width) solid transparent; border-radius: var(--radius-md); background: var(--surface-field); color: var(--text); font: var(--type-label); }
 .c-field:hover, .c-field.is-hover { border-color: var(--border); }
-.c-field:focus-within, .c-field.is-focus { border-color: var(--focus); }
+.c-field:focus-within, .c-field.is-focus { border-color: var(--border-strong); } /* typing in it: the hover edge stays, no brighter ring */
 .c-field--num input { text-align: right; }
 .c-field input { flex: 1; min-width: 0; width: 100%; padding: 0; border: 0; outline: 0; background: none; color: inherit; font: inherit; font-variant-numeric: var(--numeric); }
 .c-field input::placeholder { color: var(--text-muted); opacity: 1; }
@@ -296,6 +291,23 @@
 .c-field.is-disabled .c-field__label, .c-field.is-disabled .c-field__unit, .c-field.is-disabled .c-field__steps, .c-field.is-disabled input::placeholder { color: var(--text-disabled); }
 .c-field.is-mixed input::placeholder { color: var(--text-muted); }
 .c-field.is-error { border-color: var(--danger); }
+/* a split field: one field cut into cells by thin lines, each cell a part with its own icon or unit (Canvas
+   stitches: the stitch and its count, then strands, then density); looks like the field at rest and on hover */
+.c-field--split { flex: 1; min-width: 0; gap: 0; padding: 0; overflow: hidden; }
+.c-field__cell { display: flex; align-items: center; gap: var(--space-4); height: 100%; padding: 0 var(--space-8); border-left: var(--border-width) solid var(--border); color: var(--text); white-space: nowrap; font-variant-numeric: var(--numeric); }
+.c-field__cell:first-child { border-left: 0; }
+.c-field__cell--lead { flex: 1; min-width: 0; gap: var(--space-8); padding-left: var(--space-6); }
+.c-field__cell--num { flex: none; width: calc(var(--space-48) + var(--space-8)); padding: 0 var(--space-6); cursor: text; }
+.c-field__cell .c-ic { flex: none; width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
+.c-field__cell input { flex: 1; min-width: 0; width: 100%; padding: 0; border: 0; outline: 0; background: none; color: inherit; font: inherit; font-variant-numeric: var(--numeric); }
+/* numbers (counts, strands, density) all in the count's muted colour, as in Canvas colours; full while typed in */
+.c-field--split .c-field__cell--lead, .c-field__cell--num { color: var(--text-muted); }
+.c-field--split .c-field__cell--lead:has(input) { color: var(--text); }
+.c-field__cell--num:focus-within { background: var(--surface-selected); color: var(--text-strong); }
+.c-field__cell.is-disabled, .c-field__cell.is-disabled .c-ic { color: var(--text-disabled); cursor: default; }
+.c-field__none { flex: 1; }
+.c-field__cell--lead input { text-transform: uppercase; cursor: text; }
+.c-field__cell--count { flex: none; width: calc(var(--space-48) + var(--space-8)); color: var(--text-muted); }
 .c-hint { display: block; margin-top: var(--space-4); color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
 .c-hint--error { color: var(--danger); }
 
@@ -312,18 +324,29 @@
 .c-select__value { text-align: right; }
 .c-select.is-mixed .c-select__label { color: var(--text-muted); }
 .c-select:hover, .c-select.is-hover { border-color: var(--border); }
-.c-select.is-open { border-color: var(--focus); }
+.c-select.is-open { border-color: var(--border-strong); } /* open: the hover edge stays, no brighter ring */
 .c-select.is-mixed { color: var(--text-muted); }
 .c-select.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
 .c-select.is-disabled .c-ic { color: var(--text-disabled); }
+/* compact: just the value and the chevron, sized to its words (the colour picker's notation) */
+.c-select--compact { width: auto; flex: none; gap: var(--space-4); }
+/* the colour picker's notation: the field and the select's name crossfade when it changes; nothing resizes */
+.c-picker__names { display: inline-grid; }
+.c-picker__names > span { grid-area: 1 / 1; opacity: 0; transition: opacity 160ms ease; }
+.c-picker__names > span.is-on { opacity: 1; }
+.c-picker__field { display: grid; flex: 1; min-width: 0; }
+.c-picker__field > * { grid-area: 1 / 1; transition: opacity 160ms ease; }
+.c-picker__field > .is-entering, .c-picker__field > .is-leaving { opacity: 0; }
+.c-picker__field > .is-leaving { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .c-picker__names > span, .c-picker__field > * { transition: none; } }
 .c-menu { display: grid; gap: var(--space-2); min-width: 160px; padding: var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); }
 .c-menu__item { display: flex; align-items: center; gap: var(--space-8); min-height: var(--control-sm); padding: 0 var(--space-8); border-radius: var(--radius-sm); color: var(--text); font: var(--type-label); text-align: left; cursor: pointer; }
 .c-menu__item .c-ic { width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
-.c-menu__item:hover, .c-menu__item.is-hover { color: var(--text-strong); }
+.c-menu__item:hover, .c-menu__item.is-hover { background: var(--surface-hover); color: var(--text-strong); } /* menus take a faint fill on hover, so the row you are about to pick is clear */
 .c-menu__item:hover .c-ic, .c-menu__item.is-hover .c-ic { color: var(--icon-active); }
-.c-menu__item.is-selected { background: var(--surface-selected); color: var(--text-strong); font: var(--type-label-strong); }
+.c-menu__item.is-selected, .c-menu__item.is-selected:hover { background: var(--surface-selected-raised); color: var(--text-strong); font: var(--type-label-strong); }
 .c-menu__item.is-selected .c-ic { color: var(--icon-active); }
-.c-menu__item.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
+.c-menu__item.is-disabled, .c-menu__item.is-disabled:hover { background: none; color: var(--text-disabled); cursor: not-allowed; }
 .c-menu__end { margin-left: auto; }
 .c-menu__rule { height: var(--border-width); margin: var(--space-2) var(--space-4); background: var(--border-subtle); }
 
@@ -357,6 +380,20 @@
 /* detail: a setting and a count on the right ("Thickness 2 · 6,120") */
 .c-row__detail { margin-left: auto; color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); font-variant-numeric: var(--numeric); white-space: nowrap; }
 .c-row.is-selected .c-row__detail { color: var(--text); }
+/* a row that is a field with a button after it (Canvas stitches): the row itself doesn't act or light up */
+.c-row--field { gap: var(--space-4); padding: 0; cursor: default; }
+.c-row--field + .c-row--field { margin-top: var(--row-gap); }
+.c-row--field:hover { color: var(--text); }
+.c-row.c-row--field.is-selected { background: none; color: var(--text); font: var(--type-label); } /* selected shows on the field's edge, not as a fill behind the row's buttons */
+.c-row--field.is-selected .c-field--split { border-color: var(--border-strong); }
+.c-row--field .c-field--split { cursor: pointer; } /* clicking the field selects its stitches */
+.c-row--field .c-iconbtn { flex: none; }
+/* the last icon button in a row hangs into the gutter so its drawing, not its box, meets the edge the fields above
+   end on: half the box around the icon, plus the icon's own margin (its strokes end about 2/24 in from its edge) */
+.c-row--field > .c-iconbtn:last-child { margin-right: calc((var(--control-sm) - var(--icon-sm)) / -2 - var(--icon-sm) / 12); }
+/* hidden: the field's words and drawings fade to disabled; it can still be selected, edited or shown again */
+.c-row--field.is-hidden .c-field__cell, .c-row--field.is-hidden .c-field__cell .c-ic { color: var(--text-disabled); }
+.c-row--field.is-hidden .c-row__art { opacity: 0.4; }
 .c-row:hover, .c-row.is-hover { color: var(--text-strong); }
 .c-row:hover .c-row__art, .c-row.is-hover .c-row__art, .c-row:hover .c-row__end, .c-row.is-hover .c-row__end { color: var(--icon-active); }
 .c-row:active, .c-row.is-pressed { color: var(--text-strong); }
@@ -380,9 +417,260 @@
 .c-row__art .c-swatch svg { width: var(--space-16); height: var(--space-16); }
 
 /* @control colour-picker */
+/* The thread colour picker (colour-picker.js): pills, the preview, the pill's part, the value, the canvas's
+   colours. It opens beside the panel, over the cloth, never clipped by the panel's edge. */
 .c-popover { display: grid; gap: var(--space-12); width: var(--panel-width); max-width: 100%; padding: var(--panel-padding); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); color: var(--text); font: var(--type-label); }
+/* fields inside a pop-up sit in the well: in dark the pop-up is as light as a field, so a field there takes the
+   step darker (light: the same as everywhere) and reads as it does on the panel */
+.c-popover :is(.c-switch, .c-field, .c-fieldgroup, .c-select:not(.c-select--compact), .c-swatchrow, .ss, .c-seg:not(.c-switch .c-seg)) { background: var(--surface-well); }
 .c-popover__title { color: var(--text-strong); font: var(--type-subheading); }
 .c-swatchgrid { display: grid; grid-template-columns: repeat(5, var(--target-min)); justify-content: space-between; row-gap: var(--space-2); }
+.c-picker { position: relative; }
+.c-picker__head { display: flex; align-items: center; gap: var(--space-8); }
+.c-picker__head .c-seg { flex: 1; background: var(--surface-well); }
+/* inside the picker the controls carry an edge, so they read on the raised surface in both themes */
+.c-picker__hue .c-iconbtn, .c-picker__value .c-select, .c-picker__value .c-field { border: var(--border-width) solid var(--border); border-radius: var(--radius-md); }
+.c-picker__hue .c-iconbtn { width: var(--control-sm); height: var(--control-sm); }
+.c-picker__hue .c-iconbtn:hover:not(:disabled), .c-picker__value .c-select:hover, .c-picker__value .c-field:hover { border-color: var(--border-strong); }
+.c-picker__value .c-select.is-open, .c-picker__value .c-field:focus-within { border-color: var(--border-strong); }
+/* RGB and HSL: one box per number in one field, split by thin lines; the box being typed in is the focused one */
+.c-fieldgroup { display: flex; flex: 1; min-width: 0; height: var(--row-height); overflow: hidden; border: var(--border-width) solid var(--border); border-radius: var(--radius-md); background: var(--surface-field); }
+.c-fieldgroup:hover { border-color: var(--border-strong); }
+.c-fieldgroup:focus-within { border-color: var(--border-strong); }
+.c-fieldgroup__cell { flex: 1; min-width: 0; width: 100%; padding: 0 var(--space-4); border: 0; border-left: var(--border-width) solid var(--border); outline: 0; background: none; color: var(--text); font: var(--type-label); font-variant-numeric: var(--numeric); text-align: center; }
+.c-fieldgroup__cell:first-child { border-left: 0; }
+.c-fieldgroup__cell:focus { background: var(--surface-selected); color: var(--text-strong); }
+/* pans: the colours as a set of paints, one block of small boxes, ten a row, no gaps, no outlines; empty ones
+   are the well. Hover gives the box a thin edge a little lighter than its own colour; the selected one keeps that
+   edge. Drawn inside the box, so nothing moves or grows. */
+.c-pans { display: grid; grid-template-columns: repeat(10, 1fr); overflow: hidden; border-radius: var(--radius-sm); background: var(--surface-well); }
+.c-pan { display: grid; place-items: center; aspect-ratio: 1; background: var(--pan, none); cursor: pointer; }
+.c-pan__colour { display: none; }
+.c-pan:hover, .c-pan.is-hover, .c-pan.is-selected { box-shadow: inset 0 0 0 var(--border-width) color-mix(in srgb, var(--pan) 55%, var(--neutral-0)); }
+/* an empty pan has a faint edge a step lighter than the well (the raised surface), so the set reads as wells */
+/* a colour pulled from an image: hover shows a small cross in its corner that removes it */
+.c-panwrap { position: relative; display: grid; }
+.c-panwrap > .c-pan { width: 100%; }
+.c-pan__del { position: absolute; top: var(--space-2); right: var(--space-2); display: grid; place-items: center; width: var(--space-12); height: var(--space-12); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--icon-active); box-shadow: 0 0 0 var(--border-width) var(--border); opacity: 0; cursor: pointer; transition: opacity var(--motion-tooltip-duration) ease; }
+.c-pan__del .c-ic { width: var(--space-8); height: var(--space-8); }
+.c-pan__del svg { stroke-width: 3; }
+.c-panwrap:hover .c-pan__del, .c-pan__del:focus-visible { opacity: 1; }
+.c-pan.is-empty, .c-pan.is-empty:hover { box-shadow: inset 0 0 0 var(--border-width) var(--surface-raised); cursor: default; }
+.c-pan--add { color: var(--icon); }
+.c-pan--add .c-ic { width: var(--space-12); height: var(--space-12); }
+.c-pan--add:hover, .c-pan--add.is-hover { box-shadow: none; color: var(--icon-active); }
+/* a slot in the palette in hand (Custom): an empty pan that takes the colour in hand when tapped. The first shows a
+   plus; hovering any of them fills it with that colour, so you see what it would keep */
+.c-pan--slot { color: var(--icon); box-shadow: inset 0 0 0 var(--border-width) var(--surface-raised); }
+.c-pan--slot .c-ic { width: var(--space-12); height: var(--space-12); opacity: 0; }
+.c-pan--slot.is-next .c-ic { opacity: 1; }
+.c-pan--slot:hover, .c-pan--slot.is-hover { background: var(--hand); box-shadow: inset 0 0 0 var(--border-width) color-mix(in srgb, var(--hand) 55%, var(--neutral-0)); }
+.c-pan--slot:hover .c-ic, .c-pan--slot.is-hover .c-ic { opacity: 0; }
+.c-picker__palhead { display: flex; align-items: center; gap: var(--space-4); cursor: grab; } /* the name row: drag it out to float the palette */
+/* the palette's name, flush with the pans' left edge: the select's words and chevron with no box; hover brightens them */
+.c-picker__palhead .c-select { flex: 0 1 auto; min-width: 0; max-width: 100%; padding-left: 0; border-color: transparent; background: none; color: var(--text-muted); }
+.c-picker__palhead .c-select:hover, .c-picker__palhead .c-select.is-open { border-color: transparent; color: var(--text-strong); }
+.c-picker__palhead .c-select:hover .c-ic, .c-picker__palhead .c-select.is-open .c-ic { color: var(--icon-active); }
+.c-picker__palhead .c-select__value { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-picker__head .c-seg__opt { flex: 1; }
+.c-picker__region { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); } /* long words (an image's name) truncate instead of widening the picker */
+.c-picker__region:empty { display: none; }
+.c-picker__hue { display: grid; grid-template-columns: var(--control-sm) minmax(0, 1fr); align-items: center; gap: var(--space-8); }
+/* in the picker the hue bar is as tall as the eyedropper beside it, with a tall handle */
+.c-picker__hue .c-hue { height: var(--control-sm); border-radius: var(--radius-md); }
+.c-picker__hue .c-hue__thumb { width: var(--space-12); height: calc(var(--control-sm) - var(--space-8)); margin: calc((var(--control-sm) - var(--space-8)) / -2) 0 0 calc(var(--space-6) * -1); border-radius: var(--radius-pill); }
+/* hand feel (colour-field.js, hand: true): the rainbow is drawn behind, so it can grow while held without moving
+   anything */
+.c-hue--hand { background: none; cursor: ew-resize; }
+.c-hue--hand::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red); transition: inset calc(var(--motion-pill-duration) * 1s) cubic-bezier(.34, 1.4, .64, 1); }
+.c-hue--hand.is-held::before { inset: calc(var(--space-2) * -1) calc(var(--space-2) * -1); }
+.c-hue--hand .c-hue__thumb { z-index: 1; transition: transform calc(var(--motion-pill-duration) * 1s) cubic-bezier(.34, 1.4, .64, 1); }
+.c-hue--hand.is-held .c-hue__thumb { transform: scaleY(1.15); }
+@media (prefers-reduced-motion: reduce) { .c-hue--hand::before, .c-hue--hand .c-hue__thumb { transition: none; } }
+.c-picker__value { display: flex; gap: var(--space-8); }
+.c-picker__actions { display: flex; gap: var(--space-8); }
+/* the image the colours came from: a thumbnail, its name, and a cross to remove it (back to the drop zone) */
+.c-picker__image { display: flex; align-items: center; gap: var(--space-8); min-width: 0; min-height: var(--control-md); padding: var(--space-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-md); background: var(--surface-well); }
+.c-picker__image .c-iconbtn { flex: none; }
+/* the colours with Save at their end */
+.c-picker__palrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); } /* a row and its action after it; the actions of the rows make one column */
+/* the image row's and Save's icons a size up, so they read at a glance */
+.c-picker__image .c-iconbtn .c-ic, .c-picker__palrow > .c-iconbtn .c-ic { width: var(--icon-md); height: var(--icon-md); }
+.c-picker__image .c-iconbtn svg, .c-picker__palrow > .c-iconbtn svg { stroke-width: 1.75; }
+.c-picker__image img { flex: none; width: var(--space-32); height: var(--space-32); border-radius: var(--radius-sm); object-fit: cover; }
+.c-picker__imgname { flex: 1; min-width: 0; overflow: hidden; color: var(--text); font: var(--type-label); white-space: nowrap; text-overflow: ellipsis; }
+/* the palette's name, typed in place: plain text until you click it, the caret shows it is a field */
+.c-picker__name { flex: 1; min-width: 0; height: var(--control-sm); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-xs); outline: 0; background: none; color: var(--text-strong); font: var(--type-label-strong); text-overflow: ellipsis; }
+.c-picker__name::placeholder { color: var(--text-muted); font-weight: 400; }
+.c-picker__name:hover { background: var(--surface-hover); }
+.c-picker__name:focus { background: var(--surface-well); }
+/* card: image, name, Save and the cross in one row, the colours along the card's bottom edge */
+.c-picker__card { display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; border: var(--border-width) solid var(--border); border-radius: var(--radius-md); }
+.c-picker__cardhead { display: flex; align-items: center; gap: var(--space-4); min-width: 0; padding: var(--space-4); }
+.c-picker__cardhead img, .c-picker__image img { flex: none; width: var(--space-32); height: var(--space-32); border-radius: var(--radius-sm); object-fit: cover; }
+.c-picker__cardhead .c-iconbtn, .c-picker__namerow .c-iconbtn { flex: none; }
+.c-picker__card .c-pans { border-radius: 0; }
+/* strip: the image is the first box of the colours; the name, Save and the cross under it */
+.c-pan--image { overflow: hidden; cursor: default; }
+.c-pan--image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.c-picker__namerow { display: flex; align-items: center; gap: var(--space-4); min-width: 0; margin-top: calc(var(--space-8) * -1); }
+.c-picker__save { flex: none; }
+/* Save as an icon: the bookmark crossfades into a tick once saved */
+.c-picker__saveicon { display: inline-grid; place-items: center; }
+.c-picker__saveicon .c-ic { grid-area: 1 / 1; transition: opacity 200ms ease, transform 280ms cubic-bezier(.34, 1.4, .64, 1); }
+.c-picker__saveicon .c-ic:last-child { opacity: 0; transform: scale(.6); }
+.c-picker__saveicon.is-saved { cursor: default; color: var(--icon-active); }
+.c-picker__saveicon.is-saved .c-ic:first-child { opacity: 0; transform: scale(.6); }
+.c-picker__saveicon.is-saved .c-ic:last-child { opacity: 1; transform: none; }
+.c-picker__image .c-iconbtn { flex: none; }
+/* the colours with Save at their end */
+.c-picker__palrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); } /* a row and its action after it; the actions of the rows make one column */
+/* the image row's and Save's icons a size up, so they read at a glance */
+.c-picker__image .c-iconbtn .c-ic, .c-picker__palrow > .c-iconbtn .c-ic { width: var(--icon-md); height: var(--icon-md); }
+.c-picker__image .c-iconbtn svg, .c-picker__palrow > .c-iconbtn svg { stroke-width: 1.75; }
+@media (prefers-reduced-motion: reduce) { .c-picker__saveicon .c-ic { transition: opacity 150ms ease; transform: none !important; } }
+/* On canvas folds: folded, one line with its colours small at the end */
+.c-picker__fold { display: flex; align-items: center; gap: var(--space-8); width: 100%; min-height: var(--control-sm); color: var(--text-muted); cursor: pointer; }
+.c-picker__fold .c-group-label { padding: 0; }
+.c-picker__fold > .c-ic { width: var(--icon-sm); height: var(--icon-sm); margin-left: auto; color: var(--icon); }
+.c-picker__fold:hover > .c-ic { color: var(--icon-active); }
+.c-picker__mini { display: flex; overflow: hidden; margin-left: auto; border-radius: var(--radius-xs); }
+.c-picker__mini:empty { display: none; }
+.c-picker__mini i { width: var(--space-12); height: var(--space-12); background: var(--pan); }
+.c-picker__mini:not(:empty) + .c-ic { margin-left: 0; } /* open, the strip is empty and the chevron keeps to the right */
+.c-picker__canvas + .c-picker__canvas { padding-top: var(--space-8); }
+.c-picker__palname { color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
+/* Save palette: just words, bold on hover (room for the bold kept, so nothing shifts); once saved they roll up into
+   a tick and Saved, which stays */
+.c-picker__save { position: relative; display: inline-grid; justify-self: start; align-items: center; height: var(--control-sm); overflow: hidden; color: var(--text-muted); font: var(--type-label); cursor: pointer; }
+.c-picker__save > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: var(--space-4); transition: transform 280ms cubic-bezier(.22, 1, .36, 1), opacity 200ms ease; }
+.c-picker__save-a { display: inline-grid !important; }
+.c-picker__save-a::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: 600; }
+.c-picker__save:hover .c-picker__save-a, .c-picker__save:focus-visible .c-picker__save-a { color: var(--text-strong); font-weight: 600; }
+.c-picker__save-b { color: var(--text-strong); transform: translateY(100%); opacity: 0; }
+.c-picker__save-b .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+.c-picker__save.is-saved { cursor: default; }
+.c-picker__save.is-saved .c-picker__save-a { transform: translateY(-100%); opacity: 0; }
+.c-picker__save.is-saved .c-picker__save-b { transform: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .c-picker__save > span { transition: opacity 150ms ease; transform: none !important; } }
+.c-picker__note { color: var(--text-muted); font: var(--type-caption); letter-spacing: var(--type-caption-tracking); }
+.c-picker__palette { display: grid; gap: var(--space-4); }
+.c-picker__palette .c-group-label, .c-picker__canvas .c-group-label { padding: 0; }
+.c-picker__canvas { display: grid; gap: var(--space-4); padding-top: var(--space-8); border-top: var(--border-width) solid var(--border-subtle); }
+.c-picker__new { justify-self: start; padding-left: 0; } /* the plus lines up with the palettes' left edge */
+/* a saved palette's name, renamed in place: the name field, flush with the colours' left edge */
+.c-picker__palinput { flex: none; width: calc(100% + var(--space-4)); height: var(--control-sm); margin-left: calc(var(--space-4) * -1); }
+.c-picker__menu { position: absolute; z-index: 1; }
+.c-picker__menu:empty { display: none; }
+.c-picker__menu .c-menu { min-width: 0; } /* as wide as its words; the notation menu is three short ones */
+.c-picker__stitchmenu { position: relative; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+.c-picker__stitchmenu .c-menu__item > svg { flex: none; color: var(--icon); }
+.c-picker__stitchmenu .c-menu__item.is-selected > svg, .c-picker__stitchmenu .c-menu__item:hover > svg { color: var(--icon-active); }
+.c-picker .c-drop input { display: none; }
+
+/* the pop-out's drawing, not its button, ends at the pans' right edge (the button's padding and the icon's inset
+   hang past it). The palette can float: a grip shows on hovering its row (you can drag the row out), and the pop-out button, faint
+   until then, sends it over the cloth. Pulled, the row follows the pointer reluctantly, lifted; once out, a line says
+   so, with Bring back */
+.c-picker__grip { display: grid; place-items: center; margin-left: auto; color: var(--icon); opacity: 0; transition: opacity var(--motion-tooltip-duration) ease; }
+.c-picker__grip .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+.c-picker__grip svg, .c-floatpal__grip svg { stroke-width: 2.25; } /* the same weight as the icon buttons beside it */
+.c-picker__popout { margin-right: calc((var(--control-sm) - var(--icon-sm)) / -2 - var(--space-2)); opacity: .4; transition: opacity var(--motion-tooltip-duration) ease; }
+.c-picker__palrow-float:hover .c-picker__grip, .c-picker__palrow-float.is-hover .c-picker__grip, .c-picker__palrow-float.is-pulling .c-picker__grip { opacity: 1; }
+.c-picker__palrow-float:hover .c-picker__popout, .c-picker__palrow-float.is-hover .c-picker__popout, .c-picker__popout:focus-visible { opacity: 1; }
+.c-picker__palrow-float.is-pulling { position: relative; z-index: 2; cursor: grabbing; }
+.c-picker__palrow-float.is-pulling .c-pans { box-shadow: var(--shadow-float); }
+.c-picker__away { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); min-height: var(--control-sm); color: var(--text-muted); font: var(--type-label); }
+.c-picker__awaytext { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* one line, one type: the words and Bring back in the same label type, Bring back flush right and brightening on hover */
+.c-picker__bringback { flex: none; height: var(--control-sm); border-radius: var(--radius-xs); color: var(--text); font: var(--type-label); cursor: pointer; }
+.c-picker__bringback:hover { color: var(--text-strong); }
+@media (prefers-reduced-motion: reduce) { .c-picker__grip, .c-picker__popout { transition: none; } }
+
+/* @control floating-palette */
+/* the palette, floating over the cloth: a small raised surface with a head (grip, the palette's name, a cross that
+   puts it back) and its pans, 20px each. Carried, it lifts (scale --lift) with a deeper shadow; at the cloth's left or
+   right edge it stands up as a column, the name kept for its tooltip */
+.c-floatpal-host { position: fixed; top: 0; left: 0; z-index: var(--z-floating); }
+.c-floatpal { position: relative; display: grid; gap: var(--space-4); padding: var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-float); transition: transform 160ms ease, box-shadow 160ms ease; }
+.c-floatpal.is-dragging { transform: scale(var(--lift, 1.03)); box-shadow: var(--shadow-popover); cursor: grabbing; }
+.c-floatpal__head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; cursor: grab; }
+.c-floatpal.is-dragging .c-floatpal__head { cursor: grabbing; }
+.c-floatpal__grip { display: grid; place-items: center; width: var(--space-16); color: var(--icon); }
+.c-floatpal__grip .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+.c-floatpal__head:hover .c-floatpal__grip { color: var(--icon-active); }
+.c-floatpal__head .c-select { flex: 0 1 auto; min-width: 0; height: var(--control-sm); padding: 0 var(--space-4); border-color: transparent; background: none; color: var(--text-muted); }
+.c-floatpal__head .c-select:hover, .c-floatpal__head .c-select.is-open { border-color: transparent; color: var(--text-strong); }
+.c-floatpal__head .c-select:hover .c-ic, .c-floatpal__head .c-select.is-open .c-ic { color: var(--icon-active); }
+.c-floatpal__head .c-select__value { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-floatpal__head .c-iconbtn { margin-left: auto; }
+.c-floatpal .c-pans { grid-template-columns: repeat(10, var(--space-20)); }
+.c-floatpal--column .c-pans { grid-template-columns: var(--space-20); }
+.c-floatpal--column .c-floatpal__head { flex-direction: column; }
+.c-floatpal--column .c-floatpal__grip { transform: rotate(90deg); }
+.c-floatpal--column .c-floatpal__head .c-select { padding: 0; }
+.c-floatpal--column .c-select__value { display: none; }
+.c-floatpal--column .c-floatpal__head .c-iconbtn { margin-left: 0; }
+.c-floatpal__menu { position: absolute; top: calc(var(--control-sm) + var(--space-8)); left: var(--space-4); z-index: 1; }
+.c-floatpal__menu:empty { display: none; }
+.c-floatpal--column .c-floatpal__menu { top: var(--space-4); left: calc(100% + var(--space-4)); }
+@media (prefers-reduced-motion: reduce) { .c-floatpal { transition: none; } }
+
+/* @control picture-popup */
+/* the picture pop-up (picture-popup.js): sections like the panel's, under a head with its name and close */
+.c-picpop { gap: 0; padding-top: var(--space-12); padding-bottom: 0; max-height: calc(100vh - var(--space-16) * 2); overflow: auto; overscroll-behavior: contain; }
+.c-picpop__head { display: flex; align-items: center; gap: var(--space-8); padding-bottom: var(--space-4); }
+.c-picpop__head b { flex: 1; color: var(--text-strong); font: var(--type-subheading); }
+.c-picpop__head > .c-iconbtn { margin-right: calc((var(--control-sm) - var(--icon-sm)) / -2); } /* its cross lines up with the sections' chevrons */
+/* the image and what acts on it, one card with no border: the picture on top, its tools along the bottom */
+.c-imgcard { display: grid; overflow: hidden; border-radius: var(--radius-md); background: var(--surface-well); }
+.c-imgcard__top { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-2); }
+.c-imgcard__top img { flex: none; width: var(--space-32); height: var(--space-32); border-radius: var(--radius-sm); object-fit: cover; }
+/* a bar of icon tools, one cell each split by thin lines; hover gives a cell a faint fill, a held tool is filled */
+.c-toolbar { display: flex; height: var(--row-height); }
+.c-imgcard .c-toolbar { border-top: var(--border-width) solid var(--border); }
+.c-toolbar .c-iconbtn { flex: 1; width: auto; height: 100%; border: 0; border-radius: 0; }
+.c-toolbar .c-iconbtn + .c-iconbtn { border-left: var(--border-width) solid var(--border); }
+.c-toolbar .c-iconbtn:hover { background: var(--surface-hover); color: var(--icon-active); }
+.c-toolbar .c-iconbtn[aria-pressed="true"] { background: var(--surface-selected); color: var(--icon-active); }
+/* Size: W | H as one split field, the letters where Canvas stitches has its icons */
+.c-field--pair .c-field__cell--num { flex: 1; width: auto; }
+.c-field__letter { flex: none; display: grid; place-items: center; width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); font: var(--type-label-strong); }
+/* numbers scrub: drag sideways on one to change it; a click without moving types in it */
+[data-pp-scrub], [data-pp-scrub] input { cursor: ew-resize; user-select: none; }
+[data-pp-scrub] input:focus { cursor: text; user-select: text; }
+/* Colours: the words, then the palette (drag across it for more or fewer) */
+.c-picpop__colours { display: grid; gap: var(--space-8); }
+.c-picpop__words { display: flex; }
+.c-picpop__words .c-seg__opt { flex: 1; }
+.c-picpop__palette { position: relative; cursor: ew-resize; touch-action: pan-y; }
+.c-picpop__palette .c-pan { cursor: inherit; }
+.c-picpop__fold { position: absolute; z-index: 1; pointer-events: none; } /* a colour folding into its neighbour */
+/* Tones: three boxes side by side, each only its stitch's drawing */
+.c-tones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); }
+.c-select--art { width: 100%; justify-content: space-between; padding: 0 var(--space-8) 0 var(--space-12); }
+.c-select--art > svg { flex: none; color: var(--icon-active); }
+/* a menu that floats over the page under its control, so opening it never stretches or scrolls what it's in */
+.c-menu--float { position: fixed; z-index: calc(var(--z-popover) + 1); box-shadow: var(--shadow-popover); }
+/* a picture in a field (Pattern's Picture): a 32px thumbnail 2px in, as in the pop-up's card */
+.c-swatchrow:has(> img) { padding-left: var(--space-2); }
+.c-swatchrow > img { flex: none; width: var(--space-32); height: var(--space-32); border-radius: var(--radius-sm); object-fit: cover; }
+.c-swatchrow__muted { color: var(--text-muted); }
+
+/* @control colour-preview */
+/* The colour as thread on cloth: a patch of the chosen stitch on the chosen fabric. The cloth is content (the
+   fabric's own colour), not chrome. The two chips choose the stitch and the fabric, icons only. */
+.c-preview { position: relative; display: grid; place-items: center; height: 112px; border-radius: var(--radius-md); background: var(--cloth, var(--neutral-50)); box-shadow: inset 0 0 0 var(--border-width) var(--border-subtle); overflow: hidden; }
+.c-preview__art { display: grid; place-items: center; }
+.c-preview__art svg { display: block; }
+.c-preview__opts { position: absolute; right: var(--space-6); bottom: var(--space-6); display: flex; gap: var(--space-4); opacity: 0.4; transition: opacity var(--motion-tooltip-duration, 150ms) ease; }
+/* the chips stay faint until the preview is hovered or one of them has focus or is open */
+.c-preview:hover .c-preview__opts, .c-preview__opts:focus-within, .c-preview__opts:has(.is-open) { opacity: 1; }
+.c-chip { display: inline-flex; align-items: center; gap: 0; padding: var(--space-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--icon); cursor: pointer; }
+.c-chip > svg, .c-chip > .c-ic:first-child { width: var(--icon-md); height: var(--icon-md); }
+.c-chip > .c-ic:last-child { width: var(--space-12); height: var(--space-12); }
+.c-chip:hover, .c-chip.is-hover { color: var(--icon-active); }
+.c-chip.is-open { border-color: var(--border-strong); color: var(--icon-active); }
 
 /* @control layer-row */
 .c-layer { display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: var(--control-md); padding: 0 var(--space-4) 0 var(--space-8); border-radius: var(--radius-md); color: var(--text); font: var(--type-label); }
@@ -403,8 +691,8 @@
 .c-rule { height: var(--border-width); background: var(--border-subtle); }
 
 /* @control drop-zone */
-.c-drop { display: grid; justify-items: center; gap: var(--space-4); padding: var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-md); background: var(--surface-field); color: var(--text-muted); font: var(--type-label); text-align: center; cursor: pointer; }
-.c-drop .c-ic { color: var(--icon); }
+.c-drop { display: grid; justify-items: center; gap: var(--space-8); padding: var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-md); background: var(--surface-field); color: var(--text-muted); font: var(--type-label); text-align: center; cursor: pointer; }
+.c-drop .c-ic { width: var(--icon-lg); height: var(--icon-lg); color: var(--icon); }
 .c-drop:hover, .c-drop.is-hover { border-color: var(--border-strong); color: var(--text); }
 .c-drop:hover .c-ic, .c-drop.is-hover .c-ic { color: var(--icon-active); }
 .c-drop.is-over { border-color: var(--focus); background: var(--surface-selected); color: var(--text-strong); }
@@ -493,6 +781,11 @@
 .c-panel__section[data-open="false"] > :not(.c-panel__sechead) { display: none; }
 .c-panel__sechead { display: flex; align-items: center; gap: var(--space-4); }
 .c-panel__sechead .c-section { flex: 1; }
+/* a section's + (Pattern, Outline): in the header just before the chevron, which stays at the far right as in every section */
+.c-panel__sechead { position: relative; }
+.c-panel__secadd { position: absolute; top: 50%; right: calc(var(--icon-sm) + var(--space-4)); z-index: 1; transform: translateY(-50%); }
+/* a colour field in a row with buttons after it (Outline's colour and its bin) */
+.c-row--field > .c-swatchrow { flex: 1; min-width: 0; width: auto; }
 .c-panel .c-row { min-height: var(--row-height); }
 .c-panel .c-tilegrid { display: grid; width: 100%; grid-template-columns: repeat(auto-fill, minmax(var(--stitch-tile), 1fr)); justify-items: center; }
 .c-piece { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
@@ -511,4 +804,6 @@
 .c-swatchrow__code { color: var(--text-muted); font-variant-numeric: var(--numeric); }
 .c-swatchrow > .c-ic { width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
 .c-swatchrow:hover > .c-ic, .c-swatchrow.is-open > .c-ic { color: var(--icon-active); }
+.c-swatchrow.is-open { box-shadow: inset 0 0 0 var(--border-width) var(--border-strong); } /* open (its pop-up showing): the hover edge stays */
 .c-pop { position: absolute; z-index: var(--z-popover); }
+.c-pop--side { position: fixed; } /* the colour picker: placed beside the panel, in the window */

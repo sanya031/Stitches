@@ -17,6 +17,16 @@ const pillToken = (name, fallback) => {
   return Number.isFinite(v) ? v : fallback;
 };
 
+// the opacity drawing: the square a stitch sits in (5..19, as the primitives), its outline and a fill at the value
+const opacitySquare = (v, { size = 24, colour } = {}) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" fill-opacity="${(v / 100).toFixed(2)}"/><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/></svg>`;
+
+// the detail drawing: the same square, cut into 1 to 6 cells a side
+const detailSquare = (v, { size = 24, colour } = {}) => {
+  const n = Math.max(1, Math.round(1 + (v / 100) * 5)), step = 14 / n;
+  const cuts = Array.from({ length: n - 1 }, (_, i) => { const at = (5 + step * (i + 1)).toFixed(2); return `M${at} 5V19M5 ${at}H19`; }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}" fill="none" stroke="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" stroke-width="1.75"/>${cuts ? `<path d="${cuts}" stroke-width="1" stroke-opacity=".6"/>` : ''}</svg>`;
+};
+
 /** What each setting draws, in either style. v is the (possibly in-between) value. say: the value in words; tip: what the bubble shows, when not that. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
 export const STAGE_SETTINGS = {
   strands: {
@@ -42,10 +52,26 @@ export const STAGE_SETTINGS = {
     lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 100) }), // the same lines, packed closer
     thread: (v, o) => threadSvg('fill-columns', { ...o, density: v / 100 }),
     prim: (v, o) => primitiveSvg('fill-columns', { ...o, density: v / 100 })
+  },
+  // how strongly something shows (the pattern under the stitches): a square, filled as strongly as the value
+  opacity: {
+    label: 'Opacity', stops: Array.from({ length: 101 }, (_, i) => i), initial: 100, marks: 10, common: [50],
+    say: (v) => `${Math.round(v)}%`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 100) }),
+    thread: (v, o) => opacitySquare(v, o),
+    prim: (v, o) => opacitySquare(v, o)
+  },
+  // how much of a picture's detail its pattern keeps: the square cut into finer cells as it rises
+  detail: {
+    label: 'Detail', stops: Array.from({ length: 101 }, (_, i) => i), initial: 70, marks: 10, common: [50],
+    say: (v) => `${Math.round(v)}%`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 100) }),
+    thread: (v, o) => detailSquare(v, o),
+    prim: (v, o) => detailSquare(v, o)
   }
 };
 
-/** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's: slider lab v18.2. */
+/** How the slider behaves; the slider lab (slider-lab.html) tunes these live. The defaults are the system's: slider lab v19. */
 export const STAGE_TUNING = {
   // how the value is shown while it changes: 'bubble' (a square over the handle, following it), 'inline' (a small
   // drawing in the box, beside the number), 'fill' (the fill itself drawn as laid thread: thicker lines for strands,
@@ -57,8 +83,9 @@ export const STAGE_TUNING = {
   // 'beside' (outside the box on the right, after a divider), 'swap' (the drawing in the box, the number outside
   // on the right after a divider), 'before' (outside the box on the left, before a divider), 'label' (in the label
   // row above, on the right), 'lead' (in the box at its start, the number right after it, both on the left, like a
-  // design tool's number field)
-  inlinePlace: 'lead',
+  // design tool's number field), 'handle' (beside the handle on a raised pill, like a tooltip, only while in use; the
+  // number on the right)
+  inlinePlace: 'handle',
   fill: true,          // bar layout: false hides the fill and the handle; the drawing and the number show the value
   inlineSize: 16,      // px: one of the icon sizes, 16, 20 or 24; the stitch fills it
   inlineDivider: true, // beside, swap, before: a divider between the box and what sits outside it
@@ -105,13 +132,14 @@ export const STAGE_TUNING = {
  * pull; press or drag anywhere in the box.
  * editable (bar layout): the number is a field. Press it and it fills to show it's selected; type a value (it lands
  * on the nearest stop) or step with the up and down arrows (shift for ten), Enter or leaving keeps it, Escape undoes.
+ * initial: the value to start on (a stop; the setting's own initial otherwise).
  * Returns { el, value, setStyle(style), setColour(hex) }.
  */
-export function createStageSlider(host, { setting, style = 'prim', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'bar', editable = true } = {}) {
+export function createStageSlider(host, { setting, style = 'prim', colour = '#C8343B', onChange, labelOutside = false, tuning = {}, onMove, layout = 'bar', editable = true, initial } = {}) {
   const def = STAGE_SETTINGS[setting], last = def.stops.length - 1, uid = `ss-${setting}-${Math.random().toString(36).slice(2, 7)}`;
   const tune = (k) => (k in tuning ? tuning[k] : STAGE_TUNING[k]);
   let glideRaf = 0, scrubGain = 1;
-  let index = def.stops.indexOf(def.initial), hideTimer = 0;
+  let index = Math.max(0, def.stops.indexOf(initial ?? def.initial)), hideTimer = 0;
 
   const marks = def.marks || 1;
   // markers at every mark, inside the ends
@@ -198,6 +226,7 @@ export function createStageSlider(host, { setting, style = 'prim', colour = '#C8
       const size = tune('inlineSize');
       inlineEl.innerHTML = def.prim(v, { size, id: `${uid}-in`, holes: 0 }).replace('viewBox="0 0 24 24"', `viewBox="${def.crop || '3.5 3.5 17 17'}"`); // cropped to the stitch (its square is 5..19), so the size and the 4px gap are what you see
       el.dataset.place = tune('inlinePlace');
+      el.dataset.side = last && pos / last > 0.6 ? 'left' : 'right'; // handle: the pill goes to the side with room (the number is on the right)
       el.classList.toggle('ss--divided', !!tune('inlineDivider'));
       el.style.setProperty('--ss-inline-size', `${size}px`);
     }
