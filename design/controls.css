@@ -383,6 +383,18 @@
 /* a row that is a field with a button after it (Canvas stitches): the row itself doesn't act or light up */
 .c-row--field { gap: var(--space-4); padding: 0; cursor: default; }
 .c-row--field + .c-row--field { margin-top: var(--row-gap); }
+.c-rowlist { display: grid; gap: var(--row-gap); }
+/* a colour's opacity in its row: a drawing (a grid of dots, the colour over them as strongly), the number and %;
+   drag up or down to change it. Wide enough for 100% */
+.c-field__cell--opacity { width: calc(var(--space-64) + var(--space-12)); cursor: ns-resize; }
+.c-field__cell--opacity input { flex: 0 1 auto; width: 3ch; text-align: right; }
+.c-field__op { display: grid; flex: none; place-items: center; color: var(--icon); }
+.c-field__op svg { display: block; }
+.c-field__cell--opacity input { cursor: ns-resize; user-select: none; }
+.c-field__cell--opacity input:focus { cursor: text; user-select: text; }
+/* the quiet add row at the end of a list: no fill, muted words, brightening on hover */
+.c-swatchrow--quiet { background: none; color: var(--text-muted); }
+.c-swatchrow--quiet:hover, .c-swatchrow--quiet:hover .c-swatchrow__muted { color: var(--text-strong); } /* a list of field rows with a row after it (Pattern colours, then Add a pattern square) */
 .c-row--field:hover { color: var(--text); }
 .c-row.c-row--field.is-selected { background: none; color: var(--text); font: var(--type-label); } /* selected shows on the field's edge, not as a fill behind the row's buttons */
 .c-row--field.is-selected .c-field--split { border-color: var(--border-strong); }
@@ -394,6 +406,8 @@
 /* hidden: the field's words and drawings fade to disabled; it can still be selected, edited or shown again */
 .c-row--field.is-hidden .c-field__cell, .c-row--field.is-hidden .c-field__cell .c-ic { color: var(--text-disabled); }
 .c-row--field.is-hidden .c-row__art { opacity: 0.4; }
+.c-row--field.is-hidden > .c-swatchrow { color: var(--text-disabled); }
+.c-row--field.is-hidden > .c-swatchrow > img { opacity: 0.4; }
 .c-row:hover, .c-row.is-hover { color: var(--text-strong); }
 .c-row:hover .c-row__art, .c-row.is-hover .c-row__art, .c-row:hover .c-row__end, .c-row.is-hover .c-row__end { color: var(--icon-active); }
 .c-row:active, .c-row.is-pressed { color: var(--text-strong); }
@@ -713,6 +727,12 @@
 /* @control floating-bars */
 .c-bar { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-float); }
 .c-bar--tools { flex-direction: column; width: var(--toolbar-width); }
+/* the floating tool bar's selected tool is filled in the primary colour (one of the few selected states in terracotta);
+   the fill moves between tools with the pill motion (Squash), stretching along the bar as it goes */
+.c-bar--tools .c-tool[aria-pressed="true"], .c-bar--tools .c-tool[aria-pressed="true"]:hover { background: var(--accent); color: var(--on-accent); }
+.c-bar--tools.c-seg--motion .c-tool[aria-pressed="true"] { background: none; }
+.c-bar--tools .c-seg__thumb { border-radius: var(--radius-md); background: var(--accent); }
+.c-bar--tools .c-tool { transition: color var(--seg-label-fade, 120ms) linear; }
 .c-bar--pill { border-radius: var(--radius-pill); }
 .c-bar__sep { align-self: stretch; width: var(--border-width); margin: var(--space-4); background: var(--border-subtle); }
 .c-bar__zoom { min-width: var(--space-48); color: var(--text); font: var(--type-label); text-align: center; font-variant-numeric: var(--numeric); }
@@ -736,6 +756,7 @@
 /* the arrow: a 10px square turned 45°, half showing, on the side facing the trigger (data-side) */
 .c-tooltip__arrow { position: absolute; left: calc(var(--arrow-x, 50%) - 5px); bottom: -10px; width: 10px; height: 10px; border-radius: 2px; background: var(--text-strong); transform: translateY(calc(-50% - 2px)) rotate(45deg); }
 .c-tooltip[data-side="bottom"] .c-tooltip__arrow { bottom: auto; top: 4px; }
+.c-tooltip[data-side="right"] .c-tooltip__arrow { left: -3px; bottom: auto; top: calc(var(--arrow-y, 50%) - 5px); transform: rotate(45deg); }
 /* floating: placed by tooltip.js, animated in and out */
 .c-tooltip--float[hidden] { display: none; }
 .c-tooltip--float { position: fixed; left: 0; top: 0; z-index: var(--z-tooltip); pointer-events: none; }
@@ -779,6 +800,7 @@
 .c-panel__section { display: grid; gap: var(--row-gap); margin: 0 calc(var(--panel-padding) * -1); padding: 0 var(--panel-padding) var(--space-16); border-bottom: var(--border-width) solid var(--border); } /* dividers run the panel's full width */
 .c-panel__section:last-child { border-bottom: 0; }
 .c-panel__section[data-open="false"] > :not(.c-panel__sechead) { display: none; }
+.c-panel__section[data-open="false"] { padding-bottom: 0; } /* folded: just the header, its title centred in it, with no space left for the body */
 .c-panel__sechead { display: flex; align-items: center; gap: var(--space-4); }
 .c-panel__sechead .c-section { flex: 1; }
 /* a section's + (Pattern, Outline): in the header just before the chevron, which stays at the far right as in every section */

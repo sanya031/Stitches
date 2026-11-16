@@ -3,7 +3,8 @@
 // It opens at once, on top of its trigger by default (data-tip-side="bottom" to put it below), 4px away,
 // with an arrow pointing at the trigger. No room above: it flips below. Near the window's edge it shifts
 // along and the arrow stays on the trigger. It only fades in and out (--motion-tooltip-duration), never moves;
-// moving straight from one control to the next switches it at once, with no fade.
+// moving straight from one control to the next switches it at once, with no fade. None open while dragging.
+// data-tip-side="right" puts it beside the trigger; data-tip-delay="ms" (on it or an ancestor) waits before the first opens.
 
 const EDGE = 8; // px kept clear of the window's edge
 
@@ -28,6 +29,14 @@ export function createTooltips(root = document) {
 
   function place(el) {
     const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, gap = px('--tooltip-offset');
+    // beside: to the right of the trigger, centred on it (a vertical bar's tools), so it never covers the next one
+    if (el.dataset.tipSide === 'right') {
+      const x = r.right + gap, y = Math.min(innerHeight - EDGE - h, Math.max(EDGE, r.top + r.height / 2 - h / 2));
+      tip.dataset.side = 'right';
+      tip.style.transform = `translate(${x}px, ${y}px)`;
+      tip.style.setProperty('--arrow-y', `${Math.min(h - 10, Math.max(10, r.top + r.height / 2 - y))}px`);
+      return;
+    }
     let side = el.dataset.tipSide === 'bottom' ? 'bottom' : 'top';
     const yTop = r.top - gap - h, yBottom = r.bottom + gap;
     if (side === 'top' && yTop < EDGE) side = 'bottom';
@@ -68,11 +77,21 @@ export function createTooltips(root = document) {
 
   tip.addEventListener('animationend', done);
 
-  root.addEventListener('pointerover', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && el !== target) show(el); });
-  root.addEventListener('pointerout', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && !el.contains(e.relatedTarget)) hide(); });
+  // none while a button is held: dragging a value (a slider, a scrubbed number) across other controls shows nothing
+  // data-tip-delay (on the trigger or an ancestor): wait that many ms before the first one opens; once one is showing,
+  // moving to the next trigger switches at once
+  let wait = 0;
+  root.addEventListener('pointerover', (e) => {
+    if (e.buttons) return;
+    const el = e.target.closest?.('[data-tip]'); if (!el || el === target) return;
+    clearTimeout(wait);
+    const delay = Number(el.closest('[data-tip-delay]')?.dataset.tipDelay || 0);
+    if (delay && tip.hidden) wait = setTimeout(() => el.matches(':hover') && show(el), delay); else show(el);
+  });
+  root.addEventListener('pointerout', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && !el.contains(e.relatedTarget)) { clearTimeout(wait); hide(); } });
   root.addEventListener('focusin', (e) => { const el = e.target.closest?.('[data-tip]'); if (el && el.matches(':focus-visible')) show(el); });
   root.addEventListener('focusout', hide);
-  root.addEventListener('pointerdown', hide);
+  root.addEventListener('pointerdown', () => { clearTimeout(wait); hide(); });
   addEventListener('scroll', hide, true);
   addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
   return { hide };

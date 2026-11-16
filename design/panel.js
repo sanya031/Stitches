@@ -3,7 +3,7 @@
 // "Showing" changes what the Stitch tab acts on. Every pill moves with the saved pill motion.
 import { svg } from './icons/icons.js';
 import { PRIMITIVES, primitiveSvg, patchSquares } from './icons/primitives.js';
-import { createStageSlider } from './stage-slider.js';
+import { createStageSlider, opacitySquare } from './stage-slider.js';
 import { swatch } from './swatch.js';
 import { hexOf, parseHex } from './colour-field.js';
 import { createColourPicker, FLOAT_TUNING } from './colour-picker.js';
@@ -44,7 +44,10 @@ const section = (title, body, { action = '', open = true, add = '' } = {}) => `<
 const head = (eyebrow, title, sub, actions = '') => `<div class="c-panel__head"><span class="c-panel__eyebrow">${eyebrow}</span><span class="c-panel__title">${title}</span>${sub ? `<span class="c-panel__sub">${sub}</span>` : ''}${actions ? `<div class="c-panel__actions">${actions}</div>` : ''}</div>`;
 // the colour row: the thread as a swatch and its hex code; any colour can be used
 const swatchHtml = (hex, mixed = false) => `${swatchShow(mixed ? '--neutral-500' : hex)}<span>${mixed ? 'Mixed' : hex}</span>`;
-const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><button class="c-reset c-swatchrow c-focus" data-picker="thread" aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button></div>`;
+// with an eye (hide the stitches in this colour on the cloth) and a bin (delete them) after it, like the rows below
+const colourRow = (mixed = false) => `<div class="c-labelled"><span class="c-label" id="colour-label">Colour</span><div class="c-row c-row--field" data-thread-row><button class="c-reset c-swatchrow c-focus" data-picker="thread" aria-labelledby="colour-label colour-value" aria-haspopup="dialog"><span class="c-swatchrow__swatch" id="colour-value">${swatchHtml(threadHex, mixed)}</span></button>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Hide stitches in this colour" data-tip="Hide" data-thread-eye>${ic('eye')}</button>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Delete stitches in this colour" data-tip="Delete" data-thread-remove>${ic('bin')}</button></div></div>`;
 const stage = (setting, initial) => `<div data-stage="${setting}"${initial != null ? ` data-initial="${initial}"` : ''}></div>`;
 
 // every stitch and fill in one grid: stitches first, then fills
@@ -84,20 +87,41 @@ const layers = section('Layers', `<div>${layerRow('Lettering')}${layerRow('Stitc
 // Pattern: the squares to stitch over. Two ways in, both in view while it's empty: Picture (a field like Colour; once a
 // picture is in, its thumbnail and name, and it opens the picture pop-up beside the panel) and Pattern colours (empty,
 // "Add a pattern square", which does what the header's + does: adds the Thread colour to place squares with). With a
-// picture: Show stitches (the picture stitched over its pattern), Show pattern and Opacity; the pattern's colours as
-// rows like Canvas colours (clicking one focuses it, the eye hides it)
-const pattern = { picture: null, name: '', thumb: '', result: null, state: {}, hand: [] }; // hand: colours added with +
-const patternColours = () => [...(pattern.result?.palette.filter((p) => !p.outline).map((p) => [p.hex.toUpperCase(), p.count]) || []), ...pattern.hand.map((h) => [h, 0])];
-const patternRows = () => patternColours().map(([hex, n]) => `<div class="c-row c-row--field" data-count="${n}" data-pattern-hex="${hex}"><div class="c-field c-field--split" role="group" aria-label="${hex}, ${n.toLocaleString('en')} squares">`
-  + `<span class="c-field__cell c-field__cell--lead"><span class="c-row__art">${swatchShow(hex)}</span>${hex}</span><span class="c-field__cell c-field__cell--count" data-tip="${n.toLocaleString('en')} squares">${n.toLocaleString('en')}</span></div>`
-  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Hide this colour" data-tip="Hide" data-pattern-eye>${ic('eye')}</button></div>`).join('');
+// picture: the pattern's colours as rows like Canvas colours (clicking one focuses it, its eye hides it), then Opacity. Make stitches (a setting of the picture) is in the picture pop-up.
+// the colours "Add a pattern square" offers after the Thread colour, one each time
+const PATTERN_DEFAULTS = ['--leaf-500', '--periwinkle-400', '--ochre-300', '--lilac-400', '--crimson-500', '--neutral-950', '--terracotta-300', '--leaf-300'];
+const pattern = { opacity: {}, active: null, picture: null, name: '', thumb: '', result: null, state: {}, hand: [], hidden: false, deleted: new Set() }; // deleted: colours whose squares were taken out // hand: colours added with +
+const patternColours = () => [...(pattern.result?.palette.filter((p) => !p.outline).map((p) => [p.hex.toUpperCase(), p.count]) || []), ...pattern.hand.map((h) => [h, 0])].filter(([h]) => !pattern.deleted.has(h));
+// each colour's opacity: its drawing (a grid of dots, the pattern's squares, filled as strongly) and its number; drag up or
+// down on it to change it,
+// a click types in it, arrow keys step it (shift for ten)
+const opacityOf = (hex) => pattern.opacity[hex] ?? 100;
+const opacityCell = (hex) => `<label class="c-field__cell c-field__cell--num c-field__cell--opacity" data-tip="Opacity" data-pattern-opacity><span class="c-field__op" aria-hidden="true">${opacitySquare(opacityOf(hex), { size: 16 })}</span><input value="${opacityOf(hex)}" inputmode="numeric" maxlength="3" aria-label="Opacity of ${hex}" data-pattern-op><span class="c-field__unit">%</span></label>`;
+function setOpacity(row, v) {
+  v = Math.max(0, Math.min(100, Math.round(v)));
+  pattern.opacity[row.dataset.patternHex] = v;
+  row.querySelector('[data-pattern-op]').value = v;
+  row.querySelector('.c-field__op').innerHTML = opacitySquare(v, { size: 16 });
+}
+const patternRows = () => patternColours().map(([hex, n]) => `<div class="c-row c-row--field${hex === pattern.active ? ' is-selected' : ''}" data-count="${n}" data-pattern-hex="${hex}"><div class="c-field c-field--split" role="group" aria-label="${hex}, ${n.toLocaleString('en')} squares">`
+  + `<span class="c-field__cell c-field__cell--lead"><span class="c-row__art">${swatchShow(hex)}</span>${hex}</span>${opacityCell(hex)}</div>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Hide this colour" data-tip="Hide" data-pattern-eye>${ic('eye')}</button>`
+  + `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Delete this colour's squares" data-tip="Delete" data-pattern-remove>${ic('bin')}</button></div>`).join('');
+const setRowHidden = (row, hidden) => { row.classList.toggle('is-hidden', hidden); const eye = row.querySelector('[data-pattern-eye]'); eye.innerHTML = ic(hidden ? 'eye-off' : 'eye'); eye.dataset.tip = hidden ? 'Show' : 'Hide'; eye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} this colour`); };
 const patternSection = () => {
   const has = pattern.picture || pattern.hand.length;
-  const picture = `<div class="c-labelled"><span class="c-label">Picture</span><button class="c-reset c-swatchrow c-focus" data-picture aria-haspopup="dialog">${pattern.picture
-    ? `<img src="${pattern.thumb}" alt=""><span>${pattern.name}</span>` : `${ic('picture')}<span class="c-swatchrow__muted">Choose or drop a picture</span>`}</button></div>`;
-  const colours = `<div class="c-labelled"><span class="c-label">Pattern colours</span>${has ? `<div data-pattern-colours>${patternRows()}</div>`
-    : `<button class="c-reset c-swatchrow c-focus" data-pattern-add>${ic('plus')}<span class="c-swatchrow__muted">Add a pattern square</span></button>`}</div>`;
-  return section('Pattern', picture + (pattern.picture ? stack(sw('Show stitches', true)) : '') + (has ? `${stack(sw('Show pattern', true))}${stage('opacity', 60)}` : '') + colours,
+  // with a picture, the field is shorter: its eye (hide what the picture made) and bin (remove it) come after it
+  const field = `<button class="c-reset c-swatchrow c-focus" data-picture aria-haspopup="dialog">${pattern.picture
+    ? `<img src="${pattern.thumb}" alt=""><span>${pattern.name}</span>` : `${ic('picture')}<span class="c-swatchrow__muted">Choose or drop a picture</span>`}</button>`;
+  const picture = `<div class="c-labelled"><span class="c-label">Picture</span>${pattern.picture
+    ? `<div class="c-row c-row--field${pattern.hidden ? ' is-hidden' : ''}" data-picture-row>${field}<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="${pattern.hidden ? 'Show' : 'Hide'} the picture" data-tip="${pattern.hidden ? 'Show' : 'Hide'}" data-picture-eye>${ic(pattern.hidden ? 'eye-off' : 'eye')}</button><button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Remove the picture" data-tip="Remove" data-picture-remove>${ic('bin')}</button></div>`
+    : field}</div>`;
+  // "Add a pattern square" is always the list's last row, so placing squares by hand stays one click away with a picture in
+  const addRow = `<button class="c-reset c-swatchrow c-focus" data-pattern-add>${ic('plus')}<span class="c-swatchrow__muted">Add a pattern square</span></button>`;
+  const colours = has
+    ? `<div class="c-labelled"><span class="c-label">Pattern colours</span><div class="c-rowlist"><div data-pattern-colours>${patternRows()}</div>${addRow.replace('c-swatchrow c-focus', 'c-swatchrow c-swatchrow--quiet c-focus')}</div></div>`
+    : `<div class="c-labelled"><span class="c-label">Pattern colours</span>${addRow}</div>`;
+  return section('Pattern', picture + colours,
     { add: `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="Add a pattern colour" data-tip="Add a pattern colour" data-pattern-add>${ic('plus')}</button>` });
 };
 // the picture pop-up beside the panel, as the colour picker opens; what it was set to is kept for next time
@@ -114,7 +138,7 @@ function openPicture(trigger) {
     },
     onClose: () => { closePop(); trigger.focus(); },
     onAction: (a, on) => {
-      if (a === 'remove') { closePop(); Object.assign(pattern, { picture: null, name: '', thumb: '', result: null, state: {} }); render(); toast('Picture removed'); }
+      if (a === 'remove') removePicture();
       if (a === 'crop' && on) toast('Crop on the cloth: drag its frame');
     },
   });
@@ -130,6 +154,7 @@ function openPicture(trigger) {
   pop.place = place; place();
   pop.resize = new ResizeObserver(place); pop.resize.observe(el);
 }
+function removePicture() { if (pop?.popup) closePop(); Object.assign(pattern, { picture: null, name: '', thumb: '', result: null, state: {}, hidden: false, deleted: new Set() }); render(); toast('Picture removed'); }
 // a picture chosen (here, the sample calla lilies): the field shows it and the pop-up opens on it
 function choosePicture() {
   pattern.picture = drawCallaLilies(450, 800); pattern.name = 'calla-lilies.png'; pattern.state = {};
@@ -157,6 +182,8 @@ const outlineSection = () => section('Outline', outline
 const thread = (mixed = false) => section('Thread', `${stack(colourRow(mixed))}${stage('strands')}${mixed ? slider('Density', 0, { mixed: true }) : stage('density')}`);
 
 // ─── the panel for each tab and context ──────────────────────────────────────
+// the floating tool bar: the system's tool icons, each moving on hover (icons.css; si-host lets the button carry it)
+const TOOLS = [['tool-select', 'Select', 'V'], ['tool-stitch', 'Stitch', 'S'], ['tool-fill', 'Fill', 'F'], ['tool-pattern', 'Pattern', 'P'], ['letters', 'Letters', 'T'], ['picture', 'Picture', 'I'], ['tool-erase', 'Erase', 'E'], ['tool-pan', 'Pan', 'H']];
 const STITCH_TAB = {
   tool: () => head('Tool', 'Stitch', '')
     + `<div class="c-panel__body">${section('Stitch', `${tiles(STITCHES.indexOf('stitch-full'))}`)}${thread()}${patternSection()}${outlineSection()}${inPiece()}${canvasStitches()}</div>`,
@@ -192,6 +219,7 @@ function wire(root) {
   root.querySelectorAll('[data-pill]').forEach(motion);
   root.querySelectorAll('[data-switch] .c-seg').forEach((el) => { el._motion = motion(el); });
   root.querySelectorAll('[data-tiles]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tile' }));
+  root.querySelectorAll('[data-tools]').forEach((el) => createSegMotion(el, () => pillValues, { option: '.c-tool' })); // the tool bar's fill moves like a pill
   root.querySelectorAll('[data-stage]').forEach((host) => createStageSlider(host, { setting: host.dataset.stage, colour: threadColour(), initial: host.dataset.initial ? Number(host.dataset.initial) : undefined }));
   root.querySelectorAll('[data-slider]').forEach(liveSlider);
   root.querySelectorAll('.tz-host').forEach((h) => { const svg = h.querySelector('svg'); Object.assign(svg.dataset, { n: ZOOM_N, o: 5, c: 14 }); zoom.sync(h); });
@@ -207,7 +235,7 @@ function renderStage() {
   $('appbar').innerHTML = `<div class="pp-name"><b>Calla lilies</b><span>14 ct Aida · 120 × 90 · 11,840 stitches</span></div>${seg([['stitch', 'Stitch'], ['animate', 'Animate'], ['export', 'Export']], 0, { lg: true, id: 'mode' })}<span class="c-save">${ic('check')}Saved</span>${iconbtn('undo', 'Undo')}${iconbtn('redo', 'Redo')}`;
   const holes = Array.from({ length: 13 * 10 }, (_, i) => `<circle cx="${(i % 13) * 40 + 20}" cy="${Math.floor(i / 13) * 39 + 20}" r="2" fill="currentColor"/>`).join('');
   $('canvas').innerHTML = `<div class="pp-cloth"><svg viewBox="0 0 520 390" aria-hidden="true">${holes}</svg></div>
-    <div class="c-bar c-bar--tools pp-tools" data-tools>${['tool-select', 'tool-stitch', 'tool-fill', 'tool-pattern', 'letters', 'picture', 'tool-erase', 'tool-pan'].map((n, i) => `<button class="c-reset c-tool c-focus" aria-label="${n}" title="${n}" aria-pressed="${i === 1}">${ic(n)}</button>`).join('')}</div>
+    <div class="c-bar c-bar--tools pp-tools" data-tools data-tip-delay="700">${TOOLS.map(([n, label, key], i) => `<button class="c-reset c-tool c-focus si-host" aria-label="${label}" data-tip="${label}" data-tip-key="${key}" data-tip-side="right" aria-pressed="${i === 1}">${ic(n)}</button>`).join('')}</div>
     <div class="c-bar c-bar--pill pp-zoom">${iconbtn('minus', 'Zoom out', 'c-iconbtn--sm')}<span class="c-bar__zoom">100%</span>${iconbtn('plus', 'Zoom in', 'c-iconbtn--sm')}<span class="c-bar__sep"></span>${iconbtn('fit', 'Fit', 'c-iconbtn--sm')}</div>
     <span class="pp-note">The cloth is a placeholder: this page is for the panel</span>`;
   wire($('appbar')); wire($('canvas'));
@@ -342,8 +370,8 @@ document.addEventListener('click', (e) => {
   if (tog) { tog.classList.toggle('is-selected'); const row = tog.closest('.c-layer'); if (row && tog === row.querySelector('[data-toggle]')) { row.classList.toggle('is-hidden'); tog.innerHTML = ic(row.classList.contains('is-hidden') ? 'eye-off' : 'eye'); } }
   const layer = t.closest('.c-layer');
   if (layer && !tog) layer.parentElement.querySelectorAll('.c-layer').forEach((x) => x.classList.toggle('is-selected', x === layer));
-  const fieldRow = t.closest('.c-row--field .c-field--split')?.closest('.c-row');
-  if (fieldRow) selectRow(fieldRow, !t.closest('input'));
+  const fieldRow = t.closest('[data-pattern-opacity]') ? null : t.closest('.c-row--field .c-field--split')?.closest('.c-row'); // the opacity cell only changes opacity
+  if (fieldRow) { selectRow(fieldRow, !t.closest('input')); if (fieldRow.dataset.patternHex) pattern.active = fieldRow.classList.contains('is-selected') ? fieldRow.dataset.patternHex : null; }
   const hideBtn = t.closest('[data-row-hide]');
   if (hideBtn) hideRow(hideBtn.closest('.c-row'));
   const delBtn = t.closest('[data-row-delete]');
@@ -353,11 +381,31 @@ document.addEventListener('click', (e) => {
   const pic = t.closest('[data-picture]');
   if (pic) { if (!pattern.picture) choosePicture(); else if (pop?.trigger === pic) closePop(); else openPicture(pic); return; }
   if (t.closest('[data-pattern-add]')) {
-    if (!pattern.hand.includes(threadHex.toUpperCase()) && !patternColours().some(([h]) => h === threadHex.toUpperCase())) pattern.hand.push(threadHex.toUpperCase());
-    render(); toast(`Placing squares in ${threadHex.toUpperCase()}`); return;
+    // a colour to place squares with, added to the list and selected: the Thread colour first; once that's in the
+    // list, the next default colour not in it yet
+    const have = new Set(patternColours().map(([h]) => h)), hex = [threadHex, ...PATTERN_DEFAULTS].map((c) => hexOf(c).toUpperCase()).find((h) => !have.has(h));
+    if (!hex) { toast('Every default colour is in the pattern: pick another in Thread'); return; }
+    pattern.hand.push(hex); pattern.deleted.delete(hex); pattern.active = hex;
+    render(); toast(`Placing squares in ${hex}`); return;
+  }
+  if (t.closest('[data-picture-remove]')) { removePicture(); return; }
+  const threadEye = t.closest('[data-thread-eye]');
+  if (threadEye) { const row = threadEye.closest('.c-row'), hidden = row.classList.toggle('is-hidden'); threadEye.innerHTML = ic(hidden ? 'eye-off' : 'eye'); threadEye.dataset.tip = hidden ? 'Show' : 'Hide'; threadEye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} stitches in this colour`); toast(`${hidden ? 'Hid' : 'Showing'} stitches in ${threadHex.toUpperCase()}`); return; }
+  if (t.closest('[data-thread-remove]')) { toast(`Deleted stitches in ${threadHex.toUpperCase()}`); return; }
+  const picEye = t.closest('[data-picture-eye]');
+  if (picEye) { pattern.hidden = !pattern.hidden; const row = picEye.closest('.c-row'); row.classList.toggle('is-hidden', pattern.hidden); picEye.innerHTML = ic(pattern.hidden ? 'eye-off' : 'eye'); picEye.dataset.tip = pattern.hidden ? 'Show' : 'Hide'; picEye.setAttribute('aria-label', `${pattern.hidden ? 'Show' : 'Hide'} the picture`); return; }
+  const patternBin = t.closest('[data-pattern-remove]');
+  if (patternBin) {
+    const row = patternBin.closest('.c-row'), hex = row.dataset.patternHex;
+    pattern.deleted.add(hex); pattern.hand = pattern.hand.filter((h) => h !== hex);
+    toast(`Deleted ${rowWords(row)}`);
+    const done = () => { row.remove(); if (!patternColours().length) render(); };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) done();
+    else { row.style.overflow = 'hidden'; row.animate([{ height: `${row.offsetHeight}px`, opacity: 1 }, { height: '0px', marginTop: '0px', opacity: 0 }], { duration: 200, easing: 'ease-in' }).onfinish = done; setTimeout(() => row.isConnected && done(), 260); }
+    return;
   }
   const eye = t.closest('[data-pattern-eye]');
-  if (eye) { const row = eye.closest('.c-row'), hidden = row.classList.toggle('is-hidden'); eye.innerHTML = ic(hidden ? 'eye-off' : 'eye'); eye.dataset.tip = hidden ? 'Show' : 'Hide'; eye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} this colour`); return; }
+  if (eye) { const row = eye.closest('.c-row'); setRowHidden(row, !row.classList.contains('is-hidden')); return; }
   if (t.closest('[data-outline-add]')) { outline = { hex: context === 'image' ? hexOf('--neutral-950') : threadHex, stitch: 'back', edges: 'all' }; render(); return; }
   if (t.closest('[data-outline-remove]')) { if (pop?.trigger?.dataset.picker === 'outline') closePop(); outline = null; render(); return; }
   const outlineTile = t.closest('[data-outline-stitch] .c-tile'); if (outlineTile) outline.stitch = outlineTile.dataset.value;
@@ -374,6 +422,27 @@ document.addEventListener('click', (e) => {
   if (t.closest('.c-code .c-iconbtn')) toast('Copied the embed code');
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+// pattern opacity: drag up or down on the number (a step every 2px), or type, or arrow keys
+let opDrag = null;
+document.addEventListener('pointerdown', (e) => {
+  const cell = e.target.closest('[data-pattern-opacity]'), input = cell?.querySelector('input');
+  if (!cell || document.activeElement === input) return;
+  e.preventDefault();
+  opDrag = { row: cell.closest('.c-row'), input, y: e.clientY, from: Number(input.value), moved: false };
+});
+addEventListener('pointermove', (e) => {
+  if (!opDrag) return;
+  const dy = opDrag.y - e.clientY; if (!opDrag.moved && Math.abs(dy) < 3) return;
+  opDrag.moved = true; document.body.style.cursor = 'ns-resize';
+  setOpacity(opDrag.row, opDrag.from + dy / 2);
+});
+addEventListener('pointerup', () => { if (!opDrag) return; if (!opDrag.moved) { opDrag.input.focus(); opDrag.input.select(); } opDrag = null; document.body.style.cursor = ''; });
+document.addEventListener('keydown', (e) => {
+  const input = e.target.closest?.('[data-pattern-op]'); if (!input) return;
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setOpacity(input.closest('.c-row'), Number(input.value) + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1)); }
+  if (e.key === 'Enter') input.blur();
+});
+document.addEventListener('change', (e) => { const input = e.target.closest?.('[data-pattern-op]'); if (input) { const v = Number(input.value); setOpacity(input.closest('.c-row'), Number.isFinite(v) ? v : opacityOf(input.closest('.c-row').dataset.patternHex)); } });
 // Canvas colours and Canvas stitches rows: clicking (or typing into) a field selects its stitches on the canvas;
 // clicking a selected one again, outside its inputs, lets them go. Hide and delete act on the whole row.
 const rowData = (row) => row.dataset.hex ? PIECE.find(([c]) => hexOf(c) === row.dataset.hex) : CANVAS_STITCHES[[...row.parentElement.children].indexOf(row)];

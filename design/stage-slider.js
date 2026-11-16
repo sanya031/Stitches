@@ -17,8 +17,9 @@ const pillToken = (name, fallback) => {
   return Number.isFinite(v) ? v : fallback;
 };
 
-// the opacity drawing: the square a stitch sits in (5..19, as the primitives), its outline and a fill at the value
-const opacitySquare = (v, { size = 24, colour } = {}) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" fill-opacity="${(v / 100).toFixed(2)}"/><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/></svg>`;
+// the opacity drawing: the square a stitch sits in (5..19) with a 3 × 3 grid of dots, the pattern's squares; each dot
+// is a faint dot with the colour laid over it as strongly as the value, so 0 shows the empty grid and 100 solid dots
+export const opacitySquare = (v, { size = 24, colour } = {}) => { const at = [8.5, 12, 15.5], dots = at.flatMap((y) => at.map((x) => `<circle cx="${x}" cy="${y}" r="1.5"/>`)).join(''); return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}"><g fill="currentColor" fill-opacity="0.22">${dots}</g><g fill="currentColor" fill-opacity="${(v / 100).toFixed(2)}">${dots}</g><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/></svg>`; };
 
 // the detail drawing: the same square, cut into 1 to 6 cells a side
 const detailSquare = (v, { size = 24, colour } = {}) => {

@@ -1,7 +1,8 @@
 // The picture pop-up: what a picture becomes. Opens from Pattern's Picture field, beside the panel like the colour
 // picker. Sections like the panel's, each folding:
 //   Image    the picture and what acts on it, one card (thumbnail and name; Crop, Rotate, Compare, Remove as one bar
-//            of icons), then Remove background
+//            of icons), then Remove background and Make stitches (on: the picture stitched over its pattern; off: the
+//            pattern alone, to stitch over yourself)
 //   Size     W | H as one split field; drag sideways on a number to change it, a click types in it
 //   Colours  Simple / Balanced / Detailed (4, 8, 16), then the picture's own threads as pans: hover one for its cross
 //            to fold it into its nearest neighbour, + adds one, dragging across them adds or merges; the palette morphs
@@ -39,7 +40,7 @@ const LIMITS = { cols: [10, 140], rows: [10, 120] };
 
 export function createPicturePopup(root, { image, name = 'picture', state = {}, onChange = () => {}, onClose = () => {}, onAction = () => {} } = {}) {
   // state: carried over from the last time it was open (pass the returned state back in), so closing loses nothing
-  const S = { image, name, rot: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, cols: 70, colours: 8, removed: new Set(), dither: false, removeBg: true, light: 'half', mid: 'full', dark: 'full', secs: {}, ...state, cropping: false, comparing: false };
+  const S = { image, name, rot: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, cols: 70, colours: 8, removed: new Set(), dither: false, removeBg: true, stitched: true, light: 'half', mid: 'full', dark: 'full', secs: {}, ...state, cropping: false, comparing: false };
   let result = null, thumb = '', menu = null;
 
   // ─── the picture: turned, cropped, sampled to the grid, converted; colours taken out fold into the nearest left ───
@@ -80,7 +81,7 @@ export function createPicturePopup(root, { image, name = 'picture', state = {}, 
     root.innerHTML = `<div class="c-picpop__head"><b>Picture</b>${iconbtn('close', 'Close', 'data-pp="close"')}</div>`
       + sec('image', 'Image', `<div class="c-imgcard"><div class="c-imgcard__top"><img src="${thumb}" alt=""><span class="c-picker__imgname">${S.name}</span></div>`
         + `<div class="c-toolbar" role="toolbar" aria-label="Picture tools">${iconbtn('crop', 'Crop', `data-pp="crop" aria-pressed="${S.cropping}"`)}${iconbtn('rotate', 'Rotate', 'data-pp="rotate"')}${iconbtn('compare', 'Compare', `data-pp="compare" aria-pressed="${S.comparing}" data-tip-key="C"`)}${iconbtn('bin', 'Remove picture', 'data-pp="remove"')}</div></div>`
-        + sw('removeBg', 'Remove background', S.removeBg))
+        + sw('removeBg', 'Remove background', S.removeBg) + sw('stitched', 'Make stitches', S.stitched))
       + sec('size', 'Size', `<div class="c-field c-field--split c-field--pair" role="group" aria-label="Size in squares">${[['cols', 'W', result.cols, 'Squares across'], ['rows', 'H', result.rows, 'Squares down']].map(([k, l, v, tip]) => `<label class="c-field__cell c-field__cell--num" data-tip="${tip}" data-pp-scrub="${k}"><span class="c-field__letter" aria-hidden="true">${l}</span><input inputmode="numeric" value="${v}" aria-label="${tip}" data-pp-num="${k}"></label>`).join('')}</div>`)
       + sec('colours', 'Colours', `<div class="c-picpop__colours" data-pp-group>${coloursHtml()}</div>${sw('dither', 'Dither', S.dither)}`)
       + sec('tones', 'Tones', `<div class="c-tones">${[['light', 'Light'], ['mid', 'Mid'], ['dark', 'Dark']].map(([k, l]) => `<div class="c-labelled"><span class="c-label">${l}</span><button class="c-reset c-select c-select--art c-focus" data-pp-tone="${k}" aria-haspopup="true" aria-label="${l}: ${TONES[S[k]]}" data-tip="${TONES[S[k]]}">${toneArt(S[k])}${ic('chevron-down')}</button></div>`).join('')}</div>`);
