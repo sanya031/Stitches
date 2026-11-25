@@ -2,7 +2,9 @@
 //   pills      Custom (any colour), Extract (pull colours from an image), Saved (palettes)
 //   preview    the colour as thread on cloth: 2 × 2 of the chosen stitch on the chosen fabric (icon dropdowns)
 //   body       the pill's own part: the colour field and hue (with the eyedropper), a drop zone, or palettes
-//   value      the colour as text in a field, in a notation from a dropdown (Hex, RGB, HSL)
+//   value      the colour as text in a field, in a notation from a dropdown (Hex, RGB, HSL, DMC: the nearest DMC thread's
+//              number and name, ≈ when it isn't exact; typing a number or a name lists the threads that match, to pick one;
+//              Anchor: the same, by that thread's Anchor equivalent, always ≈ as Anchor dyes its own colours)
 //   on canvas  the colours already stitched, always there: reusing one is the most common pick
 // Colours sit in pans, like a set of paints: one block of small boxes with no gaps, filled or empty; hover rings a box
 // and its tooltip gives the hex.
@@ -13,13 +15,16 @@ import { svg } from './icons/icons.js';
 import { threadSvg } from './icons/thread.js';
 import { PRIMITIVES, primitiveSvg } from './icons/primitives.js';
 import { fieldHtml, hueHtml, createColourField, hexOf, NOTATIONS, formatColour, parseColour, colourParts, colourFromParts } from './colour-field.js';
+import { nearestThread, findThreads } from './thread-match.js';
+import { swatch } from './swatch.js';
 
 // the fabrics a canvas can be, as the lab draws them (lab/main.js SURFACES)
 export const FABRICS = [['dots', 'Dot grid', '#F2EEE6'], ['aida', 'Aida', '#F4F2EC'], ['linen', 'Linen', '#D9CCB2'], ['denim', 'Denim', '#3C5A86']];
 // one per stitch type, as in the panel's stitch grid
 const STITCHES = Object.keys(PRIMITIVES).filter((n) => !/-(tr|bl|br)$/.test(n)).sort((x, y) => (x.startsWith('fill') - y.startsWith('fill')));
 const PILLS = [['custom', 'Custom'], ['extract', 'Extract'], ['saved', 'Saved']];
-const MODES = NOTATIONS;
+const MODES = [...NOTATIONS, ['dmc', 'DMC'], ['anchor', 'Anchor']];
+const BRANDS = new Set(['dmc', 'anchor']);
 const PARTS = { rgb: ['Red', 'Green', 'Blue'], hsl: ['Hue', 'Saturation', 'Lightness'] };
 const PART_MAX = { rgb: [255, 255, 255], hsl: [360, 100, 100] };
 
@@ -88,8 +93,18 @@ const BODY = {
     + `<button class="c-reset c-btn c-btn--quiet c-btn--sm c-focus c-picker__new" data-pk="new-palette">${ic('plus')}New palette</button>`,
 };
 
+// DMC or Anchor: the nearest thread's number in the field (typed into to search), its name after it, ≈ before it when it
+// isn't exact (Anchor: always, since each Anchor number is the equivalent of a DMC thread, not the same colour)
+const brandName = (b) => (b === 'anchor' ? 'Anchor' : 'DMC');
+const brandNear = (t, b) => b === 'anchor' || !t.exact;
+const dmcTip = (t, b) => (b === 'anchor' ? `Anchor ${t.anchor} · the equivalent of DMC ${t.dmc} ${t.name}` : t.exact ? `DMC ${t.dmc} · ${t.name}` : `Nearest DMC thread · ${t.close.toLowerCase()}`);
+const dmcField = (hex, b) => { const t = nearestThread(hex); return `<label class="c-field c-picker__dmc" data-tip="${esc(dmcTip(t, b))}"><span class="c-picker__dmcnear" aria-hidden="true"${brandNear(t, b) ? '' : ' hidden'}>≈</span><input value="${t[b]}" aria-label="${brandName(b)} thread: number or name" spellcheck="false" autocomplete="off" data-pk-dmc><span class="c-picker__dmcname">${esc(t.name)}</span></label>`; };
+// what typing in it finds: up to DMC_SHOWN threads, chip, number and name (Anchor: and the DMC it stands for); ↑ ↓
+// move, Enter or a click picks
+const DMC_SHOWN = 6;
+const dmcList = (q, b, at = 0) => { const found = findThreads(q, DMC_SHOWN, b); return found.length ? `<div class="c-menu c-picker__dmclist" role="listbox">${found.map((t, i) => `<button class="c-reset c-menu__item${i === at ? ' is-active' : ''}" role="option" tabindex="-1" data-pk-dmcpick="${t.hex}" data-dmc="${t.dmc}">${swatch(t.hex, { tag: 'span' })}<span class="c-picker__dmcnum">${t[b]}</span><span class="c-menu__meta">${esc(t.name)}${b === 'anchor' ? ` · DMC ${t.dmc}` : ''}</span></button>`).join('')}</div>` : ''; };
 // the field for a notation: Hex is one field, RGB and HSL are one box per number side by side in one field
-const valueField = (s) => (PARTS[s.notation]
+const valueField = (s) => (BRANDS.has(s.notation) ? dmcField(s.hex, s.notation) : PARTS[s.notation]
   ? `<div class="c-fieldgroup" role="group" aria-label="Colour as ${label(MODES, s.notation)}">${colourParts(s.hex, s.notation).map((n, i) => `<input class="c-fieldgroup__cell" value="${n}" inputmode="numeric" aria-label="${PARTS[s.notation][i]}" spellcheck="false" autocomplete="off" data-pk-part="${i}">`).join('')}</div>`
   : `<label class="c-field"><input value="${formatColour(s.hex, s.notation)}" aria-label="Colour as ${label(MODES, s.notation)}" spellcheck="false" autocomplete="off" data-pk-value></label>`);
 // the notation's name: every name stacked in one place, so the select is as wide as the widest and never resizes,
@@ -253,10 +268,27 @@ export function createColourPicker(root, options = {}) {
     const input = el.querySelector('[data-pk-value]');
     if (input && from !== 'value') input.value = formatColour(hex, s.notation);
     if (from !== 'value') el.querySelectorAll('[data-pk-part]').forEach((x, i) => { x.value = colourParts(hex, s.notation)[i]; });
+    if (from !== 'value') syncDmc();
     el.querySelectorAll('.c-pan[data-pk-pick]').forEach((x) => x.classList.toggle('is-selected', x.dataset.pkPick === hex));
     if (!artQueued) { artQueued = true; requestAnimationFrame(() => { artQueued = false; $r('art').innerHTML = previewArt(s); }); } // the thread redraws once a frame while dragging
     onChange(hex);
   }
+
+  // the DMC field follows the colour: the nearest thread's number (unless it's being typed in), name and ≈
+  function syncDmc() {
+    const box = el.querySelector('.c-picker__dmc:not(.is-leaving)'); if (!box) return;
+    const t = nearestThread(s.hex), input = box.querySelector('[data-pk-dmc]'), b = s.notation;
+    if (!BRANDS.has(b)) return;
+    if (input && document.activeElement !== input) input.value = t[b];
+    box.querySelector('.c-picker__dmcname').textContent = t.name;
+    box.querySelector('.c-picker__dmcnear').hidden = !brandNear(t, b);
+    box.dataset.tip = dmcTip(t, b);
+  }
+  // typing in it lists the threads that match under it; picking one sets the colour to that thread exactly
+  let dmcAt = 0;
+  const dmcClose = () => { el.querySelector('.c-picker__dmclist')?.remove(); dmcAt = 0; };
+  const dmcShow = (q) => { dmcClose(); const box = el.querySelector('.c-picker__dmc:not(.is-leaving)'); if (box && q.trim()) el.querySelector('.c-picker__value')?.insertAdjacentHTML('beforeend', dmcList(q, s.notation, dmcAt)); };
+  const dmcPick = (hex) => { dmcClose(); set(hex, 'value'); const input = el.querySelector('[data-pk-dmc]'); input?.blur(); syncDmc(); };
 
   // a new notation crossfades in: the name in the select, and the field (the old one fades out on top of the new,
   // in the same place, so nothing moves)
@@ -509,6 +541,7 @@ export function createColourPicker(root, options = {}) {
       return;
     }
     if (e.target.matches('[data-pk-part]')) { set(colourFromParts([...el.querySelectorAll('[data-pk-part]')].map((x) => x.value), s.notation), 'value'); return; }
+    if (e.target.matches('[data-pk-dmc]')) { dmcAt = 0; dmcShow(e.target.value); return; }
     if (!e.target.matches('[data-pk-value]')) return;
     const hex = parseColour(e.target.value, s.notation);
     if (hex) set(hex, 'value');
@@ -516,13 +549,22 @@ export function createColourPicker(root, options = {}) {
   // leaving the field writes the colour back in full (a typed '#b42' becomes '#BB4422')
   el.addEventListener('focusout', (e) => {
     if (e.target.matches('[data-pk-value]')) e.target.value = formatColour(s.hex, s.notation);
+    if (e.target.matches('[data-pk-dmc]')) { dmcClose(); syncDmc(); e.target.value = nearestThread(s.hex)[s.notation] ?? ''; }
     if (e.target.matches('[data-pk-part]')) el.querySelectorAll('[data-pk-part]').forEach((x, i) => { x.value = colourParts(s.hex, s.notation)[i]; });
   });
   el.addEventListener('change', (e) => { if (e.target.matches('[data-pk-file]')) loadImage(e.target.files[0]); });
   el.addEventListener('dragover', (e) => { const d = e.target.closest('.c-drop'); if (d) { e.preventDefault(); d.classList.add('is-over'); } });
   el.addEventListener('dragleave', (e) => e.target.closest('.c-drop')?.classList.remove('is-over'));
   el.addEventListener('drop', (e) => { if (!e.target.closest('.c-drop')) return; e.preventDefault(); loadImage(e.dataTransfer.files[0]); });
+  // a thread in the list is picked on pointer down, before the field loses focus and the list goes
+  el.addEventListener('pointerdown', (e) => { const p = e.target.closest('[data-pk-dmcpick]'); if (p) { e.preventDefault(); dmcPick(p.dataset.pkDmcpick); } });
   el.addEventListener('keydown', (e) => {
+    if (e.target.matches?.('[data-pk-dmc]')) {
+      const items = [...el.querySelectorAll('[data-pk-dmcpick]')];
+      if (e.key === 'Escape' && items.length) { e.stopPropagation(); dmcClose(); return; }
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && items.length) { e.preventDefault(); dmcAt = (dmcAt + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; items.forEach((x, i) => x.classList.toggle('is-active', i === dmcAt)); return; }
+      if (e.key === 'Enter') { e.preventDefault(); if (items[dmcAt]) dmcPick(items[dmcAt].dataset.pkDmcpick); else e.target.blur(); return; }
+    }
     if (e.key === 'Escape') { e.stopPropagation(); if (!closeMenu()) onClose(); }
     if (e.key === 'Enter' && e.target.matches('[data-pk-name], [data-pk-palname]')) e.target.blur();
     // a number box steps with the arrow keys (shift for ten), within its range

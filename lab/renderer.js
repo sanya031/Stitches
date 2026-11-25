@@ -456,7 +456,8 @@ export function createRenderer(canvas) {
    */
   function draw(cam, look) {
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0x12 / 255, 0x14 / 255, 0x18 / 255, 1);
+    const ground = look.ground || [0x12 / 255, 0x14 / 255, 0x18 / 255];   // the bench around the cloth (sRGB 0..1)
+    gl.clearColor(ground[0], ground[1], ground[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

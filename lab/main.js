@@ -164,7 +164,7 @@ function buildScene() {
     let cached = regionCache.get(rg);
     if (!cached || cached.cols !== COLS || cached.rows !== ROWS) {
       const cells = new Set([...rg.cells].filter((k) => { const [x, y] = k.split(',').map(Number); return inside(x, y); }));
-      cached = { cols: COLS, rows: ROWS, legs: regionLegs(rg.kind, cells, rg.density, rg.seed, fw, rg.angle) };
+      cached = { cols: COLS, rows: ROWS, legs: cells.size ? regionLegs(rg.kind, cells, rg.density, rg.seed, fw, rg.angle) : [] };   // a fill wholly off a smaller sheet draws nothing
       regionCache.set(rg, cached);
     }
     const rgb = hex(rg.color), r = rng(rg.seed);

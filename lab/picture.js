@@ -1,6 +1,6 @@
 // Picture → thread: turns a photo into a piece of stitches, fills and backstitch.
 // Pipeline: sample to the grid → remove background → reduce colours (k-means in Lab)
-// → snap to floss → split tones into light / mid / dark → stitch each band its own way → outline.
+// → snap to DMC floss (lab/floss.js) → split tones into light / mid / dark → stitch each band its own way → outline.
 import { FLOSS, darkerShade } from './floss.js';
 
 /** What each tone band can become. Cell kinds go one per square; the rest are long-stitch fills. */
@@ -104,7 +104,8 @@ function kmeans(points, k, seed) {
 
 /**
  * o: { colours, removeBg, bgTolerance, dither, light, mid, dark (TONE_STITCHES keys),
- *      lightShare, darkShare (0..1 of the picture), outline, outlineStrength (0..1) }
+ *      lightShare, darkShare (0..1 of the picture), outline, outlineStrength (0..1),
+ *      saturation (1 = as the picture is; above 1 more vivid), brightness (−50..50, added to lightness) }
  * Returns plain data: { cols, rows, palette, blocks, stitches, regions, backs }.
  */
 export function convertPicture({ cols, rows, rgba }, o) {
@@ -136,6 +137,11 @@ export function convertPicture({ cols, rows, rgba }, o) {
   }
   const fg = [];
   for (let i = 0; i < n; i++) if (!bg[i]) fg.push(i);
+  // Saturation and brightness, on the subject only (after the background is found, so they never change what's
+  // background). Averaging colours into a palette pulls them towards grey, so a little extra saturation keeps the
+  // threads as lively as the picture looks.
+  const sat = o.saturation ?? 1, bri = o.brightness ?? 0;
+  if (sat !== 1 || bri) for (const i of fg) { const p = lab[i]; lab[i] = [Math.max(0, Math.min(100, p[0] + bri)), p[1] * sat, p[2] * sat]; }
   if (!fg.length) return { cols, rows, palette: [], blocks: new Map(), stitches: new Map(), regions: [], backs: [] };
 
   // Colours: k-means, then snap each centre to the nearest floss; centres that land on the same floss merge.
@@ -248,14 +254,14 @@ export function convertPicture({ cols, rows, rgba }, o) {
     }
   }
 
-  const palette = chosen.map((j, a) => ({ name: FLOSS[j].name, hex: FLOSS[j].hex, count: counts[a], L: palLab[a][0] }))
+  const palette = chosen.map((j, a) => ({ dmc: FLOSS[j].dmc, name: FLOSS[j].name, hex: FLOSS[j].hex, count: counts[a], L: palLab[a][0] }))
     .filter((p) => p.count).sort((a, b) => b.count - a.count);
   // outline threads go on the shopping list too, counted in backstitches
   const outlines = new Map();
   for (const b of backs) outlines.set(b.color, (outlines.get(b.color) || 0) + 1);
   for (const [hex, count] of outlines) {
     const f = FLOSS.find((x) => x.hex === hex);
-    palette.push({ name: f.name, hex, count, L: hexToLab(hex)[0], outline: true });
+    palette.push({ dmc: f.dmc, name: f.name, hex, count, L: hexToLab(hex)[0], outline: true });
   }
   return { cols, rows, palette, blocks, stitches, regions, backs };
 }

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design log for a slider</title>
+  <link rel="stylesheet" href="../design/tokens.css">
+  <link rel="stylesheet" href="../design/controls.css">
+  <link rel="stylesheet" href="reel.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scrollbar-width: none; }
+    html::-webkit-scrollbar { display: none; } /* nothing but the page in a recording */
+    body { margin: 0; background: var(--surface-bench); color: var(--text); font: var(--type-body); }
+    /* the scroll: the page is tall; the view stays put in the window while it's scrolled through */
+    .s-track { height: 900vh; }
+    .s-view { position: sticky; top: 0; height: 100vh; display: grid; grid-template-columns: 300px 300px; align-items: center; justify-content: center; column-gap: 96px; }
+    /* left: what this version is */
+    .s-log { position: relative; height: 200px; }
+    .s-entry { position: absolute; inset: 0; display: grid; align-content: center; gap: var(--space-12); transition: opacity 320ms ease, transform 320ms cubic-bezier(.22, 1, .36, 1); }
+    .s-entry.is-out { opacity: 0; transform: translateY(-8px); }
+    .s-entry.is-in { opacity: 0; transform: translateY(8px); }
+    .s-v { color: var(--text-muted); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }
+    .s-say { margin: 0; color: var(--text-strong); font: var(--type-heading); font-weight: 500; text-wrap: pretty; }
+    .s-diff { display: grid; gap: var(--space-4); font: var(--type-label); }
+    .s-add { color: var(--leaf-400); }
+    .s-cut { color: var(--crimson-400); }
+    /* right: the slider, and the bars */
+    .s-frame { position: relative; height: 260px; }
+    .r-stage { position: absolute; left: 0; right: 0; top: 150px; } /* versions hang from here, so each box sits in the same place; room above for the bubble */
+    .r-layer { position: absolute; left: 0; right: 0; bottom: 0; }
+    .r-layer--inline { padding-top: calc(var(--icon-sm) + var(--space-6)); } /* label inside the box: the room a label above takes, so every box sits at the same height */
+    .r-bars { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--space-6); }
+    .r-bar { display: grid; gap: var(--space-6); }
+    .r-track { position: relative; height: var(--space-4); overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-selected); }
+    .r-track i { position: absolute; inset: 0; width: calc(var(--fill, 0) * 100%); border-radius: inherit; background: var(--text-strong); }
+    .r-name { color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); text-align: center; transition: color 240ms ease; }
+    .r-bar.is-on .r-name { color: var(--text-strong); }
+    .r-cursor { position: fixed; }
+  </style>
+</head>
+<body>
+  <div class="s-track">
+    <div class="s-view">
+      <div class="s-log" id="log"></div>
+      <div class="s-frame">
+        <div class="r-stage" id="stage"></div>
+        <div class="r-bars" id="bars"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="scroll.js"></script>
+</body>
+</html>

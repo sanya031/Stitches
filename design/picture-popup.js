@@ -1,22 +1,25 @@
 // The picture pop-up: what a picture becomes. Opens from Pattern's Picture field, beside the panel like the colour
 // picker. Sections like the panel's, each folding:
 //   Image    the picture and what acts on it, one card (thumbnail and name; Crop, Rotate, Compare, Remove as one bar
-//            of icons), then Remove background and Make stitches (on: the picture stitched over its pattern; off: the
+//            of icons), then Remove background and Add stitches (on: the picture stitched over its pattern; off: the
 //            pattern alone, to stitch over yourself)
 //   Size     W | H as one split field; drag sideways on a number to change it, a click types in it
 //   Colours  Simple / Balanced / Detailed (4, 8, 16), then the picture's own threads as pans: hover one for its cross
 //            to fold it into its nearest neighbour, + adds one, dragging across them adds or merges; the palette morphs
-//            (new colours split off their nearest, gone ones fold into theirs). Then Dither
+//            (new colours split off their nearest, gone ones fold into theirs). Then Dither, then Saturation (starts at
+//            130%: averaging a picture's colours into threads pulls them towards grey) and Brightness, stage sliders
 //   Tones    Light, Mid, Dark side by side, each a box with only its stitch's drawing; the menu floats over the page
 // The conversion is the lab's (lab/picture.js), so the palette and counts are real.
-// createPicturePopup(root, { image, name, state, onChange(result), onClose, onAction(name, on) }) →
-//   { el, state, result(), setPicture(image, name) }.  onAction: 'crop', 'compare' (held), 'remove'.
+// createPicturePopup(root, { image, name, state, onChange(result), onClose, onAction(name, on), options(), fit }) →
+//   options(): more for the conversion (an outline); fit: [cols, rows] the picture may take at most (the canvas)
+//   { el, state, result(), thumb(), source() (the picture as cropped), turned() (whole, turned), rebuild(), setPicture(image, name) }.  onAction: 'crop', 'compare' (on or off: a click toggles it, a long press or C shows it while held), 'remove'.
 // Styled by the picture-popup block of controls.css.
 import { svg } from './icons/icons.js';
 import { primitiveSvg } from './icons/primitives.js';
 import { pans } from './colour-picker.js';
 import { SEG_MOTIONS, createSegMotion, dialDefaults } from './seg-motion.js';
 import { samplePicture, convertPicture, TONE_STITCHES } from '../lab/picture.js';
+import { createStageSlider, STAGE_SETTINGS } from './stage-slider.js';
 
 const ic = (n) => `<span class="c-ic">${svg(n)}</span>`;
 const iconbtn = (n, label, extra = '') => `<button class="c-reset c-iconbtn c-iconbtn--sm c-focus" aria-label="${label}" data-tip="${label}" ${extra}>${ic(n)}</button>`;
@@ -38,23 +41,24 @@ const rgbOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const nearestOf = (hex, list) => { const a = rgbOf(hex); return list.reduce((b, c) => { const d = rgbOf(c.hex).reduce((t, v, i) => t + (v - a[i]) ** 2, 0); return d < b[0] ? [d, c] : b; }, [Infinity, null])[1]; };
 const LIMITS = { cols: [10, 140], rows: [10, 120] };
 
-export function createPicturePopup(root, { image, name = 'picture', state = {}, onChange = () => {}, onClose = () => {}, onAction = () => {} } = {}) {
+export function createPicturePopup(root, { image, name = 'picture', state = {}, onChange = () => {}, onClose = () => {}, onAction = () => {}, options = () => ({}), fit = [140, 120] } = {}) {
   // state: carried over from the last time it was open (pass the returned state back in), so closing loses nothing
-  const S = { image, name, rot: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, cols: 70, colours: 8, removed: new Set(), dither: false, removeBg: true, stitched: true, light: 'half', mid: 'full', dark: 'full', secs: {}, ...state, cropping: false, comparing: false };
-  let result = null, thumb = '', menu = null;
+  const S = { image, name, rot: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, cols: 70, colours: 8, removed: new Set(), dither: false, saturation: STAGE_SETTINGS.saturation.initial, brightness: STAGE_SETTINGS.brightness.initial, removeBg: true, stitched: true, light: 'half', mid: 'full', dark: 'full', secs: {}, ...state, cropping: false, comparing: false };
+  let result = null, thumb = '', menu = null, source = null, turned = null;
 
   // ─── the picture: turned, cropped, sampled to the grid, converted; colours taken out fold into the nearest left ───
   function rebuild() {
     const s = S.image, r = S.rot % 4, t = document.createElement('canvas');
     t.width = r % 2 ? s.height : s.width; t.height = r % 2 ? s.width : s.height;
     const x = t.getContext('2d'); x.translate(t.width / 2, t.height / 2); x.rotate(r * Math.PI / 2); x.drawImage(s, -s.width / 2, -s.height / 2);
+    turned = t;
     const k = S.crop, src = document.createElement('canvas');
     src.width = Math.max(1, Math.round(t.width * k.w)); src.height = Math.max(1, Math.round(t.height * k.h));
     src.getContext('2d').drawImage(t, t.width * k.x, t.height * k.y, src.width, src.height, 0, 0, src.width, src.height);
     const th = document.createElement('canvas'); th.width = th.height = 64;
     const f = Math.max(64 / src.width, 64 / src.height); th.getContext('2d').drawImage(src, (64 - src.width * f) / 2, (64 - src.height * f) / 2, src.width * f, src.height * f);
-    thumb = th.toDataURL();
-    result = convertPicture(samplePicture(src, S.cols, 120), { colours: S.colours, removeBg: S.removeBg, bgTolerance: 14, dither: S.dither, light: S.light, mid: S.mid, dark: S.dark, lightShare: 0.25, darkShare: 0.2, outline: false, outlineStrength: 0 });
+    thumb = th.toDataURL(); source = src;
+    result = convertPicture(samplePicture(src, Math.min(S.cols, fit[0]), fit[1]), { colours: S.colours, removeBg: S.removeBg, bgTolerance: 14, dither: S.dither, saturation: S.saturation / 100, brightness: S.brightness, light: S.light, mid: S.mid, dark: S.dark, lightShare: 0.25, darkShare: 0.2, outline: false, outlineStrength: 0, ...options() });
     if (S.removed.size) {
       const keep = result.palette.filter((p) => !S.removed.has(p.hex));
       if (keep.length) {
@@ -81,11 +85,13 @@ export function createPicturePopup(root, { image, name = 'picture', state = {}, 
     root.innerHTML = `<div class="c-picpop__head"><b>Picture</b>${iconbtn('close', 'Close', 'data-pp="close"')}</div>`
       + sec('image', 'Image', `<div class="c-imgcard"><div class="c-imgcard__top"><img src="${thumb}" alt=""><span class="c-picker__imgname">${S.name}</span></div>`
         + `<div class="c-toolbar" role="toolbar" aria-label="Picture tools">${iconbtn('crop', 'Crop', `data-pp="crop" aria-pressed="${S.cropping}"`)}${iconbtn('rotate', 'Rotate', 'data-pp="rotate"')}${iconbtn('compare', 'Compare', `data-pp="compare" aria-pressed="${S.comparing}" data-tip-key="C"`)}${iconbtn('bin', 'Remove picture', 'data-pp="remove"')}</div></div>`
-        + sw('removeBg', 'Remove background', S.removeBg) + sw('stitched', 'Make stitches', S.stitched))
+        + sw('removeBg', 'Remove background', S.removeBg) + sw('stitched', 'Add stitches', S.stitched))
       + sec('size', 'Size', `<div class="c-field c-field--split c-field--pair" role="group" aria-label="Size in squares">${[['cols', 'W', result.cols, 'Squares across'], ['rows', 'H', result.rows, 'Squares down']].map(([k, l, v, tip]) => `<label class="c-field__cell c-field__cell--num" data-tip="${tip}" data-pp-scrub="${k}"><span class="c-field__letter" aria-hidden="true">${l}</span><input inputmode="numeric" value="${v}" aria-label="${tip}" data-pp-num="${k}"></label>`).join('')}</div>`)
-      + sec('colours', 'Colours', `<div class="c-picpop__colours" data-pp-group>${coloursHtml()}</div>${sw('dither', 'Dither', S.dither)}`)
+      + sec('colours', 'Colours', `<div class="c-picpop__colours" data-pp-group>${coloursHtml()}</div>${sw('dither', 'Dither', S.dither)}<div data-pp-stage="saturation"></div><div data-pp-stage="brightness"></div>`)
       + sec('tones', 'Tones', `<div class="c-tones">${[['light', 'Light'], ['mid', 'Mid'], ['dark', 'Dark']].map(([k, l]) => `<div class="c-labelled"><span class="c-label">${l}</span><button class="c-reset c-select c-select--art c-focus" data-pp-tone="${k}" aria-haspopup="true" aria-label="${l}: ${TONES[S[k]]}" data-tip="${TONES[S[k]]}">${toneArt(S[k])}${ic('chevron-down')}</button></div>`).join('')}</div>`);
     root.querySelectorAll('.c-switch .c-seg, [data-pp-words]').forEach((el) => { el._motion = createSegMotion(el, () => pillValues); });
+    // Saturation (starts richer than the picture) and Brightness: stage sliders; the palette morphs to the new threads
+    root.querySelectorAll('[data-pp-stage]').forEach((host) => { const k = host.dataset.ppStage; createStageSlider(host, { setting: k, initial: S[k], onChange: (v) => { if (v === S[k]) return; morph(() => { S[k] = v; rebuild(); renderPalette(); }); } }); });
   }
   const renderColours = () => { const g = root.querySelector('[data-pp-group]'); if (!g) return; g.innerHTML = coloursHtml(); g.querySelectorAll('[data-pp-words]').forEach((el) => createSegMotion(el, () => pillValues)); };
   const renderPalette = () => { const p = root.querySelector('[data-pp-palette]'); if (p) { p.innerHTML = paletteHtml(); p.dataset.tip = `${threads().length} colours · drag sideways for more or fewer`; } };
@@ -160,14 +166,23 @@ export function createPicturePopup(root, { image, name = 'picture', state = {}, 
     if (t.closest('[data-pk-add]')) { setColours(S.colours + 1); return; }
     const tone = t.closest('[data-pp-tone]'); if (tone) { openMenu(tone); return; }
     const act = t.closest('[data-pp]')?.dataset.pp;
-    if (act === 'close') onClose();
+    // closing ends what the pop-up started on the cloth: the crop frame and the compare overlay
+    if (act === 'close') { compare(false); if (S.cropping) { S.cropping = false; onAction('crop', false); } onClose(); }
     if (act === 'rotate') { S.rot = (S.rot + 1) % 4; S.crop = { x: 1 - S.crop.y - S.crop.h, y: S.crop.x, w: S.crop.h, h: S.crop.w }; rebuild(); render(); }
     if (act === 'crop') { S.cropping = !S.cropping; t.closest('[data-pp]').setAttribute('aria-pressed', S.cropping); onAction('crop', S.cropping); }
     if (act === 'remove') onAction('remove');
   });
-  // compare: held, on the button or with C
+  // compare: a click on the button turns it on, another click off; held down (longer than COMPARE_HOLD ms) it shows only
+  // while held, as holding C does
+  const COMPARE_HOLD = 300;
   const compare = (on) => { if (S.comparing === on) return; S.comparing = on; root.querySelector('[data-pp="compare"]')?.setAttribute('aria-pressed', on); onAction('compare', on); };
-  root.addEventListener('pointerdown', (e) => { if (e.target.closest('[data-pp="compare"]')) compare(true); });
+  let comparePress = null;
+  root.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('[data-pp="compare"]')) return;
+    if (S.comparing) { compare(false); comparePress = null; return; }
+    compare(true); comparePress = performance.now();
+  });
+  const compareUp = () => { if (comparePress != null && performance.now() - comparePress > COMPARE_HOLD) compare(false); comparePress = null; };
   const keydown = (e) => {
     const n = e.target.closest?.('[data-pp-num]');
     if (n && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); setNum(n.dataset.ppNum, Number(n.value) + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1)); return; }
@@ -192,19 +207,19 @@ export function createPicturePopup(root, { image, name = 'picture', state = {}, 
     if (drag.kind === 'num') { const v = drag.from + Math.round(dx / 4), key = drag.key; drag.input.value = v; clearTimeout(dragT); dragT = setTimeout(() => setNum(key, v), 16); }
     else { const n = Math.max(2, Math.min(24, drag.from + Math.round(dx / 16))); if (n !== S.colours) setColours(n); }
   };
-  const up = () => { if (!drag) return; if (drag.kind === 'num' && !drag.moved) { drag.input.focus(); drag.input.select(); } drag = null; document.body.style.cursor = ''; compare(false); };
+  const up = () => { if (!drag) return; if (drag.kind === 'num' && !drag.moved) { drag.input.focus(); drag.input.select(); } drag = null; document.body.style.cursor = ''; };
   const outside = (e) => { if (menu && !e.target.closest('.c-menu--float') && !e.target.closest('[data-pp-tone]')) closeMenu(); };
   const shift = (e) => { if (menu && !(e.target instanceof Element && e.target.closest('.c-menu--float'))) closeMenu(); };
-  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('keydown', keydown, true); addEventListener('keyup', keyup);
+  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointerup', compareUp); addEventListener('keydown', keydown, true); addEventListener('keyup', keyup);
   addEventListener('pointerdown', outside, true); addEventListener('scroll', shift, true); addEventListener('resize', closeMenu);
 
   rebuild(); render();
   return {
-    el: root, state: S, result: () => result, thumb: () => thumb,
+    el: root, state: S, result: () => result, thumb: () => thumb, source: () => source, turned: () => turned, rebuild: () => { rebuild(); renderSize(); },
     setPicture(img, nm) { S.image = img; S.name = nm; S.rot = 0; S.crop = { x: 0, y: 0, w: 1, h: 1 }; S.removed.clear(); rebuild(); render(); },
     destroy() {
       closeMenu();
-      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('keydown', keydown, true); removeEventListener('keyup', keyup);
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointerup', compareUp); removeEventListener('keydown', keydown, true); removeEventListener('keyup', keyup);
       removeEventListener('pointerdown', outside, true); removeEventListener('scroll', shift, true); removeEventListener('resize', closeMenu);
     },
   };

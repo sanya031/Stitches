@@ -16,17 +16,28 @@ export const threads = () => THREADS;
 // how close, in words: under about 2 the eye can't tell them apart
 const CLOSENESS = [[1, 'Exact'], [4, 'Very close'], [9, 'Close'], [16, 'Near'], [Infinity, 'Far off']];
 
-/** { name, hex, d (ΔE), close (words), exact } for the thread nearest to hex. */
+/** { dmc, anchor, name, hex, d (ΔE), close (words), exact } for the thread nearest to hex. */
 export function nearestThread(hex) {
   const a = lab(hex);
   let best = null, d = Infinity;
   for (const t of THREADS) { const e = Math.hypot(a[0] - t.lab[0], a[1] - t.lab[1], a[2] - t.lab[2]); if (e < d) { d = e; best = t; } }
-  return { name: best.name, hex: best.hex, d, close: CLOSENESS.find(([k]) => d < k)[1], exact: d < 1 };
+  return { dmc: best.dmc, anchor: best.anchor, name: best.name, hex: best.hex, d, close: CLOSENESS.find(([k]) => d < k)[1], exact: d < 1 };
 }
 
-/** Threads whose name starts with or contains the query, best first. */
-export function findThreads(q, max = 4) {
-  q = q.trim().toLowerCase();
+/** Threads matching the query, best first: by number (an exact number first, then numbers starting with it), then by
+ * name (names starting with it, then containing it). brand: 'dmc' (DMC numbers) or 'anchor' (each thread's Anchor
+ * equivalent; one Anchor number can stand for more than one DMC thread, and each is listed). */
+export function findThreads(q, max = 4, brand = 'dmc') {
+  q = q.trim().toLowerCase().replace(/^(dmc|anchor)\s*/, '');
   if (!q) return [];
-  return THREADS.filter((t) => t.name.toLowerCase().includes(q)).sort((x, y) => x.name.toLowerCase().indexOf(q) - y.name.toLowerCase().indexOf(q)).slice(0, max);
+  const score = (t) => {
+    const n = String(t[brand] ?? '').toLowerCase(), name = t.name.toLowerCase();
+    if (n === q) return 0;
+    if (n.startsWith(q)) return 1 + n.length / 10 + (parseInt(n, 10) || 0) / 1e6;   // shorter, then lower numbers first
+    const i = name.indexOf(q);
+    return i === 0 ? 3 : i > 0 ? 4 + i / 100 : Infinity;
+  };
+  return THREADS.map((t) => [score(t), t]).filter(([sc]) => sc < Infinity).sort((a, b) => a[0] - b[0]).slice(0, max).map(([, t]) => t);
 }
+/** The thread with this DMC number, or null */
+export const threadByDmc = (n) => THREADS.find((t) => t.dmc.toLowerCase() === String(n).trim().toLowerCase().replace(/^dmc\s*/, '')) || null;

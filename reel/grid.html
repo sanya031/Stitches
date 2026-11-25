@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200">
+  <title>Design log for a slider</title>
+  <link rel="stylesheet" href="../design/tokens.css">
+  <link rel="stylesheet" href="../design/controls.css">
+  <link rel="stylesheet" href="reel.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; width: 1200px; height: 675px; overflow: hidden; } /* recorded at 1.6×: 1920 × 1080, 16:9 */
+    body { position: relative; background: var(--surface-bench); color: var(--text); font: var(--type-body); }
+    /* one spacing between the title, the cards and the frame's edge (--gap); the same padding inside every card (--pad) */
+    .g-page { --gap: var(--space-32); --pad: var(--space-24); --card: 260px; position: absolute; inset: 0; display: grid; align-content: center; justify-content: center; gap: var(--gap); }
+    .g-title { margin: 0; color: var(--text-strong); font: var(--type-title); }
+    .g-grid { display: grid; grid-template-columns: repeat(4, var(--card)); grid-auto-rows: var(--card); gap: var(--gap); }
+    /* a square card: version, the slider in the middle, what it is, what changed */
+    .g-card { display: grid; grid-template-rows: auto 1fr auto auto; gap: var(--space-12); min-width: 0; padding: var(--pad); border-radius: var(--radius-xl); background: var(--surface-panel); }
+    .g-v { color: var(--text-strong); font: var(--type-label-strong); font-variant-numeric: var(--numeric); }
+    .g-slider { position: relative; z-index: 1; align-self: center; }
+    .g-slider--inline { padding-top: calc(var(--icon-sm) + var(--space-6)); } /* its label is inside the box: the room a label above takes, so every box lines up */
+    .g-say { min-height: calc(2 * 18px); margin: 0; color: var(--text); font: var(--type-body); text-wrap: pretty; } /* two lines' room in every card, so the sliders line up */
+    .g-diff { display: grid; align-content: start; gap: var(--space-2); min-height: calc(3 * 14px + 2 * var(--space-2)); font: var(--type-caption); }
+    .g-diff > span { white-space: nowrap; }
+    .g-add { color: var(--leaf-400); }     /* added in this version */
+    .g-cut { color: var(--crimson-400); }  /* taken out */
+  </style>
+</head>
+<body>
+  <div class="g-page">
+    <h1 class="g-title">Design log for a slider</h1>
+    <div class="g-grid" id="grid"></div>
+  </div>
+  <script type="module" src="grid.js"></script>
+</body>
+</html>

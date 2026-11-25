@@ -29,6 +29,24 @@ const detailSquare = (v, { size = 24, colour } = {}) => {
 };
 
 /** What each setting draws, in either style. v is the (possibly in-between) value. say: the value in words; tip: what the bubble shows, when not that. marks: a marker every n stops (bar layout); common: values whose marker is bolder. */
+// the eraser drawing: the square a stitch sits in, cut into n × n squares, every one shaded as the patch it clears
+const eraserSquare = (v, { size = 24, colour } = {}) => {
+  const n = Math.max(1, Math.round(v)), step = 14 / n;
+  const cuts = Array.from({ length: n - 1 }, (_, i) => { const at = (5 + step * (i + 1)).toFixed(2); return `M${at} 5V19M5 ${at}H19`; }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}" fill="none" stroke="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" fill-opacity=".2" stroke="none"/>${cuts ? `<path d="${cuts}" stroke-width="${n > 6 ? 0.6 : 1}" stroke-opacity=".7"/>` : ''}<rect x="5" y="5" width="14" height="14" rx="2" stroke-width="1.75"/></svg>`;
+};
+
+// the saturation drawing: the square with three threads' colours in it, from grey (0%) through as they are (100%) to
+// richer (200%); the colours are the point, so they're drawn in colour, not currentColor
+const SAT_HUES = [[196, 64, 48], [70, 140, 92], [62, 104, 176]];
+const saturationSquare = (v, { size = 24, colour } = {}) => {
+  const t = Math.max(0, v) / 100, mix = (c) => { const g = (c[0] + c[1] + c[2]) / 3; return `rgb(${c.map((x) => Math.round(Math.max(0, Math.min(255, g + (x - g) * t)))).join(',')})`; };
+  const bars = SAT_HUES.map((c, i) => `<rect x="${7 + i * 3.6}" y="7" width="3" height="10" rx="1" fill="${mix(c)}"/>`).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}">${bars}<rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.75"/></svg>`;
+};
+// the brightness drawing: the square filled as light as the value, from dim (−50) to bright (+50)
+const brightnessSquare = (v, { size = 24, colour } = {}) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="color:${colour || 'currentColor'}"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" fill-opacity="${(0.5 + v / 110).toFixed(2)}" stroke="currentColor" stroke-width="1.75"/></svg>`;
+
 export const STAGE_SETTINGS = {
   strands: {
     label: 'Strands', stops: [1, 2, 3, 4, 5, 6], initial: 2, marks: 1, common: [2],
@@ -61,6 +79,31 @@ export const STAGE_SETTINGS = {
     lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 100) }),
     thread: (v, o) => opacitySquare(v, o),
     prim: (v, o) => opacitySquare(v, o)
+  },
+  // how many squares the eraser takes at once: n squares a side, the square cut into that many and shaded
+  eraser: {
+    label: 'Size', stops: Array.from({ length: 12 }, (_, i) => i + 1), initial: 1, marks: 1, common: [1],
+    say: (v) => `${v} × ${v} square${v > 1 ? 's' : ''}`,
+    tip: (v) => `${v} × ${v}`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, (v - 1) / 11) }),
+    thread: (v, o) => eraserSquare(v, o),
+    prim: (v, o) => eraserSquare(v, o)
+  },
+  // a picture's colours: how vivid (100% = as the picture is; it starts richer, since a palette's averages lean grey)
+  saturation: {
+    label: 'Saturation', stops: Array.from({ length: 21 }, (_, i) => i * 10), initial: 130, marks: 1, common: [100],
+    say: (v) => `${Math.round(v)}%`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, v / 200) }),
+    thread: (v, o) => saturationSquare(v, o),
+    prim: (v, o) => saturationSquare(v, o)
+  },
+  // and how light: added to every colour's lightness, −50 to +50, 0 as the picture is
+  brightness: {
+    label: 'Brightness', stops: Array.from({ length: 21 }, (_, i) => i * 5 - 50), initial: 0, marks: 1, common: [0],
+    say: (v) => `${v > 0 ? '+' : ''}${Math.round(v)}`,
+    lines: (v) => ({ w: 1.5, pitch: lerp(12, 3, (v + 50) / 100) }),
+    thread: (v, o) => brightnessSquare(v, o),
+    prim: (v, o) => brightnessSquare(v, o)
   },
   // how much of a picture's detail its pattern keeps: the square cut into finer cells as it rises
   detail: {

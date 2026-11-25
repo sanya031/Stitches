@@ -98,6 +98,23 @@
 .c-seg--clean { padding: 0; background: none; }
 .c-seg--outline { background: none; border: var(--border-width) solid var(--border); }
 .c-seg--ring .c-seg__thumb { background: none; border: var(--border-width) solid var(--text-strong); }
+/* an option with a quieter detail under its word (Weave: "Regular" over "14"), the detail smaller and muted */
+.c-seg__stack { display: grid; justify-items: center; line-height: 1.1; }
+.c-seg__meta { color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }
+.c-seg__opt[aria-pressed="true"] .c-seg__meta { color: var(--text); }
+.c-coverage { display: flex; } .c-coverage .c-seg__opt { flex: 1; } /* Coverage: four drawings across the row */
+/* @control fabric */
+/* Fabric (fabric.js): four swatches across the row in a field, each with its name under it; the selected one sits on
+   the moving fill (pill motion) and its name is at full strength */
+.c-fabrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-md); background: var(--surface-field); }
+.c-fabric { position: relative; display: grid; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer; }
+.c-fabric:hover { color: var(--text-strong); }
+.c-fabric[aria-pressed="true"] { background: var(--surface-selected); color: var(--text-strong); }
+.c-seg--motion .c-fabric[aria-pressed="true"] { background: none; }
+.c-fabric__art { display: block; overflow: hidden; height: var(--space-32); border-radius: var(--radius-xs); box-shadow: inset 0 0 0 var(--border-width) var(--border); }
+.c-fabric__art svg { display: block; width: 100%; height: 100%; }
+.c-fabric__name { font: var(--type-caption); text-align: center; white-space: nowrap; }
+.c-fabrics .c-seg__thumb { border-radius: var(--radius-sm); }
 .c-seg--underline .c-seg__thumb { background: none; border-radius: 0; }
 .c-seg--underline .c-seg__mark { display: block; position: absolute; left: var(--space-8); right: var(--space-8); bottom: 0; height: var(--space-2); border-radius: var(--radius-pill); background: var(--text-strong); }
 .c-seg--invert .c-seg__thumb { background: var(--text-strong); }
@@ -287,6 +304,30 @@
 .c-field__unit { color: var(--text-muted); }
 .c-field__steps { display: inline-flex; color: var(--icon); }
 .c-field__steps .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+/* @control cell-size */
+/* Cell size (cell-size.js): a box of number blocks the row's width, "12 | 12 px", then − and + beside it; drag on the box in any
+   direction to scrub it (the move cursor says so), a click types in it */
+.c-cellsize { display: flex; align-items: center; gap: var(--space-4); }
+.c-cellsize .c-cellsize__box { flex: 1; min-width: 0; cursor: move; } /* fills the row, like the panel's other fields; − and + after it */
+.c-cellsize__box .c-field__cell--num { flex: 1; width: auto; justify-content: flex-start; gap: var(--space-4); padding-left: var(--space-12); color: var(--text); cursor: move; }
+.c-cellsize__box .c-field__cell input { flex: 0 1 auto; width: 2ch; text-align: left; cursor: move; user-select: none; }
+.c-cellsize__box .c-field__unit { margin-left: 0; } /* "12 px" reads as one, from the left */
+.c-cellsize__box .c-field__cell input:focus { cursor: text; user-select: text; }
+.c-cellsize__box .c-field__cell--num:focus-within { background: var(--surface-selected); }
+.c-cellsize > .c-iconbtn { flex: none; }
+.c-cellsize--beside > .c-iconbtn:last-child { margin-right: calc((var(--control-sm) - var(--icon-sm)) / -2 - var(--icon-sm) / 12); } /* its drawing meets the fields' right edge */
+/* B, inside: − and + as two more blocks of the box */
+.c-cellsize .c-cellsize__step { flex: none; width: var(--row-height); justify-content: center; padding: 0; color: var(--icon); cursor: pointer; }
+.c-cellsize .c-cellsize__step:hover { background: var(--surface-hover); color: var(--icon-active); }
+.c-cellsize .c-cellsize__step .c-ic { width: var(--icon-sm); height: var(--icon-sm); }
+/* C, one box: − and + beside, sharing a field box split by a line */
+.c-cellsize__steps { display: flex; flex: none; height: var(--row-height); overflow: hidden; border-radius: var(--radius-md); background: var(--surface-field); }
+.c-cellsize__steps .c-iconbtn { width: var(--row-height); height: 100%; border: 0; border-radius: 0; }
+.c-cellsize__steps .c-iconbtn + .c-iconbtn { border-left: var(--border-width) solid var(--border); }
+.c-cellsize__steps .c-iconbtn:hover { background: var(--surface-hover); color: var(--icon-active); }
+/* D, each: − and + beside, each in a small field box */
+.c-cellsize--each > .c-iconbtn, .c-cellsize--each > .c-iconbtn:last-child { width: var(--row-height); height: var(--row-height); margin: 0; border-radius: var(--radius-md); background: var(--surface-field); }
+.c-cellsize--each > .c-iconbtn:hover { background: var(--surface-hover); }
 .c-field.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
 .c-field.is-disabled .c-field__label, .c-field.is-disabled .c-field__unit, .c-field.is-disabled .c-field__steps, .c-field.is-disabled input::placeholder { color: var(--text-disabled); }
 .c-field.is-mixed input::placeholder { color: var(--text-muted); }
@@ -339,6 +380,22 @@
 .c-picker__field > .is-entering, .c-picker__field > .is-leaving { opacity: 0; }
 .c-picker__field > .is-leaving { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .c-picker__names > span, .c-picker__field > * { transition: none; } }
+/* DMC: ≈ (when the thread is only the nearest), the number typed into, the thread's name after it, muted, cut short;
+   typing lists the matching threads under the field, the one ↑ ↓ are on lit as if hovered */
+.c-picker__value { position: relative; }
+.c-picker__dmc { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.c-picker__dmc input { flex: 0 0 5ch; width: 5ch; min-width: 0; font-variant-numeric: var(--numeric); }
+.c-picker__dmcnear { flex: none; color: var(--text-muted); }
+.c-picker__dmcnear[hidden] { display: none; }
+/* while typing, the field is only the search: the current thread's name and ≈ step aside */
+.c-picker__dmc:focus-within .c-picker__dmcname, .c-picker__dmc:focus-within .c-picker__dmcnear { visibility: hidden; }
+.c-picker__dmc:focus-within input { flex: 1; }
+.c-picker__dmcname { flex: 1; min-width: 0; overflow: hidden; color: var(--text-muted); white-space: nowrap; text-overflow: ellipsis; }
+.c-picker__dmclist { position: absolute; top: calc(100% + var(--space-4)); left: 0; right: 0; z-index: var(--z-popover, 50); }
+.c-picker__dmclist .c-menu__item { gap: var(--space-8); }
+.c-picker__dmclist .c-menu__item.is-active { background: var(--surface-hover); color: var(--text-strong); }
+.c-picker__dmclist .c-menu__meta { flex: 1; min-width: 0; margin-left: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.c-picker__dmcnum { flex: none; min-width: 4ch; font-variant-numeric: var(--numeric); }
 .c-menu { display: grid; gap: var(--space-2); min-width: 160px; padding: var(--space-4); border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow: var(--shadow-popover); }
 .c-menu__item { display: flex; align-items: center; gap: var(--space-8); min-height: var(--control-sm); padding: 0 var(--space-8); border-radius: var(--radius-sm); color: var(--text); font: var(--type-label); text-align: left; cursor: pointer; }
 .c-menu__item .c-ic { width: var(--icon-sm); height: var(--icon-sm); color: var(--icon); }
@@ -348,6 +405,10 @@
 .c-menu__item.is-selected .c-ic { color: var(--icon-active); }
 .c-menu__item.is-disabled, .c-menu__item.is-disabled:hover { background: none; color: var(--text-disabled); cursor: not-allowed; }
 .c-menu__end { margin-left: auto; }
+/* a quieter second part at the item's end (a size's numbers): smaller and muted, so the name leads */
+.c-menu__meta { margin-left: auto; color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }
+.c-menu__meta + .c-menu__end { margin-left: 0; }
+.c-select__meta { margin-left: var(--space-6); color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }
 .c-menu__rule { height: var(--border-width); margin: var(--space-2) var(--space-4); background: var(--border-subtle); }
 
 /* @control swatch */
@@ -632,6 +693,8 @@
 
 /* @control picture-popup */
 /* the picture pop-up (picture-popup.js): sections like the panel's, under a head with its name and close */
+/* a pop-up kept for later is hidden with the hidden attribute; its own display (grid) must not win over it */
+.c-pop[hidden], .c-popover[hidden] { display: none; }
 .c-picpop { gap: 0; padding-top: var(--space-12); padding-bottom: 0; max-height: calc(100vh - var(--space-16) * 2); overflow: auto; overscroll-behavior: contain; }
 .c-picpop__head { display: flex; align-items: center; gap: var(--space-8); padding-bottom: var(--space-4); }
 .c-picpop__head b { flex: 1; color: var(--text-strong); font: var(--type-subheading); }
@@ -736,6 +799,39 @@
 .c-bar--pill { border-radius: var(--radius-pill); }
 .c-bar__sep { align-self: stretch; width: var(--border-width); margin: var(--space-4); background: var(--border-subtle); }
 .c-bar__zoom { min-width: var(--space-48); color: var(--text); font: var(--type-label); text-align: center; font-variant-numeric: var(--numeric); }
+
+/* @control selection-bar */
+/* floats over the cloth above a selection: Thread (stitch | colour in one split box), Outline, Hide, Delete, More */
+.c-selbar { gap: var(--space-2); }
+.c-selbar .c-iconbtn { width: var(--control-sm); height: var(--control-sm); }
+.c-selbar .c-iconbtn.is-open { background: var(--surface-field); color: var(--icon-active); }
+/* a field inside something raised sits on the well (in dark the bar is as light as a field), as in a pop-up */
+.c-selbar__thread { display: inline-flex; align-items: stretch; height: var(--control-sm); border: var(--border-width) solid transparent; border-radius: var(--radius-md); background: var(--surface-well); overflow: hidden; }
+.c-selbar__half { display: inline-flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-6, 6px) 0 var(--space-8); color: var(--text); font: var(--type-label); font-variant-numeric: var(--numeric); white-space: nowrap; cursor: pointer; }
+.c-selbar__half + .c-selbar__half { border-left: var(--border-width) solid var(--border); }
+.c-selbar__half > .c-ic { width: var(--space-12); height: var(--space-12); color: var(--icon); }
+.c-selbar__half:hover > .c-ic, .c-selbar__half.is-hover > .c-ic, .c-selbar__half.is-open > .c-ic { color: var(--icon-active); }
+.c-selbar__half.is-open { background: var(--surface-selected); }
+.c-selbar__half:hover, .c-selbar__half.is-hover { color: var(--text-strong); }
+.c-selbar__half .c-swatch { width: var(--space-16); height: var(--space-16); }
+.c-selbar__half .c-swatch svg { width: var(--space-16); height: var(--space-16); }
+.c-selbar__art { display: grid; place-items: center; flex: none; width: var(--space-20); height: var(--space-20); }
+.c-selbar__art svg { width: var(--space-20); height: var(--space-20); }
+.c-selbar__mixed { color: var(--text-muted); }
+/* mixed: what's in the selection, small: stitch drawings side by side, colour chips overlapping (each ringed in the
+   well so the overlap reads), then +n */
+.c-selbar__stack { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--icon-active); }
+.c-selbar__chips { display: inline-flex; align-items: center; }
+.c-selbar__chips .c-swatch { width: var(--space-16); height: var(--space-16); border-radius: var(--radius-xs); box-shadow: 0 0 0 2px var(--surface-well); }
+.c-selbar__chips .c-swatch + .c-swatch { margin-left: calc(-1 * var(--space-6, 6px)); }
+.c-selbar__more { color: var(--text-muted); font: var(--type-caption); font-variant-numeric: var(--numeric); }
+/* the pop-ups' list of what's in a mixed selection: a row each (drawing or chip, name, count), the chosen one selected */
+.c-selbar-list { display: grid; gap: var(--space-2); }
+.c-selbar-list .c-menu__item { gap: var(--space-8); }
+.c-selbar-list .c-menu__item .c-selbar__art { color: var(--icon); }
+.c-selbar-list .c-swatch { width: var(--space-16); height: var(--space-16); }
+.c-selbar-list .c-swatch svg { width: var(--space-16); height: var(--space-16); }
+.c-selbar .c-iconbtn .c-selbar__art { color: inherit; }
 
 /* @control number-motion */
 /* a number drawn digit by digit (number-motion.js); each digit sits in a column one line tall, with half a line
