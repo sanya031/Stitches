@@ -124,3 +124,27 @@ Wear modes: off / per visitor (local) / **shared** (everyone wears the same piec
 - Mode switcher is a pill; thread colours appear as chips (small rounded squares).
 - **Must not resemble Epoch Playground** (the inspiration): no light grey UI, no dashed panel borders, no black active tab bar, no red slider thumbs, no three-rail clone.
 - No emoji, no gradient washes. Real buttons, 44px targets, 4.5:1 text contrast.
+
+## Working rules (from earlier sessions; details in `notes/claude-memory/`)
+- design/ is the design system for icons and controls; never build them into the lab app.
+- Finalised decisions go on the design pages, but ask each time before writing there.
+- Use the design system's own parts; flag anything made from scratch and confirm before adding it.
+- Pill motion is Squash (`--motion-pill-*`) for every pill whose selection travels.
+- Tooltips only fade (no slide, rise or zoom), switch instantly between controls, and only where needed (none on obvious controls like − / +; keep aria-labels).
+- No hint lines under controls; explanations go in short tooltips.
+- Every new slider is a stage slider (`createStageSlider`; add a `STAGE_SETTINGS` entry).
+- A row's last icon button hangs so its glyph meets the fields' right edge.
+- The eye shows/hides what exists; a switch only for settings that change the result.
+- The canvas look is the lab renderer; panel sketches finalise controls only.
+- Strands and density are per stitch: the next stitch takes the value, a selection edits only itself.
+- The Layers section is parked (removed 2026-11-11, still built in panel.js).
+- Commit only when asked; pushing `main` redeploys https://stitches-ruddy.vercel.app. Work happens on `design/panel-pattern-picture`.
+
+## Where we left off (2026-11-25)
+Everything is committed and deployed. Open ideas, none started:
+- Outlines aren't in undo yet, and an area outline doesn't follow its stitches when they're moved.
+- Ways to clear everything (suggested: ⌘A + Delete, and Clear canvas in the Canvas section; `clearPattern()` exists in the editor).
+- The renderer mutes thread colours a little (cloth showing through, sheen); worth a look.
+- The default thread #C8343B isn't exactly DMC 321.
+- New stage settings (eraser, saturation, brightness) and the DMC/Anchor field aren't on the Controls page yet.
+- `lab/main.js` still has its own copy of the engine; moving it onto `lab/editor.js` is to come.
