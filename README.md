@@ -23,7 +23,7 @@ Draw stitches by hand, turn a picture into thread, outline it, and (soon) embed 
 | [`/mockup/`](https://stitches-ruddy.vercel.app/mockup/) | Clickable mockup of the full product: Stitch, Picture, Letters, Close-up, Embed. |
 | [`/reel/`](https://stitches-ruddy.vercel.app/reel/) | Pages for recording short demo clips. |
 
-The design rules that hold all of this together are in **[DESIGN.md](DESIGN.md)**.
+The design system (principles, tokens, controls, motion and how to extend it) is in **[DESIGN.md](DESIGN.md)**, with every token and its light and dark value in **[design/TOKENS.md](design/TOKENS.md)**.
 
 ---
 
