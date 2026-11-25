@@ -1,0 +1,13 @@
+- [Icons and controls stay on the design page](icons-design-page-only.md) — design/ is the design system for icons and controls; never build them into the lab app
+- [Ask before writing to the design page](ask-before-design-page.md) — finalised decisions go on design/, but ask each time first
+- [Pill motion is Squash](pill-motion-squash.md) — every pill whose selection travels uses Squash (--motion-pill-*)
+- [Use the design system's own parts](use-design-system-parts.md) — every icon and part comes from the system; flag anything made from scratch and confirm before adding it
+- [Tooltips only fade](tooltip-no-movement.md) — no slide, rise or zoom on tooltips; instant switch between controls
+- [Strands and density per stitch](per-stitch-thread-settings.md) — not global; next stitch takes the value, selection edits only itself; raise when building the editor
+- [Layers section parked](layers-section-parked.md) — removed from the panel 2026-11-11, contents kept in panel.js to place elsewhere
+- [No hint lines under controls](no-hint-lines.md) — explanations go in short tooltips, not c-hint captions in the panel
+- [Sliders are stage sliders](sliders-are-stage-sliders.md) — every new slider uses createStageSlider; add a STAGE_SETTINGS entry if needed
+- [Trailing icons align optically](trailing-icons-align.md) — last icon button hangs so its glyph meets the fields' right edge
+- [Canvas look is the lab renderer](canvas-look-is-lab-renderer.md) — panel sketches finalise controls only; stitches must look like stitches-ruddy.vercel.app
+- [Eye vs toggle](eye-vs-toggle.md) — eye shows/hides what exists; switch only for settings that change the result
+- [Tooltips only when needed](tooltips-only-when-needed.md) — no tooltips on obvious controls like − / +; keep aria-labels
